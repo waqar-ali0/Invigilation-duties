@@ -5,6 +5,7 @@ dataclasses below, and get back the new assignments, the seats that could not be
 filled (with a reason), and fairness statistics.
 """
 
+import random
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import date
@@ -167,23 +168,110 @@ class AllocationState:
         return self.hard_errors(person_id, room_id), self.soft_warnings(person_id, room_id)
 
 
-def allocate(data: EngineInput, seed: int) -> AllocationResult:
+@dataclass(frozen=True)
+class CapacityReport:
+    seats_needed: int
+    capacity: int
+    ok: bool
+    slot_shortages: list[tuple[int, int, int]]  # (slot_id, seats needed in slot, people available in slot)
+
+
+def _slot_demand(state: AllocationState) -> tuple[dict[int, int], dict[int, int]]:
+    """Per slot: remaining seats, and people still able to sit in it (not unavailable, not already there)."""
+    needed = Counter()
+    for room in state.data.rooms:
+        needed[room.slot_id] += state.remaining(room.id)
+    available = {}
+    for slot in state.data.slots:
+        available[slot.id] = sum(
+            1
+            for p in state.data.people
+            if not state.is_unavailable(p.id, slot) and p.id not in state.people_in_slot(slot.id)
+        )
+    return needed, available
+
+
+def capacity_check(data: EngineInput) -> CapacityReport:
+    """Can the remaining seats be filled at all? Checked before allocating."""
     state = AllocationState(data)
+    seats_needed = sum(state.remaining(r.id) for r in data.rooms)
+    capacity = sum(max(0, p.cap - state.count(p.id)) for p in data.people)
+    needed, available = _slot_demand(state)
+    shortages = [(s.id, needed[s.id], available[s.id]) for s in data.slots if needed[s.id] > available[s.id]]
+    return CapacityReport(seats_needed, capacity, seats_needed <= capacity, shortages)
+
+
+def _unfilled_reason(state: AllocationState, room: Room) -> str:
+    slot = state.slots[room.slot_id]
+    unavailable = at_cap = at_daily = 0
+    others = [p for p in state.data.people if p.id not in state.people_in_slot(slot.id)]
+    if not others:
+        return "All faculty are already assigned in this time slot"
+    for p in others:
+        if state.is_unavailable(p.id, slot):
+            unavailable += 1
+        elif state.count(p.id) >= p.cap:
+            at_cap += 1
+        else:
+            at_daily += 1
+    total = len(others)
+    if unavailable == total:
+        return "All remaining faculty are unavailable"
+    if at_cap == total:
+        return "All remaining faculty have reached their period cap"
+    if at_daily == total:
+        return "All remaining faculty have reached their daily limit"
+    return f"No eligible faculty: {unavailable} unavailable, {at_cap} at period cap, {at_daily} at daily limit"
+
+
+def allocate(data: EngineInput, seed: int) -> AllocationResult:
+    """Fill every remaining seat, hardest time slots first, giving each seat to the
+    eligible person with the fewest duties (soft rules and department spread first,
+    then a seeded random tie-break)."""
+    state = AllocationState(data)
+
+    needed, available = _slot_demand(state)
+
+    def difficulty(slot: Slot):
+        ratio = float("inf") if available[slot.id] == 0 else needed[slot.id] / available[slot.id]
+        return (-ratio, slot.date, slot.order)
+
+    order = [p.id for p in data.people]
+    random.Random(seed).shuffle(order)
+    tie_break = {pid: i for i, pid in enumerate(order)}
+
+    rooms_by_slot = defaultdict(list)
+    for room in sorted(data.rooms, key=lambda r: r.id):
+        rooms_by_slot[room.slot_id].append(room)
+
     assignments = []
     unfilled = []
     soft_violations = 0
-    for room in data.rooms:
-        missing = 0
-        for _ in range(state.remaining(room.id)):
-            candidates = [p for p in data.people if not state.hard_errors(p.id, room.id)]
-            if not candidates:
-                missing += 1
-                continue
-            best = min(candidates, key=lambda p: (state.count(p.id), p.id))
-            soft_violations += len(state.soft_warnings(best.id, room.id))
-            state.assign(best.id, room.id)
-            assignments.append((best.id, room.id))
-        if missing:
-            unfilled.append(Unfilled(room.id, missing, "No eligible faculty"))
+    for slot in sorted(data.slots, key=difficulty):
+        for room in rooms_by_slot[slot.id]:
+            missing = 0
+            for _ in range(state.remaining(room.id)):
+                depts = state.departments_in_room(room.id)
+                best_key, best = None, None
+                for p in data.people:
+                    if state.hard_errors(p.id, room.id):
+                        continue
+                    key = (
+                        len(state.soft_warnings(p.id, room.id)),
+                        state.count(p.id),
+                        1 if p.department_id in depts else 0,
+                        tie_break[p.id],
+                    )
+                    if best_key is None or key < best_key:
+                        best_key, best = key, p
+                if best is None:
+                    missing += 1
+                    continue
+                soft_violations += best_key[0]
+                state.assign(best.id, room.id)
+                assignments.append((best.id, room.id))
+            if missing:
+                unfilled.append(Unfilled(room.id, missing, _unfilled_reason(state, room)))
+
     stats = fairness_stats(state.count(p.id) for p in data.people)
     return AllocationResult(assignments, unfilled, stats, soft_violations, seed)
