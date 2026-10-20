@@ -70,3 +70,34 @@ def make_room(db, period, dept):
         )
 
     return make
+
+
+@pytest.fixture
+def room(make_room):
+    return make_room()
+
+
+@pytest.fixture
+def room_fac(make_faculty):
+    return make_faculty("Room Faculty")
+
+
+@pytest.fixture
+def admin_user(db):
+    from accounts.models import Role, User
+
+    return User.objects.create_user("manager@uni.edu", "pw12345!", role=Role.ADMIN)
+
+
+@pytest.fixture
+def faculty_user(db):
+    from accounts.models import User
+
+    return User.objects.create_user("teacher@uni.edu", "pw12345!")
+
+
+@pytest.fixture
+def superuser(db):
+    from accounts.models import User
+
+    return User.objects.create_superuser("root@uni.edu", "pw12345!")

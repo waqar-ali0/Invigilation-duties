@@ -1,3 +1,29 @@
 from django.contrib import admin
 
-# Register your models here.
+from .models import Duty, Unavailability
+
+
+@admin.register(Unavailability)
+class UnavailabilityAdmin(admin.ModelAdmin):
+    list_display = ("faculty", "period", "date", "slot", "status")
+    list_filter = ("period", "status")
+    search_fields = ("faculty__name", "faculty__email")
+    autocomplete_fields = ("faculty",)
+
+
+@admin.register(Duty)
+class DutyAdmin(admin.ModelAdmin):
+    """Read-only list; duties are edited through the draft review screens."""
+
+    list_display = ("faculty", "room_allocation", "status", "source")
+    list_filter = ("period", "status", "source")
+    search_fields = ("faculty__name", "room_allocation__room", "room_allocation__session__course_code")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

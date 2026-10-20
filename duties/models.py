@@ -1,3 +1,80 @@
+from django.conf import settings
 from django.db import models
+from django.db.models import Q
 
-# Create your models here.
+from exams.models import ExamPeriod, RoomAllocation, TimeSlot
+from faculty.models import Faculty
+
+
+class UnavailabilityStatus(models.TextChoices):
+    PENDING = "pending", "Pending"
+    APPROVED = "approved", "Approved"
+    REJECTED = "rejected", "Rejected"
+
+
+class Unavailability(models.Model):
+    faculty = models.ForeignKey(Faculty, on_delete=models.CASCADE, related_name="unavailability")
+    period = models.ForeignKey(ExamPeriod, on_delete=models.CASCADE, related_name="unavailability")
+    date = models.DateField()
+    slot = models.ForeignKey(
+        TimeSlot, null=True, blank=True, on_delete=models.CASCADE, help_text="Leave empty for the whole day."
+    )
+    reason = models.TextField()
+    status = models.CharField(max_length=10, choices=UnavailabilityStatus.choices, default=UnavailabilityStatus.PENDING)
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["date"]
+        verbose_name_plural = "unavailability"
+
+    def __str__(self):
+        return f"{self.faculty.name} — {self.date}{' ' + str(self.slot.start_time) if self.slot else ''}"
+
+
+class DutyStatus(models.TextChoices):
+    ASSIGNED = "assigned", "Assigned"
+    COMPLETED = "completed", "Completed"
+    ABSENT = "absent", "Absent"
+    CANCELLED = "cancelled", "Cancelled"
+
+
+class DutySource(models.TextChoices):
+    AUTO = "auto", "Auto"
+    MANUAL = "manual", "Manual"
+    SWAP = "swap", "Swap"
+    REPLACEMENT = "replacement", "Replacement"
+
+
+class DutyQuerySet(models.QuerySet):
+    def active(self):
+        return self.exclude(status=DutyStatus.CANCELLED)
+
+
+class Duty(models.Model):
+    period = models.ForeignKey(ExamPeriod, on_delete=models.CASCADE, related_name="duties", editable=False)
+    faculty = models.ForeignKey(Faculty, on_delete=models.PROTECT, related_name="duties")
+    room_allocation = models.ForeignKey(RoomAllocation, on_delete=models.CASCADE, related_name="duties")
+    status = models.CharField(max_length=10, choices=DutyStatus.choices, default=DutyStatus.ASSIGNED)
+    source = models.CharField(max_length=12, choices=DutySource.choices)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    objects = DutyQuerySet.as_manager()
+
+    class Meta:
+        verbose_name_plural = "duties"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["faculty", "room_allocation"],
+                condition=~Q(status="cancelled"),
+                name="unique_active_duty",
+            )
+        ]
+
+    def save(self, *args, **kwargs):
+        self.period_id = self.room_allocation.session.slot.period_id
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.faculty.name} — {self.room_allocation}"
