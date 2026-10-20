@@ -11,6 +11,7 @@ class UnavailabilityStatus(models.TextChoices):
     PENDING = "pending", "Pending"
     APPROVED = "approved", "Approved"
     REJECTED = "rejected", "Rejected"
+    WITHDRAWN = "withdrawn", "Withdrawn"
 
 
 class Unavailability(models.Model):
@@ -24,6 +25,8 @@ class Unavailability(models.Model):
     status = models.CharField(max_length=10, choices=UnavailabilityStatus.choices, default=UnavailabilityStatus.PENDING)
     reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
     reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_comment = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
 
     class Meta:
         ordering = ["date"]

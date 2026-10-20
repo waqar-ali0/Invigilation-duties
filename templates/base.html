@@ -21,6 +21,7 @@
         <a href="{% url 'admin:index' %}">Admin panel</a>
         {% elif user.role == "faculty" or user.role == "hod" %}
         <a href="{% url 'my_duties' %}">My duties</a>
+        <a href="{% url 'my_unavailability' %}">My unavailability</a>
         {% endif %}
         <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="link" type="submit">Log out</button></form>
       </nav>

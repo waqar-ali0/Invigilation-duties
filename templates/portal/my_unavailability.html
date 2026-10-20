@@ -2,4 +2,52 @@
 {% block title %}My unavailability — Invigilation Duties{% endblock %}
 {% block content %}
 <h1>My unavailability</h1>
+<p class="subtitle">Tell the exam office which dates or time slots you can't invigilate. Your head of department reviews each request.</p>
+
+{% if faculty.is_exempt %}
+  <div class="card"><p>You are exempt from invigilation, so you don't need to request unavailable dates.</p></div>
+{% else %}
+  {% for period, form in forms %}
+  <div class="card">
+    <h2>{{ period.name }}</h2>
+    <p class="muted">Exams {{ period.start_date|date:"d M" }} – {{ period.end_date|date:"d M Y" }} · requests close {{ period.availability_deadline|date:"D d M Y, H:i" }}</p>
+    {% if form.non_field_errors %}
+      <div class="alert error"><ul>{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul></div>
+    {% endif %}
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="period" value="{{ period.pk }}">
+      <div class="field">{{ form.date.label_tag }} {{ form.date }} {{ form.date.errors }}</div>
+      <div class="field"><label for="{{ form.slot.id_for_label }}">Time slot</label> {{ form.slot }} <span class="muted">Leave as “Whole day” if you can't do any slot that day.</span></div>
+      <div class="field">{{ form.reason.label_tag }} {{ form.reason }} {{ form.reason.errors }}</div>
+      <button type="submit">Send request</button>
+    </form>
+  </div>
+  {% empty %}
+  <div class="card"><p class="muted">No exam period is accepting requests right now. You'll get an email when one opens.</p></div>
+  {% endfor %}
+{% endif %}
+
+{% if requests %}
+<div class="card table-wrap">
+  <h2>My requests</h2>
+  <table>
+    <thead><tr><th>Period</th><th>Date</th><th>Slot</th><th>Reason</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      {% for r in requests %}
+      <tr>
+        <td>{{ r.period.name }}</td>
+        <td>{{ r.date|date:"D d M Y" }}</td>
+        <td>{% if r.slot %}{{ r.slot.start_time|time:"H:i" }}–{{ r.slot.end_time|time:"H:i" }}{% else %}Whole day{% endif %}</td>
+        <td>{{ r.reason }}</td>
+        <td><span class="badge">{{ r.get_status_display }}</span>{% if r.review_comment %}<div class="muted">{{ r.review_comment }}</div>{% endif %}</td>
+        <td>{% if r.status == "pending" and r.period.availability_is_open %}
+          <form method="post" action="{% url 'withdraw_request' r.pk %}">{% csrf_token %}<button class="secondary" type="submit">Withdraw</button></form>
+        {% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
 {% endblock %}
