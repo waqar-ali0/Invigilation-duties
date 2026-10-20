@@ -13,4 +13,5 @@ urlpatterns = [
     path("", include("allocation.urls")),
     path("", include("reports.urls")),
     path("", include("notifications.urls")),
+    path("", include("accounts.urls")),
 ]

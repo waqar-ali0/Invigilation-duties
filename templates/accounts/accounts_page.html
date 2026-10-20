@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Faculty accounts — Invigilation Duties{% endblock %}
+{% block content %}
+<h1>Faculty accounts</h1>
+<p class="subtitle">Faculty get an email with a link to set their password. Links work for 7 days; resend if one expires.</p>
+
+<div class="card">
+  <div class="actions">
+    <form method="post" action="{% url 'invite_all' %}">{% csrf_token %}<button type="submit">Send activation emails ({{ groups.none|length }})</button></form>
+    <span class="muted">Sends to everyone in “No account”. Emails go out within a few minutes.</span>
+  </div>
+</div>
+
+<div class="card table-wrap">
+  <h2>No account ({{ groups.none|length }})</h2>
+  {% include "accounts/_faculty_rows.html" with rows=groups.none action="Invite" %}
+</div>
+<div class="card table-wrap">
+  <h2>Invited, not yet activated ({{ groups.invited|length }})</h2>
+  {% include "accounts/_faculty_rows.html" with rows=groups.invited action="Resend" show_invited=True %}
+</div>
+<div class="card table-wrap">
+  <h2>Active ({{ groups.active|length }})</h2>
+  {% include "accounts/_faculty_rows.html" with rows=groups.active %}
+</div>
+{% endblock %}

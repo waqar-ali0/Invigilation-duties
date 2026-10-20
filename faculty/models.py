@@ -40,6 +40,7 @@ class Faculty(models.Model):
     designation = models.CharField(max_length=30, choices=Designation.choices)
     is_active = models.BooleanField(default=True)
     is_exempt = models.BooleanField(default=False, help_text="Exempt from invigilation entirely.")
+    invited_at = models.DateTimeField(null=True, blank=True, editable=False)
 
     objects = FacultyQuerySet.as_manager()
 

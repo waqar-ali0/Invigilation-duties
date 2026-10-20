@@ -1,0 +1,11 @@
+Dear {{ faculty.name }},
+
+The exam office has created your account in the invigilation duties system.
+There you can see your exam duties and tell us which dates you are unavailable.
+
+Set your password here (the link works for {{ days }} days):
+{{ link }}
+
+Log in afterwards with this email address.
+
+— Exam Office
