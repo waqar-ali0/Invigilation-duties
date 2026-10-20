@@ -3,6 +3,7 @@ from django.db import models
 
 class EmailStatus(models.TextChoices):
     QUEUED = "queued", "Queued"
+    SENDING = "sending", "Sending"
     SENT = "sent", "Sent"
     FAILED = "failed", "Failed"
 
@@ -28,6 +29,7 @@ class OutboundEmail(models.Model):
     last_error = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     sent_at = models.DateTimeField(null=True, blank=True)
+    claimed_at = models.DateTimeField(null=True, blank=True)  # when a send run took it
     attachment_name = models.CharField(max_length=200, blank=True)
     attachment_content = models.BinaryField(null=True, blank=True)
     attachment_mimetype = models.CharField(max_length=100, blank=True)

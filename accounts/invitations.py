@@ -38,11 +38,17 @@ def invite(faculty, actor):
         if user is not None and user.has_usable_password():
             raise InvitationError(f"{faculty.name} already has an active account.")
         if user is None:
-            user = User.objects.filter(email__iexact=faculty.email).first()
-            if user is None:
-                user = User(email=faculty.email.lower(), role=role_for(faculty))
-                user.set_unusable_password()
-                user.save()
+            existing = User.objects.filter(email__iexact=faculty.email).first()
+            if existing is not None:
+                # Never take over an account that already exists (e.g. an exam office login).
+                if existing.is_staff or existing.is_superuser or existing.role not in (Role.FACULTY, Role.HOD):
+                    raise InvitationError(
+                        f"{faculty.email} is used by an exam office or staff account; link it in the admin panel instead."
+                    )
+                raise InvitationError(f"{faculty.name} already has an active account.")
+            user = User(email=faculty.email.lower(), role=role_for(faculty))
+            user.set_unusable_password()
+            user.save()
             faculty.user = user
         faculty.invited_at = timezone.now()
         faculty.save(update_fields=["user", "invited_at"])

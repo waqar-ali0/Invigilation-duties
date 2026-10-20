@@ -33,13 +33,24 @@ def update_hod_roles(sender, instance, **kwargs):
         sync_hod_role(faculty)
 
 
+def is_faculty_account(user):
+    """Only plain faculty/HOD accounts follow their faculty record; exam office and staff accounts never do."""
+    return user.role in (Role.FACULTY, Role.HOD) and not user.is_staff and not user.is_superuser
+
+
+def email_taken(email, user_id):
+    from accounts.models import User
+
+    return User.objects.filter(email__iexact=email).exclude(pk=user_id).exists()
+
+
 @receiver(post_save, sender=Faculty, dispatch_uid="faculty.sync_user")
 def sync_user(sender, instance, **kwargs):
     user = instance.user
-    if user is None:
+    if user is None or not is_faculty_account(user):
         return
     changed = []
-    if user.email != instance.email.lower():
+    if user.email != instance.email.lower() and not email_taken(instance.email, user.pk):
         user.email = instance.email.lower()
         changed.append("email")
     if user.is_active != instance.is_active:

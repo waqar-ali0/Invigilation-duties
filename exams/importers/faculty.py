@@ -3,6 +3,7 @@ from django.core.validators import validate_email
 from django.db import transaction
 
 from faculty.models import Department, Designation, Faculty
+from faculty.signals import email_taken
 
 from .reader import read_rows
 from .result import ImportResult, is_blank, length_errors, missing_columns
@@ -57,8 +58,11 @@ def import_faculty(file):
         except ValidationError:
             row_errors.append(f"Row {n}: invalid email '{values['email']}'")
         else:
+            existing = by_employee.get(emp)
             if email_owner.get(email, emp) != emp:
                 row_errors.append(f"Row {n}: email '{values['email']}' belongs to another employee")
+            elif existing is not None and existing.user_id and email_taken(email, existing.user_id):
+                row_errors.append(f"Row {n}: email '{values['email']}' is already used by another account")
         dept = departments.get(values["department"].lower())
         if dept is None:
             row_errors.append(f"Row {n}: unknown department '{values['department']}'")

@@ -11,7 +11,8 @@ FULL_ACCESS_APPS = ("faculty", "exams")
 # Individual models the exam office manages fully, in apps that are otherwise view-only.
 FULL_ACCESS_MODELS = (("duties", "unavailability"),)
 # Apps the exam office may only look at in the Django admin.
-VIEW_ONLY_APPS = ("duties", "audit", "notifications")
+# (Not "notifications": stored emails can contain account links; the exam office uses the Emails page.)
+VIEW_ONLY_APPS = ("duties", "audit")
 
 
 def ensure_exam_office_group():

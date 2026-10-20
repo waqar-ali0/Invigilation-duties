@@ -50,3 +50,11 @@ class Faculty(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.department})"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        from .signals import email_taken
+
+        if self.user_id and self.email and email_taken(self.email, self.user_id):
+            raise ValidationError({"email": "This email is already used by another account."})
