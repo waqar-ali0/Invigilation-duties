@@ -1,0 +1,6 @@
+Django~=5.2.0
+dj-database-url~=2.3
+python-dotenv~=1.0
+openpyxl~=3.1
+reportlab~=4.2
+psycopg[binary]~=3.2
