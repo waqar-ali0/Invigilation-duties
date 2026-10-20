@@ -1,7 +1,49 @@
-from django.db.models import Count, Q
+from dataclasses import dataclass
+from datetime import date, time
 
-from duties.models import DutyStatus
+from django.db.models import Count, Prefetch, Q
+
+from duties.models import Duty, DutyStatus
+from exams.models import RoomAllocation
 from faculty.models import Faculty
+
+
+@dataclass(frozen=True)
+class RosterRow:
+    date: date
+    start_time: time
+    end_time: time
+    course_code: str
+    course_name: str
+    department: str
+    room: str
+    student_count: int
+    invigilators: list[str]
+
+
+def roster_rows(period):
+    """One row per room of `period`, by date, start time, course and room."""
+    duties = Duty.objects.active().select_related("faculty")
+    rooms = (
+        RoomAllocation.objects.filter(session__slot__period=period)
+        .select_related("session__slot", "session__department")
+        .prefetch_related(Prefetch("duties", queryset=duties))
+        .order_by("session__slot__date", "session__slot__start_time", "session__course_code", "room")
+    )
+    return [
+        RosterRow(
+            date=r.session.slot.date,
+            start_time=r.session.slot.start_time,
+            end_time=r.session.slot.end_time,
+            course_code=r.session.course_code,
+            course_name=r.session.course_name,
+            department=r.session.department.name,
+            room=r.room,
+            student_count=r.student_count,
+            invigilators=sorted(d.faculty.name for d in r.duties.all()),
+        )
+        for r in rooms
+    ]
 
 
 def faculty_load(period):

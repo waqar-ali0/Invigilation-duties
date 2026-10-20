@@ -52,6 +52,17 @@
   </div>
 </div>
 
+{% if duty_count %}
+<div class="card">
+  <h2>Downloads</h2>
+  <div class="actions">
+    <a class="button secondary" href="{% url 'roster_pdf' period.pk %}">Roster (PDF)</a>
+    <a class="button secondary" href="{% url 'roster_xlsx' period.pk %}">Roster (Excel)</a>
+    <a class="button secondary" href="{% url 'load_xlsx' period.pk %}">Faculty load (Excel)</a>
+  </div>
+</div>
+{% endif %}
+
 {% if unfilled %}
 <div class="card table-wrap">
   <h2>Unfilled seats</h2>
