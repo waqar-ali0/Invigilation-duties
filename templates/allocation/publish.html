@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Publish — {{ period.name }}{% endblock %}
+{% block content %}
+<h1>Publish {{ period.name }}</h1>
+<p class="subtitle"><a href="{% url 'period_dashboard' period.pk %}">← Back to the dashboard</a></p>
+
+{% if not editable %}
+  <div class="alert">This period is already {{ period.get_status_display|lower }}.</div>
+{% else %}
+<div class="card">
+  <p>Publishing makes this roster final. After that, changes go through swaps and replacements, and every change is logged.</p>
+  <p><strong>{{ duty_count }}</strong> duties will be published.</p>
+
+  {% if missing %}
+  <div class="alert warning">{{ missing }} seat(s) are still unfilled:
+    <ul>{% for room, m, reason in unfilled %}<li>{{ room.session.slot }} · {{ room.session.course_code }} · {{ room.room }}: {{ m }} missing{% if reason %} — {{ reason }}{% endif %}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+    {% if missing %}
+    <div class="field">
+      <label><input type="checkbox" name="acknowledge_unfilled" required> I understand {{ missing }} seat(s) are unfilled and want to publish anyway.</label>
+    </div>
+    {% endif %}
+    <button type="submit">Publish roster</button>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

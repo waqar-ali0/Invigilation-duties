@@ -45,6 +45,7 @@
       <a class="button secondary" href="{% url 'schedule_import' period.pk %}">Import schedule</a>
       <form method="post" action="{% url 'run_allocation' period.pk %}">{% csrf_token %}<button type="submit">Run allocation</button></form>
       <form method="post" action="{% url 'clear_draft' period.pk %}" onsubmit="return confirm('Remove every duty in this draft, including manual ones?');">{% csrf_token %}<button class="danger" type="submit">Clear draft</button></form>
+      {% if duty_count %}<a class="button" href="{% url 'publish' period.pk %}">Review and publish</a>{% endif %}
     {% else %}
       <span class="muted">This period is {{ period.get_status_display|lower }}; the roster can no longer be edited here.</span>
     {% endif %}

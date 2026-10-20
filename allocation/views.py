@@ -1,14 +1,105 @@
 from django.contrib import messages
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from accounts.models import Role
 from accounts.permissions import role_required
-from exams.models import ExamPeriod, PeriodLockedError
+from duties.models import Duty
+from duties.services import (
+    AssignmentBlocked,
+    AssignmentNeedsConfirmation,
+    add_duty,
+    eligible_candidates,
+    remove_duty,
+)
+from exams.models import ExamPeriod, PeriodLockedError, PeriodStatus, RoomAllocation
+from faculty.models import Faculty
 
-from .services import clear_draft, run_allocation
+from .services import PublishBlocked, clear_draft, publish_period, run_allocation, unfilled_rooms
 
 admin_only = role_required(Role.ADMIN)
+
+
+def _room_in_period(pk, room_id):
+    period = get_object_or_404(ExamPeriod, pk=pk)
+    room = get_object_or_404(
+        RoomAllocation.objects.select_related("session__slot", "session__department"),
+        pk=room_id,
+        session__slot__period=period,
+    )
+    return period, room
+
+
+def _render_room(request, period, room, pending=None):
+    context = {
+        "period": period,
+        "room": room,
+        "duties": Duty.objects.active().filter(room_allocation=room).select_related("faculty__department"),
+        "editable": period.status not in (PeriodStatus.PUBLISHED, PeriodStatus.CLOSED),
+        "pending": pending,  # (faculty, warnings) awaiting confirmation
+    }
+    if context["editable"]:
+        context["candidates"] = eligible_candidates(room)
+    return render(request, "allocation/room_detail.html", context)
+
+
+@admin_only
+def room_detail(request, pk, room_id):
+    period, room = _room_in_period(pk, room_id)
+    return _render_room(request, period, room)
+
+
+@admin_only
+@require_POST
+def add_duty_view(request, pk, room_id):
+    period, room = _room_in_period(pk, room_id)
+    faculty = get_object_or_404(Faculty, pk=request.POST.get("faculty_id") or 0)
+    try:
+        add_duty(faculty, room, request.user, allow_warnings=request.POST.get("confirm") == "1")
+    except PeriodLockedError as e:
+        messages.error(request, str(e))
+    except AssignmentBlocked as e:
+        messages.error(request, f"Cannot assign {faculty.name}: {'; '.join(e.errors)}.")
+    except AssignmentNeedsConfirmation as e:
+        return _render_room(request, period, room, pending=(faculty, e.warnings))
+    else:
+        messages.success(request, f"{faculty.name} assigned to {room.room}.")
+    return redirect("room_detail", pk=pk, room_id=room_id)
+
+
+@admin_only
+@require_POST
+def remove_duty_view(request, pk, duty_id):
+    duty = get_object_or_404(Duty.objects.select_related("faculty", "room_allocation"), pk=duty_id, period_id=pk)
+    try:
+        remove_duty(duty, request.user)
+    except PeriodLockedError as e:
+        messages.error(request, str(e))
+    else:
+        messages.success(request, f"{duty.faculty.name} removed from {duty.room_allocation.room}.")
+    return redirect("room_detail", pk=pk, room_id=duty.room_allocation_id)
+
+
+@admin_only
+def publish_view(request, pk):
+    period = get_object_or_404(ExamPeriod, pk=pk)
+    if request.method == "POST":
+        try:
+            publish_period(period, request.user, acknowledge_unfilled=bool(request.POST.get("acknowledge_unfilled")))
+        except (PublishBlocked, PeriodLockedError) as e:
+            messages.error(request, str(e))
+            return redirect("publish", pk=pk)
+        messages.success(request, f"{period.name} is published.")
+        return redirect("period_dashboard", pk=pk)
+    unfilled = unfilled_rooms(period)
+    context = {
+        "period": period,
+        "duty_count": Duty.objects.active().filter(period=period).count(),
+        "unfilled": unfilled,
+        "missing": sum(m for _, m, _ in unfilled),
+        "editable": period.status not in (PeriodStatus.PUBLISHED, PeriodStatus.CLOSED),
+    }
+    return render(request, "allocation/publish.html", context)
 
 
 @admin_only
