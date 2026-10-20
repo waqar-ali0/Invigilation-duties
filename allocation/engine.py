@@ -216,11 +216,37 @@ def _slot_demand(state: AllocationState) -> tuple[dict[int, int], dict[int, int]
     return needed, available
 
 
+def _attendable(state: AllocationState, person: Person, slots_by_date) -> int:
+    """Most duties `person` could sit in this period: per date, the non-overlapping slots
+    they are available for (greedy by end time), capped by the daily limit."""
+    total = 0
+    for slots in slots_by_date.values():
+        free = [s for s in slots if not state.is_unavailable(person.id, s)]
+        free.sort(key=lambda s: (s.end or time.max, s.order))
+        picked = []
+        for s in free:
+            if not any(s.overlaps(p) for p in picked):
+                picked.append(s)
+        total += min(state.rules.max_per_day, len(picked))
+    return total
+
+
 def capacity_check(data: EngineInput) -> CapacityReport:
-    """Can the remaining seats be filled at all? Checked before allocating."""
+    """Can the remaining seats be filled at all? Checked before allocating.
+
+    Each person counts for at most their cap and at most the slots they can actually
+    attend (unavailability, overlapping exams and the daily limit), minus duties they already have.
+    """
     state = AllocationState(data)
     seats_needed = sum(state.remaining(r.id) for r in data.rooms)
-    capacity = sum(max(0, p.cap - state.count(p.id)) for p in data.people)
+    slots_with_rooms = {r.slot_id for r in data.rooms}
+    slots_by_date = defaultdict(list)
+    for s in data.slots:
+        if s.id in slots_with_rooms:
+            slots_by_date[s.date].append(s)
+    capacity = sum(
+        max(0, min(p.cap, _attendable(state, p, slots_by_date)) - state.count(p.id)) for p in data.people
+    )
     needed, available = _slot_demand(state)
     shortages = [(s.id, needed[s.id], available[s.id]) for s in data.slots if needed[s.id] > available[s.id]]
     return CapacityReport(seats_needed, capacity, seats_needed <= capacity, shortages)

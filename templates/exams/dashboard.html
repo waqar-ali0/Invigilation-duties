@@ -11,6 +11,9 @@
 {% if not capacity.ok %}
   <div class="alert warning">Need {{ capacity.seats_needed }} duties, only {{ capacity.capacity }} possible. Raise the cap or add faculty.</div>
 {% endif %}
+{% if pending %}
+  <div class="alert warning">{{ pending.0 }} request(s) pending. If all are approved, capacity drops to {{ pending.1.capacity }} duties (need {{ pending.1.seats_needed }}). <a href="{% url 'admin_requests' %}">Review requests</a></div>
+{% endif %}
 {% if slot_shortages %}
   <div class="alert warning">Some time slots need more invigilators than there are available faculty:
     <ul>{% for name, needed, available in slot_shortages %}<li>{{ name }}: {{ needed }} needed, {{ available }} available</li>{% endfor %}</ul>

@@ -33,13 +33,14 @@ def test_period_list_shows_periods(admin_client, period):
 
 
 def test_dashboard_shows_capacity_warning(admin_client, period, make_room, make_faculty):
-    make_room(needed=5)
+    make_room(needed=1)
     make_faculty()
     page = admin_client.get(reverse("period_dashboard", args=[period.pk])).content.decode()
-    assert "Need 5 duties, only 8 possible. Raise the cap or add faculty." not in page
+    assert "Raise the cap or add faculty." not in page
     make_room(day=2, needed=10)
     page = admin_client.get(reverse("period_dashboard", args=[period.pk])).content.decode()
-    assert "Need 15 duties, only 8 possible. Raise the cap or add faculty." in page
+    # one person over two days can sit at most 2 duties
+    assert "Need 11 duties, only 2 possible. Raise the cap or add faculty." in page
 
 
 def test_dashboard_shows_rooms_and_fairness(admin_client, small_period, admin_user):

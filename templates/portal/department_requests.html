@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Department requests — Invigilation Duties{% endblock %}
+{% block content %}
+<h1>Department requests</h1>
+<p class="subtitle">{% for d in departments %}{{ d.name }}{% if not forloop.last %}, {% endif %}{% endfor %} · Your own requests are decided by the exam office.</p>
+
+<div class="card table-wrap">
+  <h2>Waiting for your decision ({{ pending|length }})</h2>
+  {% include "portal/_request_table.html" with rows=pending decide=True empty="No pending requests." %}
+</div>
+
+<div class="card table-wrap">
+  <h2>Decided</h2>
+  {% include "portal/_request_table.html" with rows=decided empty="Nothing decided yet." %}
+</div>
+{% endblock %}

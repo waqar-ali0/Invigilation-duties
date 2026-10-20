@@ -1,0 +1,9 @@
+Dear {{ req.faculty.name }},
+
+Your request to be unavailable on {{ req.date|date:"l d M Y" }}{% if req.slot %}, {{ req.slot.start_time|time:"H:i" }}–{{ req.slot.end_time|time:"H:i" }}{% else %} (whole day){% endif %} for {{ req.period.name }} was {% if approved %}approved. You will not be given invigilation duties then.{% else %}rejected. You may still be given invigilation duties then.{% endif %}
+{% if req.review_comment %}
+Comment: {{ req.review_comment }}
+{% endif %}
+Your requests: {{ link }}
+
+— Exam Office

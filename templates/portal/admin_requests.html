@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Unavailability requests — Invigilation Duties{% endblock %}
+{% block content %}
+<h1>Unavailability requests</h1>
+<p class="subtitle">HODs decide their own department's requests. Requests from HODs themselves (marked “HOD request”) need your decision; you can also decide any other request.</p>
+
+<div class="card table-wrap">
+  <h2>Pending ({{ pending|length }})</h2>
+  {% include "portal/_request_table.html" with rows=pending decide=True empty="No pending requests." %}
+</div>
+{% endblock %}

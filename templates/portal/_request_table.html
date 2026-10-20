@@ -1,0 +1,32 @@
+{% if rows %}
+<table>
+  <thead><tr><th>Faculty</th><th>Period</th><th>Date</th><th>Slot</th><th>Reason</th>{% if decide %}<th>Decision</th>{% else %}<th>Status</th>{% endif %}</tr></thead>
+  <tbody>
+    {% for r in rows %}
+    <tr>
+      <td>{{ r.faculty.name }}<div class="muted">{{ r.faculty.department }}</div>{% if r.is_hod_request %}<span class="badge short">HOD request</span>{% endif %}</td>
+      <td>{{ r.period.name }}</td>
+      <td>{{ r.date|date:"D d M Y" }}</td>
+      <td>{% if r.slot %}{{ r.slot.start_time|time:"H:i" }}–{{ r.slot.end_time|time:"H:i" }}{% else %}Whole day{% endif %}</td>
+      <td>{{ r.reason }}</td>
+      {% if decide %}
+      <td>
+        <form method="post" action="{% url 'decide_request' r.pk %}">
+          {% csrf_token %}
+          <input type="text" name="comment" placeholder="Comment (optional)" style="margin-bottom:6px">
+          <div class="actions">
+            <button type="submit" name="decision" value="approve">Approve</button>
+            <button class="danger" type="submit" name="decision" value="reject">Reject</button>
+          </div>
+        </form>
+      </td>
+      {% else %}
+      <td><span class="badge">{{ r.get_status_display }}</span>{% if r.review_comment %}<div class="muted">{{ r.review_comment }}</div>{% endif %}</td>
+      {% endif %}
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">{{ empty }}</p>
+{% endif %}

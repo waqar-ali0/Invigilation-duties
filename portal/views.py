@@ -3,15 +3,17 @@ from itertools import groupby
 from django.contrib import messages
 from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import PermissionDenied
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from accounts.models import Role
-from accounts.permissions import faculty_required, role_required
-from duties.models import Unavailability
-from duties.unavailability import RequestRejected, submit_request, withdraw_request
-from exams.models import ExamPeriod, PeriodStatus
+from accounts.permissions import faculty_required, hod_required, role_required
+from duties.models import Unavailability, UnavailabilityStatus
+from duties.unavailability import RequestRejected, can_decide, decide_request, submit_request, withdraw_request
+from exams.models import ExamPeriod, PeriodLockedError, PeriodStatus
+from faculty.models import Department
 from reports.personal import faculty_duties
 
 from .forms import RequestForm
@@ -84,6 +86,56 @@ def withdraw_request_view(request, pk):
     else:
         messages.success(request, "Request withdrawn.")
     return redirect("my_unavailability")
+
+
+def _requests_qs():
+    return Unavailability.objects.select_related("faculty__department", "period", "slot", "reviewed_by").order_by(
+        "created_at", "date"
+    )
+
+
+DECIDED = [UnavailabilityStatus.APPROVED, UnavailabilityStatus.REJECTED]
+
+
+@hod_required
+def department_requests(request):
+    mine = _requests_qs().filter(faculty__department__in=request.hod_departments).exclude(faculty=request.faculty)
+    context = {
+        "pending": mine.filter(status=UnavailabilityStatus.PENDING),
+        "decided": mine.filter(status__in=DECIDED).exclude(period__status__in=["published", "closed"]).order_by("-reviewed_at"),
+        "departments": request.hod_departments,
+    }
+    return render(request, "portal/department_requests.html", context)
+
+
+@role_required(Role.ADMIN)
+def admin_requests(request):
+    hod_ids = set(Department.objects.exclude(hod=None).values_list("hod_id", flat=True))
+    pending = list(_requests_qs().filter(status=UnavailabilityStatus.PENDING))
+    for r in pending:
+        r.is_hod_request = r.faculty_id in hod_ids
+    pending.sort(key=lambda r: (not r.is_hod_request, r.created_at or timezone.now()))
+    return render(request, "portal/admin_requests.html", {"pending": pending})
+
+
+@role_required(Role.ADMIN, Role.HOD)
+@require_POST
+def decide_request_view(request, pk):
+    req = get_object_or_404(_requests_qs(), pk=pk)
+    back = "admin_requests" if request.user.is_superuser or request.user.role == Role.ADMIN else "department_requests"
+    if not can_decide(request.user, req):
+        raise Http404
+    decision = request.POST.get("decision")
+    if decision not in ("approve", "reject"):
+        messages.error(request, "Choose approve or reject.")
+        return redirect(back)
+    try:
+        decide_request(req, request.user, approve=decision == "approve", comment=request.POST.get("comment", ""))
+    except (RequestRejected, PeriodLockedError) as e:
+        messages.error(request, " ".join(e.errors) if isinstance(e, RequestRejected) else str(e))
+    else:
+        messages.success(request, f"Request from {req.faculty.name} {'approved' if decision == 'approve' else 'rejected'}.")
+    return redirect(back)
 
 
 @role_required(Role.EXAM_STAFF)

@@ -1,0 +1,1 @@
+Your unavailability request for {{ req.date|date:"d M Y" }} was {% if approved %}approved{% else %}not approved{% endif %}

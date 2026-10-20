@@ -83,7 +83,8 @@ def test_clear_draft_deletes_all_and_audits(small_period, admin_user):
 
 def test_capacity_report_and_unfilled_rooms(short_period, admin_user):
     report = capacity_report(short_period)
-    assert (report.seats_needed, report.capacity, report.ok) == (5, 16, True)
+    # 2 faculty, one time slot: each can sit at most one duty, whatever their cap.
+    assert (report.seats_needed, report.capacity, report.ok) == (5, 2, False)
     assert report.slot_shortages != []
     run_allocation(short_period, admin_user, seed=1)
     [(room, missing, reason)] = unfilled_rooms(short_period)

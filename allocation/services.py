@@ -19,9 +19,10 @@ class PublishBlocked(Exception):
     """Publishing is not possible (yet) for the reason in the message."""
 
 
-def build_engine_input(period, exclude_auto=False):
+def build_engine_input(period, exclude_auto=False, include_pending=False):
     """Describe `period` for the engine. Existing active duties become `fixed`
-    (AUTO ones are left out when `exclude_auto`)."""
+    (AUTO ones are left out when `exclude_auto`). Approved unavailability blocks people;
+    with `include_pending`, pending requests do too (for "what if all are approved")."""
     s = period.settings
     caps = {c.designation: c.max_duties for c in period.designation_caps.all()}
     people = [
@@ -45,9 +46,10 @@ def build_engine_input(period, exclude_auto=False):
         for r in RoomAllocation.objects.filter(session__slot__period=period).select_related("session")
     ]
 
+    statuses = [UnavailabilityStatus.APPROVED] + ([UnavailabilityStatus.PENDING] if include_pending else [])
     unavailable_days, unavailable_slots = set(), set()
     for faculty_id, day, slot_id in Unavailability.objects.filter(
-        period=period, status=UnavailabilityStatus.APPROVED
+        period=period, status__in=statuses
     ).values_list("faculty_id", "date", "slot_id"):
         if slot_id is None:
             unavailable_days.add((faculty_id, day))
@@ -125,6 +127,14 @@ def clear_draft(period, actor) -> int:
 
 def capacity_report(period) -> CapacityReport:
     return capacity_check(build_engine_input(period))
+
+
+def pending_capacity(period):
+    """(pending request count, capacity if they were all approved), or None when nothing is pending."""
+    pending = Unavailability.objects.filter(period=period, status=UnavailabilityStatus.PENDING).count()
+    if not pending:
+        return None
+    return pending, capacity_check(build_engine_input(period, include_pending=True))
 
 
 def unfilled_rooms(period):
