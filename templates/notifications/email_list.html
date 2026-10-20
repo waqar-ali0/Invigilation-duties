@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Emails — Invigilation Duties{% endblock %}
+{% block content %}
+<h1>Emails</h1>
+<p class="subtitle">Emails are queued and sent every few minutes by the <code>send_emails</code> job.</p>
+
+<div class="grid">
+  <div class="card"><h2>Queued</h2><div class="stat">{{ queued }}</div><div class="muted">{{ queued }} queued</div></div>
+  <div class="card"><h2>Sent</h2><div class="stat">{{ sent }}</div></div>
+  <div class="card"><h2>Failed</h2><div class="stat">{{ failed_count }}</div></div>
+</div>
+
+<div class="card">
+  <div class="actions">
+    <form method="post" action="{% url 'send_emails_now' %}">{% csrf_token %}<button type="submit">Send queued emails now</button></form>
+  </div>
+</div>
+
+{% if failed %}
+<div class="card table-wrap">
+  <h2>Failed emails</h2>
+  <table>
+    <thead><tr><th>Created</th><th>To</th><th>Subject</th><th>Error</th><th></th></tr></thead>
+    <tbody>
+      {% for e in failed %}
+      <tr>
+        <td>{{ e.created_at|date:"d M Y H:i" }}</td><td>{{ e.to }}</td><td>{{ e.subject }}</td>
+        <td class="muted">{{ e.last_error|truncatechars:120 }}</td>
+        <td><form method="post" action="{% url 'resend_email' e.pk %}">{% csrf_token %}<button class="secondary" type="submit">Resend</button></form></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<div class="card table-wrap">
+  <h2>Recent emails</h2>
+  {% if recent %}
+  <table>
+    <thead><tr><th>Created</th><th>To</th><th>Subject</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for e in recent %}
+      <tr><td>{{ e.created_at|date:"d M Y H:i" }}</td><td>{{ e.to }}</td><td>{{ e.subject }}</td><td><span class="badge">{{ e.get_status_display }}</span></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p class="muted">No emails yet.</p>{% endif %}
+</div>
+{% endblock %}

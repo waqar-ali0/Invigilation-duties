@@ -46,6 +46,8 @@ INSTALLED_APPS = [
     "audit",
     "allocation",
     "reports",
+    "notifications",
+    "portal",
 ]
 
 MIDDLEWARE = [
@@ -108,3 +110,17 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Email. Development writes emails to files in sent_emails/; production sets SMTP values in .env.
+EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.filebased.EmailBackend")
+EMAIL_FILE_PATH = BASE_DIR / "sent_emails"
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "localhost")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "invigilation@localhost")
+# Base address used in links inside emails, e.g. https://duties.university.edu
+SITE_URL = os.environ.get("SITE_URL", "http://127.0.0.1:8000")
+# Activation and password-reset links stay valid for 7 days.
+PASSWORD_RESET_TIMEOUT = 7 * 24 * 60 * 60

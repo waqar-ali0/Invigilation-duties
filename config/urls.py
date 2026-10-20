@@ -12,4 +12,5 @@ urlpatterns = [
     path("", include("exams.urls")),
     path("", include("allocation.urls")),
     path("", include("reports.urls")),
+    path("", include("notifications.urls")),
 ]
