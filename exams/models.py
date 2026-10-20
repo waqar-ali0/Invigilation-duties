@@ -51,6 +51,17 @@ class ExamPeriod(models.Model):
         if self.status == PeriodStatus.CLOSED:
             raise PeriodLockedError("This exam period is closed.")
 
+    @property
+    def availability_is_open(self):
+        """Faculty can submit unavailability requests until the deadline."""
+        from django.utils import timezone
+
+        return (
+            self.status == PeriodStatus.AVAILABILITY_OPEN
+            and self.availability_deadline is not None
+            and timezone.now() < self.availability_deadline
+        )
+
     @classmethod
     def lock_for_edit(cls, pk):
         """Lock the period row and check it is still editable. Call inside transaction.atomic().

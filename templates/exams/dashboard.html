@@ -41,6 +41,26 @@
   </div>
 </div>
 
+{% if editable %}
+<div class="card">
+  <h2>Faculty availability</h2>
+  {% if period.availability_is_open %}
+  <div class="actions">
+    <span>Availability open until <strong>{{ period.availability_deadline|date:"D d M Y, H:i" }}</strong>.</span>
+    <form method="post" action="{% url 'close_availability' period.pk %}">{% csrf_token %}<button class="secondary" type="submit">Close now</button></form>
+  </div>
+  {% else %}
+  <p class="muted">{% if period.availability_deadline %}The window closed on {{ period.availability_deadline|date:"D d M Y, H:i" }}. You can open it again.{% else %}Let faculty request the dates they can't invigilate before you allocate.{% endif %}</p>
+  <form method="post" action="{% url 'open_availability' period.pk %}" class="actions">
+    {% csrf_token %}
+    <label for="id_deadline" style="margin:0">Open until</label>
+    <input type="datetime-local" name="deadline" id="id_deadline" required style="max-width:240px">
+    <button type="submit">Open availability</button>
+  </form>
+  {% endif %}
+</div>
+{% endif %}
+
 <div class="card">
   <h2>Actions</h2>
   <div class="actions">

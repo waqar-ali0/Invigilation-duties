@@ -1,0 +1,10 @@
+{% load tz %}Dear {{ faculty.name }},
+
+Invigilation duties for {{ period.name }} ({{ period.start_date|date:"d M Y" }} – {{ period.end_date|date:"d M Y" }}) will be assigned soon.
+
+If you cannot invigilate on some dates or time slots, request them here before {{ deadline|localtime|date:"l d M Y, H:i" }}:
+{{ link }}
+
+Your head of department reviews each request.
+
+— Exam Office

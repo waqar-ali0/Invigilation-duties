@@ -1,9 +1,12 @@
 from collections import defaultdict
+from datetime import datetime
 
 from django.contrib import messages
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from accounts.models import Role
 from accounts.permissions import role_required
@@ -13,6 +16,7 @@ from duties.models import Duty
 from faculty.models import Designation
 from reports.queries import faculty_load
 
+from .availability import AvailabilityError, close_availability, open_availability
 from .importers.departments import import_departments
 from .importers.faculty import COLUMNS as FACULTY_COLUMNS
 from .importers.faculty import import_faculty
@@ -79,6 +83,40 @@ def period_dashboard(request, pk):
         "editable": period.status not in ("published", "closed"),
     }
     return render(request, "exams/dashboard.html", context)
+
+
+@admin_only
+@require_POST
+def open_availability_view(request, pk):
+    period = get_object_or_404(ExamPeriod, pk=pk)
+    try:
+        deadline = timezone.make_aware(datetime.strptime(request.POST.get("deadline", ""), "%Y-%m-%dT%H:%M"))
+    except ValueError:
+        messages.error(request, "Choose a deadline date and time.")
+        return redirect("period_dashboard", pk=pk)
+    try:
+        count = open_availability(period, deadline, request.user)
+    except (AvailabilityError, PeriodLockedError) as e:
+        messages.error(request, str(e))
+    else:
+        messages.success(
+            request,
+            f"Availability is open until {timezone.localtime(deadline):%d %b %Y %H:%M}. {count} faculty will be emailed.",
+        )
+    return redirect("period_dashboard", pk=pk)
+
+
+@admin_only
+@require_POST
+def close_availability_view(request, pk):
+    period = get_object_or_404(ExamPeriod, pk=pk)
+    try:
+        close_availability(period, request.user)
+    except PeriodLockedError as e:
+        messages.error(request, str(e))
+    else:
+        messages.success(request, "Availability closed. Faculty can no longer submit requests.")
+    return redirect("period_dashboard", pk=pk)
 
 
 def _import_view(request, title, columns, run, notes="", back_url=None):

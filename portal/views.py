@@ -36,6 +36,11 @@ def my_duties(request):
     return render(request, "portal/my_duties.html", {"periods": periods})
 
 
+@faculty_required
+def my_unavailability(request):
+    return render(request, "portal/my_unavailability.html")
+
+
 @role_required(Role.EXAM_STAFF)
 def staff_home(request):
     return render(request, "portal/staff_home.html")
