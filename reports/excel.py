@@ -59,6 +59,33 @@ def roster_xlsx(period):
     return _save(wb)
 
 
+def department_xlsx(period, departments):
+    """Duties of every faculty member in `departments` for `period`."""
+    wb, ws = _sheet("Department Duties", ["Name", "Department", "Duties", "Dates and rooms"])
+    for row in department_rows(period, departments):
+        _append(ws, [row["faculty"].name, row["faculty"].department.name, len(row["duties"]), row["summary"]])
+    for col, width in zip("ABCD", (30, 22, 8, 90)):
+        ws.column_dimensions[col].width = width
+    return _save(wb)
+
+
+def department_rows(period, departments):
+    """[{faculty, duties, summary}] for active faculty of `departments`, by name."""
+    from faculty.models import Faculty
+
+    from .personal import faculty_duties
+
+    rows = []
+    for f in Faculty.objects.filter(department__in=departments, is_active=True).select_related("department").order_by("name"):
+        duties = faculty_duties(f, period)
+        summary = "; ".join(
+            f"{d.room_allocation.session.slot.date:%d %b} {d.room_allocation.session.slot.start_time:%H:%M} {d.room_allocation.room}"
+            for d in duties
+        )
+        rows.append({"faculty": f, "duties": duties, "summary": summary})
+    return rows
+
+
 def load_xlsx(period):
     wb, ws = _sheet("Faculty Load", ["Employee ID", "Name", "Department", "Designation", "Duties"])
     load = faculty_load(period)

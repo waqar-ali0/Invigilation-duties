@@ -7,6 +7,10 @@
 {% for p in periods %}
 <div class="card table-wrap">
   <h2>{{ p.period.name }}</h2>
+  <div class="actions" style="margin-bottom:12px">
+    <a class="button secondary" href="{% url 'my_duties_pdf' p.period.pk %}">Download PDF</a>
+    <a class="button secondary" href="{% url 'my_duties_ics' p.period.pk %}">Add to calendar (.ics)</a>
+  </div>
   {% if p.upcoming %}
   <table>
     <thead><tr><th>Date</th><th>Time</th><th>Course</th><th>Room</th></tr></thead>

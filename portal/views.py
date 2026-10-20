@@ -3,7 +3,8 @@ from itertools import groupby
 from django.contrib import messages
 from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import PermissionDenied
-from django.http import Http404
+from django.http import Http404, HttpResponse
+from django.utils.text import slugify
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -14,7 +15,8 @@ from duties.models import Unavailability, UnavailabilityStatus
 from duties.unavailability import RequestRejected, can_decide, decide_request, submit_request, withdraw_request
 from exams.models import ExamPeriod, PeriodLockedError, PeriodStatus
 from faculty.models import Department
-from reports.personal import faculty_duties
+from reports.excel import department_rows, department_xlsx
+from reports.personal import VISIBLE_STATUSES, duties_ics, duties_pdf, faculty_duties
 
 from .forms import RequestForm
 
@@ -43,6 +45,48 @@ def my_duties(request):
         periods.append({"period": period, "upcoming": upcoming, "past": past})
     periods.sort(key=lambda p: p["period"].start_date, reverse=True)
     return render(request, "portal/my_duties.html", {"periods": periods})
+
+
+def _visible_period(pk):
+    return get_object_or_404(ExamPeriod, pk=pk, status__in=VISIBLE_STATUSES)
+
+
+def _attachment(content, filename, content_type):
+    response = HttpResponse(content, content_type=content_type)
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
+
+
+@faculty_required
+def my_duties_pdf(request, period_id):
+    period = _visible_period(period_id)
+    return _attachment(duties_pdf(request.faculty, period), f"{slugify(period.name)}-my-duties.pdf", "application/pdf")
+
+
+@faculty_required
+def my_duties_ics(request, period_id):
+    period = _visible_period(period_id)
+    text = duties_ics(request.faculty, faculty_duties(request.faculty, period))
+    return _attachment(text, f"{slugify(period.name)}-duties.ics", "text/calendar; charset=utf-8")
+
+
+@hod_required
+def department_duties(request):
+    periods = list(ExamPeriod.objects.filter(status__in=VISIBLE_STATUSES).order_by("-start_date"))
+    selected = next((p for p in periods if str(p.pk) == request.GET.get("period")), periods[0] if periods else None)
+    rows = department_rows(selected, request.hod_departments) if selected else []
+    context = {"periods": periods, "selected": selected, "rows": rows, "departments": request.hod_departments}
+    return render(request, "portal/department_duties.html", context)
+
+
+@hod_required
+def department_duties_xlsx(request, period_id):
+    period = _visible_period(period_id)
+    return _attachment(
+        department_xlsx(period, request.hod_departments),
+        f"{slugify(period.name)}-department-duties.xlsx",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
 
 
 @faculty_required

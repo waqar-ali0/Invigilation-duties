@@ -23,7 +23,10 @@
         {% elif user.role == "faculty" or user.role == "hod" %}
         <a href="{% url 'my_duties' %}">My duties</a>
         <a href="{% url 'my_unavailability' %}">My unavailability</a>
-        {% if user.role == "hod" %}<a href="{% url 'department_requests' %}">Department requests</a>{% endif %}
+        {% if user.role == "hod" %}
+        <a href="{% url 'department_requests' %}">Department requests</a>
+        <a href="{% url 'department_duties' %}">Department duties</a>
+        {% endif %}
         {% endif %}
         <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="link" type="submit">Log out</button></form>
       </nav>

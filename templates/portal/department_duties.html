@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Department duties — Invigilation Duties{% endblock %}
+{% block content %}
+<h1>Department duties</h1>
+<p class="subtitle">{% for d in departments %}{{ d.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+
+{% if selected %}
+<div class="card">
+  <form method="get" class="actions">
+    <label for="id_period" style="margin:0">Exam period</label>
+    <select name="period" id="id_period" style="max-width:280px" onchange="this.form.submit()">
+      {% for p in periods %}<option value="{{ p.pk }}"{% if p == selected %} selected{% endif %}>{{ p.name }}</option>{% endfor %}
+    </select>
+    <noscript><button type="submit">Show</button></noscript>
+    <a class="button secondary" href="{% url 'department_duties_xlsx' selected.pk %}">Download Excel</a>
+  </form>
+</div>
+<div class="card table-wrap">
+  <table>
+    <thead><tr><th>Name</th><th>Duties</th><th>Dates and rooms</th></tr></thead>
+    <tbody>
+      {% for r in rows %}
+      <tr><td>{{ r.faculty.name }}{% if r.faculty.is_exempt %} <span class="badge">exempt</span>{% endif %}</td><td>{{ r.duties|length }}</td><td>{{ r.summary|default:"—" }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card"><p class="muted">No roster has been published yet.</p></div>
+{% endif %}
+{% endblock %}
