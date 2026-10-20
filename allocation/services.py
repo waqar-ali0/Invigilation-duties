@@ -11,6 +11,7 @@ from audit.log import log
 from duties.models import Duty, DutySource, DutyStatus, Unavailability, UnavailabilityStatus
 from exams.models import ExamPeriod, ExamSession, PeriodStatus, RoomAllocation
 from faculty.models import Faculty
+from notifications.triggers import queue_roster_published
 
 from .engine import AllocationResult, CapacityReport, EngineInput, Person, Room, Rules, Slot, allocate, capacity_check
 
@@ -165,5 +166,6 @@ def publish_period(period, actor, acknowledge_unfilled=False) -> None:
         period.status = PeriodStatus.PUBLISHED
         period.published_at = timezone.now()
         period.save(update_fields=["status", "published_at"])
-        log(actor, "period.publish", period, after={"unfilled_seats": missing})
+        emails = queue_roster_published(period)
+        log(actor, "period.publish", period, after={"unfilled_seats": missing, "emails": emails})
     _copy_fields(period, caller_period, ["status", "published_at"])

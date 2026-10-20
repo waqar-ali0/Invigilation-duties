@@ -1,0 +1,10 @@
+Dear {{ faculty.name }},
+
+The invigilation roster for {{ period.name }} is published. Your duties ({{ duties|length }}):
+{% for d in duties %}
+- {{ d.room_allocation.session.slot.date|date:"D d M Y" }}, {{ d.room_allocation.session.slot.start_time|time:"H:i" }}–{{ d.room_allocation.session.slot.end_time|time:"H:i" }}: {{ d.room_allocation.session.course_code }} {{ d.room_allocation.session.course_name }}, room {{ d.room_allocation.room }}{% endfor %}
+
+The attached calendar file adds these duties to Google Calendar or Outlook.
+See them any time at {{ link }}{% if not faculty.user_id %} (you'll first get an email to set up your account){% endif %}.
+
+— Exam Office

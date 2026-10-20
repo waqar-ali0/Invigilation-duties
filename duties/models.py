@@ -71,6 +71,7 @@ class Duty(models.Model):
     source = models.CharField(max_length=12, choices=DutySource.choices)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    reminder_sent_at = models.DateTimeField(null=True, blank=True)
 
     objects = DutyQuerySet.as_manager()
 

@@ -1,0 +1,9 @@
+Dear {{ faculty.name }},
+
+A reminder of your invigilation duties on {{ day|date:"l d M Y" }}:
+{% for d in duties %}
+- {{ d.room_allocation.session.slot.start_time|time:"H:i" }}–{{ d.room_allocation.session.slot.end_time|time:"H:i" }}: {{ d.room_allocation.session.course_code }} {{ d.room_allocation.session.course_name }}, room {{ d.room_allocation.room }}{% endfor %}
+
+Please arrive before the exam starts. All your duties: {{ link }}
+
+— Exam Office
