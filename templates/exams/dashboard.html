@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}{{ period.name }} — Invigilation Duties{% endblock %}
+{% block content %}
+<h1>{{ period.name }}</h1>
+<p class="subtitle">
+  {{ period.start_date|date:"d M Y" }} – {{ period.end_date|date:"d M Y" }}
+  · <span class="badge">{{ period.get_status_display }}</span>
+  · <a href="{% url 'admin:exams_examperiod_change' period.pk %}">Edit dates and settings</a>
+</p>
+
+{% if not capacity.ok %}
+  <div class="alert warning">Need {{ capacity.seats_needed }} duties, only {{ capacity.capacity }} possible. Raise the cap or add faculty.</div>
+{% endif %}
+{% if slot_shortages %}
+  <div class="alert warning">Some time slots need more invigilators than there are available faculty:
+    <ul>{% for name, needed, available in slot_shortages %}<li>{{ name }}: {{ needed }} needed, {{ available }} available</li>{% endfor %}</ul>
+  </div>
+{% endif %}
+
+<div class="grid">
+  <div class="card">
+    <h2>Duties</h2>
+    <div class="stat">{{ duty_count }}</div>
+    <div class="muted">assigned · {{ capacity.seats_needed }} seat(s) still empty</div>
+  </div>
+  <div class="card">
+    <h2>Fairness</h2>
+    <div class="stat">Min {{ stats.min }} · Max {{ stats.max }}</div>
+    <div class="muted">Average {{ stats.avg }} per eligible faculty member{% if period.last_run %} · {{ period.last_run.soft_violations }} soft-rule exception(s) in last run{% endif %}</div>
+  </div>
+  <div class="card">
+    <h2>Rules</h2>
+    <div class="muted">
+      Max {{ settings.max_duties_per_faculty }} duties per person{% for c in caps %}, {{ c }}{% endfor %}<br>
+      Max {{ settings.max_duties_per_day }} per day · 1 invigilator per {{ settings.students_per_invigilator }} students (min {{ settings.min_invigilators_per_room }})<br>
+      Avoid back-to-back: {{ settings.avoid_back_to_back|yesno:"yes,no" }} · Avoid own course: {{ settings.exclude_course_teacher|yesno:"yes,no" }}
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Actions</h2>
+  <div class="actions">
+    {% if editable %}
+      <a class="button secondary" href="{% url 'schedule_import' period.pk %}">Import schedule</a>
+      <form method="post" action="{% url 'run_allocation' period.pk %}">{% csrf_token %}<button type="submit">Run allocation</button></form>
+      <form method="post" action="{% url 'clear_draft' period.pk %}" onsubmit="return confirm('Remove every duty in this draft, including manual ones?');">{% csrf_token %}<button class="danger" type="submit">Clear draft</button></form>
+    {% else %}
+      <span class="muted">This period is {{ period.get_status_display|lower }}; the roster can no longer be edited here.</span>
+    {% endif %}
+  </div>
+</div>
+
+{% if unfilled %}
+<div class="card table-wrap">
+  <h2>Unfilled seats</h2>
+  <table>
+    <thead><tr><th>Time slot</th><th>Course</th><th>Room</th><th>Missing</th><th>Reason</th></tr></thead>
+    <tbody>
+      {% for room, missing, reason in unfilled %}
+      <tr><td>{{ room.session.slot }}</td><td>{{ room.session.course_code }}</td><td>{% include "exams/_room_link.html" with room=room %}</td><td>{{ missing }}</td><td>{{ reason|default:"—" }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% for s in slots %}
+<div class="card table-wrap">
+  <h2>{{ s.slot }}</h2>
+  {% if s.rows %}
+  <table>
+    <thead><tr><th>Course</th><th>Room</th><th>Students</th><th>Invigilators</th></tr></thead>
+    <tbody>
+      {% for r in s.rows %}
+      <tr>
+        <td>{{ r.session.course_code }} — {{ r.session.course_name }}</td>
+        <td>{% include "exams/_room_link.html" with room=r.room %}</td>
+        <td>{{ r.room.student_count }}</td>
+        <td>
+          {{ r.names|join:", "|default:"—" }}
+          {% if r.short %}<span class="badge short">{{ r.names|length }}/{{ r.room.invigilators_required }}</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">No exams in this slot.</p>
+  {% endif %}
+</div>
+{% empty %}
+<div class="card"><p class="muted">No schedule yet. <a href="{% url 'schedule_import' period.pk %}">Import the exam schedule</a> to begin.</p></div>
+{% endfor %}
+{% endblock %}

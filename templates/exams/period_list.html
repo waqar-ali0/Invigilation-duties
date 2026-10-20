@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Exam periods — Invigilation Duties{% endblock %}
+{% block content %}
+<h1>Exam periods</h1>
+<p class="subtitle">Create a new period in the <a href="{% url 'admin:exams_examperiod_add' %}">admin panel</a>, then import its schedule here.</p>
+<div class="card table-wrap">
+  {% if periods %}
+  <table>
+    <thead><tr><th>Name</th><th>Dates</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for p in periods %}
+      <tr>
+        <td><a href="{% url 'period_dashboard' p.pk %}">{{ p.name }}</a></td>
+        <td>{{ p.start_date|date:"d M Y" }} – {{ p.end_date|date:"d M Y" }}</td>
+        <td><span class="badge">{{ p.get_status_display }}</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">No exam periods yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

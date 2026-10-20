@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} — Invigilation Duties{% endblock %}
+{% block content %}
+<h1>{{ title }}</h1>
+{% if back_url %}<p class="subtitle"><a href="{{ back_url }}">← Back</a></p>{% endif %}
+
+{% if result %}
+  {% if result.ok %}
+    <div class="alert success">Imported {{ result.created }} new{% if result.updated %} and updated {{ result.updated }}{% endif %} row(s).</div>
+  {% else %}
+    <div class="alert error">Nothing was saved. Fix these problems and upload the file again:
+      <ul>{% for e in result.errors %}<li>{{ e }}</li>{% endfor %}</ul>
+    </div>
+  {% endif %}
+{% endif %}
+{% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+
+<div class="card">
+  <h2>Upload an .xlsx or .csv file</h2>
+  <p>The first row must contain these column headings:</p>
+  <p>{% for c in columns %}<code>{{ c }}</code> {% endfor %}</p>
+  {% if notes %}<p class="muted">{{ notes }}</p>{% endif %}
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="field"><input type="file" name="file" accept=".xlsx,.csv" required></div>
+    <button type="submit">Import</button>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Invigilation Duties{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body>
+  {% if user.is_authenticated %}
+  <header class="top">
+    <div class="inner">
+      <a class="brand" href="{% url 'period_list' %}">Invigilation Duties</a>
+      <nav>
+        <a href="{% url 'period_list' %}">Exam periods</a>
+        <a href="{% url 'department_import' %}">Import departments</a>
+        <a href="{% url 'faculty_import' %}">Import faculty</a>
+        <a href="{% url 'admin:index' %}">Admin panel</a>
+        <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="link" type="submit">Log out</button></form>
+      </nav>
+    </div>
+  </header>
+  {% endif %}
+  <main>
+    {% for message in messages %}
+      <div class="alert {{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
