@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}My duties — Invigilation Duties{% endblock %}
+{% block content %}
+<h1>My duties</h1>
+<p class="subtitle">{{ request.faculty.name }} · {{ request.faculty.department }}</p>
+
+{% for p in periods %}
+<div class="card table-wrap">
+  <h2>{{ p.period.name }}</h2>
+  {% if p.upcoming %}
+  <table>
+    <thead><tr><th>Date</th><th>Time</th><th>Course</th><th>Room</th></tr></thead>
+    <tbody>
+      {% for d in p.upcoming %}{% include "portal/_duty_row.html" %}{% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">No upcoming duties.</p>
+  {% endif %}
+  {% if p.past %}
+  <details>
+    <summary class="muted">Past duties ({{ p.past|length }})</summary>
+    <table><tbody>{% for d in p.past %}{% include "portal/_duty_row.html" %}{% endfor %}</tbody></table>
+  </details>
+  {% endif %}
+</div>
+{% empty %}
+<div class="card"><p class="muted">You have no published duties yet. You'll get an email when the roster is published.</p></div>
+{% endfor %}
+{% endblock %}

@@ -10,14 +10,18 @@
   {% if user.is_authenticated %}
   <header class="top">
     <div class="inner">
-      <a class="brand" href="{% url 'period_list' %}">Invigilation Duties</a>
+      <a class="brand" href="{% url 'home' %}">Invigilation Duties</a>
       <nav>
+        {% if user.is_superuser or user.role == "admin" %}
         <a href="{% url 'period_list' %}">Exam periods</a>
         <a href="{% url 'department_import' %}">Import departments</a>
         <a href="{% url 'faculty_import' %}">Import faculty</a>
         <a href="{% url 'accounts_page' %}">Accounts</a>
         <a href="{% url 'email_list' %}">Emails</a>
         <a href="{% url 'admin:index' %}">Admin panel</a>
+        {% elif user.role == "faculty" or user.role == "hod" %}
+        <a href="{% url 'my_duties' %}">My duties</a>
+        {% endif %}
         <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="link" type="submit">Log out</button></form>
       </nav>
     </div>

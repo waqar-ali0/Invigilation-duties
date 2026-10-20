@@ -24,11 +24,6 @@ admin_only = role_required(Role.ADMIN)
 
 
 @admin_only
-def home(request):
-    return redirect("period_list")
-
-
-@admin_only
 def period_list(request):
     return render(request, "exams/period_list.html", {"periods": ExamPeriod.objects.all()})
 

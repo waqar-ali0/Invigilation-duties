@@ -137,3 +137,17 @@ def published_period(small_period, admin_user):
 def admin_client(client, admin_user):
     client.force_login(admin_user)
     return client
+
+
+@pytest.fixture
+def make_member(db, make_faculty):
+    """Factory: make_member(name=None, role=FACULTY, **faculty_fields) -> Faculty with a linked, active user."""
+    from accounts.models import Role, User
+
+    def make(name=None, role=Role.FACULTY, **extra):
+        f = make_faculty(name, **extra)
+        f.user = User.objects.create_user(f.email.lower(), "Strong-pass-123", role=role)
+        f.save()
+        return f
+
+    return make

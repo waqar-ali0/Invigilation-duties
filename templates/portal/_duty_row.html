@@ -1,0 +1,8 @@
+{% with s=d.room_allocation.session %}
+<tr>
+  <td>{{ s.slot.date|date:"D d M Y" }}</td>
+  <td>{{ s.slot.start_time|time:"H:i" }}–{{ s.slot.end_time|time:"H:i" }}</td>
+  <td>{{ s.course_code }} — {{ s.course_name }}</td>
+  <td>{{ d.room_allocation.room }}</td>
+</tr>
+{% endwith %}

@@ -88,7 +88,8 @@ DATABASES = {
 
 AUTH_USER_MODEL = "accounts.User"
 LOGIN_URL = "login"
-LOGIN_REDIRECT_URL = "period_list"
+LOGIN_REDIRECT_URL = "home"
+AUTHENTICATION_BACKENDS = ["accounts.backends.EmailBackend"]
 LOGOUT_REDIRECT_URL = "login"
 
 AUTH_PASSWORD_VALIDATORS = [

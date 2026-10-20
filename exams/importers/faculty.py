@@ -77,7 +77,10 @@ def import_faculty(file):
         for emp, name, email, dept, designation in records:
             fields = {"name": name, "email": email, "department": dept, "designation": designation}
             if emp in by_employee:
-                Faculty.objects.filter(pk=by_employee[emp].pk).update(**fields)
+                existing = by_employee[emp]
+                for name, value in fields.items():
+                    setattr(existing, name, value)
+                existing.save(update_fields=list(fields))  # save() so linked accounts follow email changes
                 result.updated += 1
             else:
                 Faculty.objects.create(employee_id=emp, **fields)
