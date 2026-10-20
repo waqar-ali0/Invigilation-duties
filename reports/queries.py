@@ -47,13 +47,14 @@ def roster_rows(period):
 
 
 def faculty_load(period):
-    """[(faculty, active duty count in `period`)] for every eligible faculty member, by name."""
+    """[(faculty, active duty count in `period`)] for every eligible faculty member, plus anyone
+    no longer eligible who still has active duties in `period` (so the load matches the roster), by name."""
     faculty = (
-        Faculty.objects.eligible()
-        .select_related("department")
+        Faculty.objects.select_related("department")
         .annotate(
             n=Count("duties", filter=Q(duties__period=period) & ~Q(duties__status=DutyStatus.CANCELLED))
         )
+        .filter(Q(is_active=True, is_exempt=False) | Q(n__gt=0))
         .order_by("name")
     )
     return [(f, f.n) for f in faculty]

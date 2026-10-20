@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 
@@ -27,6 +28,14 @@ class Unavailability(models.Model):
     class Meta:
         ordering = ["date"]
         verbose_name_plural = "unavailability"
+
+    def clean(self):
+        if self.slot_id is None:
+            return
+        if self.period_id is not None and self.slot.period_id != self.period_id:
+            raise ValidationError({"slot": "This time slot belongs to a different exam period."})
+        if self.date is not None and self.slot.date != self.date:
+            raise ValidationError({"slot": "This time slot is not on the chosen date."})
 
     def __str__(self):
         return f"{self.faculty.name} — {self.date}{' ' + str(self.slot.start_time) if self.slot else ''}"

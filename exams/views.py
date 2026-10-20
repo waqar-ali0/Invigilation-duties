@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from django.contrib import messages
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
@@ -8,6 +10,7 @@ from accounts.permissions import role_required
 from allocation.engine import fairness_stats
 from allocation.services import capacity_report, unfilled_rooms
 from duties.models import Duty
+from faculty.models import Designation
 from reports.queries import faculty_load
 
 from .importers.departments import import_departments
@@ -47,19 +50,34 @@ def _slots_with_rooms(period):
     return result
 
 
+def _fairness(period, load):
+    """Stats for eligible faculty at the default cap, and (label, cap, stats) per capped designation."""
+    caps = {c.designation: c.max_duties for c in period.designation_caps.all()}
+    groups = defaultdict(list)
+    for f, n in load:
+        if f.is_active and not f.is_exempt:
+            groups[f.designation if f.designation in caps else None].append(n)
+    labels = dict(Designation.choices)
+    capped = [
+        (labels[d], caps[d], fairness_stats(groups[d])) for d in sorted(caps, key=list(labels).index) if groups[d]
+    ]
+    return fairness_stats(groups[None]), capped
+
+
 @admin_only
 def period_dashboard(request, pk):
     period = get_object_or_404(ExamPeriod, pk=pk)
     capacity = capacity_report(period)
     slot_names = {s.id: str(s) for s in period.slots.all()}
-    load = faculty_load(period)
+    stats, capped_stats = _fairness(period, faculty_load(period))
     context = {
         "period": period,
         "settings": period.settings,
         "caps": period.designation_caps.all(),
         "capacity": capacity,
         "slot_shortages": [(slot_names[sid], needed, avail) for sid, needed, avail in capacity.slot_shortages],
-        "stats": fairness_stats(n for _, n in load),
+        "stats": stats,
+        "capped_stats": capped_stats,
         "unfilled": unfilled_rooms(period),
         "slots": _slots_with_rooms(period),
         "duty_count": Duty.objects.active().filter(period=period).count(),

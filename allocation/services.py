@@ -77,7 +77,8 @@ def run_allocation(period, actor, seed=None) -> AllocationResult:
     with transaction.atomic():
         period = ExamPeriod.lock_for_edit(period.pk)
         Duty.objects.active().filter(period=period, source=DutySource.AUTO).delete()
-        seed = seed or random.randrange(1, 2**31)
+        if seed is None:
+            seed = random.randrange(1, 2**31)
         result = allocate(build_engine_input(period), seed)
         Duty.objects.bulk_create(
             Duty(period=period, faculty_id=person_id, room_allocation_id=room_id, source=DutySource.AUTO)
@@ -109,12 +110,16 @@ def _copy_fields(source, target, fields):
 
 
 def clear_draft(period, actor) -> int:
-    """Delete every duty of the draft (auto and manual)."""
+    """Delete every duty of the draft (auto and manual) and forget the last run's summary."""
+    caller_period = period
     period.ensure_editable()
     with transaction.atomic():
         period = ExamPeriod.lock_for_edit(period.pk)
         deleted, _ = Duty.objects.filter(period=period).delete()
+        period.last_run = None
+        period.save(update_fields=["last_run"])
         log(actor, "allocation.clear", period, after={"deleted": deleted})
+    _copy_fields(period, caller_period, ["last_run"])
     return deleted
 
 

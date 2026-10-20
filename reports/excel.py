@@ -9,6 +9,14 @@ from faculty.models import Designation
 from .queries import faculty_load, roster_rows
 
 
+FORMULA_PREFIXES = ("=", "+", "-", "@")
+
+
+def _append(ws, values):
+    """Append a row, quoting text that a spreadsheet would otherwise run as a formula."""
+    ws.append(["'" + v if isinstance(v, str) and v.startswith(FORMULA_PREFIXES) else v for v in values])
+
+
 def _save(wb):
     buf = io.BytesIO()
     wb.save(buf)
@@ -30,7 +38,8 @@ def roster_xlsx(period):
     header = ["Date", "Start", "End", "Course Code", "Course Name", "Department", "Room", "Students", "Invigilators"]
     wb, ws = _sheet("Roster", header)
     for r in roster_rows(period):
-        ws.append(
+        _append(
+            ws,
             [
                 r.date,
                 r.start_time.strftime("%H:%M"),
@@ -41,7 +50,7 @@ def roster_xlsx(period):
                 r.room,
                 r.student_count,
                 ", ".join(r.invigilators),
-            ]
+            ],
         )
     for col, width in zip("ABCDEFGHI", (12, 8, 8, 14, 30, 22, 10, 10, 60)):
         ws.column_dimensions[col].width = width
@@ -55,8 +64,8 @@ def load_xlsx(period):
     load = faculty_load(period)
     labels = dict(Designation.choices)
     for f, n in load:
-        ws.append([f.employee_id, f.name, f.department.name, labels.get(f.designation, f.designation), n])
-    stats = fairness_stats(n for _, n in load)
+        _append(ws, [f.employee_id, f.name, f.department.name, labels.get(f.designation, f.designation), n])
+    stats = fairness_stats(n for f, n in load if f.is_active and not f.is_exempt)
     ws.append([])
     for label, value in (("Min", stats.min), ("Max", stats.max), ("Average", stats.avg)):
         ws.append([label, None, None, None, value])

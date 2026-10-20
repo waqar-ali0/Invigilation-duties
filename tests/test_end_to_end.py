@@ -72,5 +72,9 @@ def test_demo_data_allocates_quickly_and_correctly(admin_user):
     assert elapsed < 10, f"allocation took {elapsed:.1f}s"
     assert len(result.assignments) > 1000
     assert_roster_invariants(period)
+    capped = period.designation_caps.values_list("designation", flat=True)
+    totals = Counter(Duty.objects.active().filter(period=period).values_list("faculty_id", flat=True))
+    counts = [totals[pk] for pk in Faculty.objects.eligible().exclude(designation__in=capped).values_list("pk", flat=True)]
+    assert max(counts) - min(counts) <= 1, f"default-cap loads range {min(counts)}..{max(counts)}"
     with pytest.raises(CommandError, match="Demo Finals already exists."):
         call_command("load_demo")

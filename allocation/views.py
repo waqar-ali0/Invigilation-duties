@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -53,7 +54,10 @@ def room_detail(request, pk, room_id):
 @require_POST
 def add_duty_view(request, pk, room_id):
     period, room = _room_in_period(pk, room_id)
-    faculty = get_object_or_404(Faculty, pk=request.POST.get("faculty_id") or 0)
+    faculty_id = request.POST.get("faculty_id", "")
+    if not faculty_id.isdigit():
+        raise Http404("Unknown faculty member.")
+    faculty = get_object_or_404(Faculty, pk=faculty_id)
     try:
         add_duty(faculty, room, request.user, allow_warnings=request.POST.get("confirm") == "1")
     except PeriodLockedError as e:

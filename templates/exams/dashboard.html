@@ -26,7 +26,10 @@
   <div class="card">
     <h2>Fairness</h2>
     <div class="stat">Min {{ stats.min }} · Max {{ stats.max }}</div>
-    <div class="muted">Average {{ stats.avg }} per eligible faculty member{% if period.last_run %} · {{ period.last_run.soft_violations }} soft-rule exception(s) in last run{% endif %}</div>
+    <div class="muted">Average {{ stats.avg }} per eligible faculty member{% if capped_stats %} at the default cap of {{ settings.max_duties_per_faculty }}{% endif %}{% if period.last_run %} · {{ period.last_run.soft_violations }} soft-rule exception(s) in last run{% endif %}</div>
+    {% for label, cap, s in capped_stats %}
+      <div class="muted">{{ label }} (cap {{ cap }}): min {{ s.min }} · max {{ s.max }} · average {{ s.avg }}</div>
+    {% endfor %}
   </div>
   <div class="card">
     <h2>Rules</h2>

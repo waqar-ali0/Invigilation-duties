@@ -16,8 +16,9 @@ LIMITS = {
     "room": (RoomAllocation, "room"),
 }
 DUTIES_EXIST = "This period already has duties. Clear the draft before re-importing the schedule."
-DATE_FORMATS = ("%Y-%m-%d", "%d/%m/%Y")
-TIME_FORMATS = ("%H:%M", "%H:%M:%S")
+# Excel-exported CSVs can carry a midnight time on dates and AM/PM times.
+DATE_FORMATS = ("%Y-%m-%d", "%d/%m/%Y", "%Y-%m-%d %H:%M:%S")
+TIME_FORMATS = ("%H:%M", "%H:%M:%S", "%I:%M %p")
 
 
 def _parse_date(value):
