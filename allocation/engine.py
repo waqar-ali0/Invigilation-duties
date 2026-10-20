@@ -8,10 +8,11 @@ filled (with a reason), and fairness statistics.
 import random
 from collections import Counter, defaultdict
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, time
 from typing import Iterable
 
 MSG_SAME_SLOT = "Already assigned in this time slot"
+MSG_OVERLAPPING_SLOT = "Already assigned in an overlapping time slot"
 MSG_UNAVAILABLE = "Marked unavailable for this date or slot"
 MSG_PERIOD_CAP = "Reached period cap ({cap})"
 MSG_DAILY_LIMIT = "Reached daily limit ({max_per_day})"
@@ -24,6 +25,15 @@ class Slot:
     id: int
     date: date
     order: int  # 0-based position among the slots on the same date, by start time
+    start: time | None = None  # with `end`, used to find slots that overlap on the same date
+    end: time | None = None
+
+    def overlaps(self, other: "Slot") -> bool:
+        if self.id == other.id:
+            return True
+        if self.date != other.date or None in (self.start, self.end, other.start, other.end):
+            return False
+        return self.start < other.end and other.start < self.end
 
 
 @dataclass(frozen=True)
@@ -103,6 +113,16 @@ class AllocationState:
         self._slot_people = defaultdict(set)  # slot_id -> person ids
         self._person_slots = defaultdict(set)  # person_id -> slot ids
         self._room_people = defaultdict(list)  # room_id -> person ids
+        # slot_id -> ids of the other slots on the same date whose times intersect it
+        self._overlapping = defaultdict(set)
+        by_date = defaultdict(list)
+        for s in data.slots:
+            by_date[s.date].append(s)
+        for same_day in by_date.values():
+            for a in same_day:
+                for b in same_day:
+                    if a.id != b.id and a.overlaps(b):
+                        self._overlapping[a.id].add(b.id)
         for person_id, room_id in data.fixed:
             if room_id in self.rooms:
                 self.assign(person_id, room_id)
@@ -114,7 +134,11 @@ class AllocationState:
         return max(0, self.rooms[room_id].needed - len(self._room_people[room_id]))
 
     def people_in_slot(self, slot_id: int) -> set[int]:
-        return self._slot_people[slot_id]
+        """People already sitting in this slot or in one that overlaps it."""
+        people = set(self._slot_people[slot_id])
+        for other in self._overlapping[slot_id]:
+            people |= self._slot_people[other]
+        return people
 
     def departments_in_room(self, room_id: int) -> set[int]:
         return {self.people[p].department_id for p in self._room_people[room_id] if p in self.people}
@@ -141,6 +165,8 @@ class AllocationState:
         errors = []
         if person_id in self._slot_people[slot.id]:
             errors.append(MSG_SAME_SLOT)
+        elif self._person_slots[person_id] & self._overlapping[slot.id]:
+            errors.append(MSG_OVERLAPPING_SLOT)
         if self.is_unavailable(person_id, slot):
             errors.append(MSG_UNAVAILABLE)
         if self._counts[person_id] >= cap:
@@ -183,10 +209,9 @@ def _slot_demand(state: AllocationState) -> tuple[dict[int, int], dict[int, int]
         needed[room.slot_id] += state.remaining(room.id)
     available = {}
     for slot in state.data.slots:
+        busy = state.people_in_slot(slot.id)
         available[slot.id] = sum(
-            1
-            for p in state.data.people
-            if not state.is_unavailable(p.id, slot) and p.id not in state.people_in_slot(slot.id)
+            1 for p in state.data.people if not state.is_unavailable(p.id, slot) and p.id not in busy
         )
     return needed, available
 
@@ -204,7 +229,8 @@ def capacity_check(data: EngineInput) -> CapacityReport:
 def _unfilled_reason(state: AllocationState, room: Room) -> str:
     slot = state.slots[room.slot_id]
     unavailable = at_cap = at_daily = 0
-    others = [p for p in state.data.people if p.id not in state.people_in_slot(slot.id)]
+    busy = state.people_in_slot(slot.id)
+    others = [p for p in state.data.people if p.id not in busy]
     if not others:
         return "All faculty are already assigned in this time slot"
     for p in others:

@@ -1,48 +1,120 @@
 from django.contrib import admin
+from django.core.exceptions import PermissionDenied
 
-from .models import DesignationCap, ExamPeriod, ExamSession, PeriodSettings, RoomAllocation, TimeSlot
+from .models import (
+    DesignationCap,
+    ExamPeriod,
+    ExamSession,
+    PeriodSettings,
+    PeriodStatus,
+    RoomAllocation,
+    TimeSlot,
+)
+
+LOCKED = (PeriodStatus.PUBLISHED, PeriodStatus.CLOSED)
 
 
-class PeriodSettingsInline(admin.StackedInline):
+class LockedAfterPublishMixin:
+    """Once a period is published or closed, its schedule and rules are read-only here.
+
+    `period_of(obj)` returns the exam period an object belongs to (None for a new object).
+    """
+
+    def period_of(self, obj):
+        raise NotImplementedError
+
+    def _locked(self, obj):
+        period = self.period_of(obj) if obj is not None else None
+        return period is not None and period.status in LOCKED
+
+    def has_change_permission(self, request, obj=None):
+        return not self._locked(obj) and super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        return not self._locked(obj) and super().has_delete_permission(request, obj)
+
+    def save_model(self, request, obj, form, change):
+        if self._locked(obj):
+            raise PermissionDenied("This exam period is published; its schedule can no longer be changed.")
+        super().save_model(request, obj, form, change)
+
+    def delete_queryset(self, request, queryset):
+        if any(self._locked(obj) for obj in queryset):
+            raise PermissionDenied("Some selected items belong to a published exam period.")
+        super().delete_queryset(request, queryset)
+
+
+class LockedInlineMixin:
+    """Inline rows follow the lock of the parent object (an ExamPeriod or ExamSession)."""
+
+    def _locked(self, parent):
+        if parent is None:
+            return False
+        period = parent if isinstance(parent, ExamPeriod) else parent.slot.period
+        return period.status in LOCKED
+
+    def has_add_permission(self, request, obj=None):
+        return not self._locked(obj) and super().has_add_permission(request, obj)
+
+    def has_change_permission(self, request, obj=None):
+        return not self._locked(obj) and super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        return not self._locked(obj) and super().has_delete_permission(request, obj)
+
+
+class PeriodSettingsInline(LockedInlineMixin, admin.StackedInline):
     model = PeriodSettings
     can_delete = False
 
 
-class DesignationCapInline(admin.TabularInline):
+class DesignationCapInline(LockedInlineMixin, admin.TabularInline):
     model = DesignationCap
     extra = 0
 
 
 @admin.register(ExamPeriod)
-class ExamPeriodAdmin(admin.ModelAdmin):
+class ExamPeriodAdmin(LockedAfterPublishMixin, admin.ModelAdmin):
     list_display = ("name", "start_date", "end_date", "status")
     list_filter = ("status",)
     readonly_fields = ("status", "published_at")
     inlines = [PeriodSettingsInline, DesignationCapInline]
 
+    def period_of(self, obj):
+        return ExamPeriod.objects.get(pk=obj.pk) if obj.pk else None
+
 
 @admin.register(TimeSlot)
-class TimeSlotAdmin(admin.ModelAdmin):
+class TimeSlotAdmin(LockedAfterPublishMixin, admin.ModelAdmin):
     list_display = ("__str__", "period")
     list_filter = ("period",)
 
+    def period_of(self, obj):
+        return obj.period if obj.period_id else None
 
-class RoomAllocationInline(admin.TabularInline):
+
+class RoomAllocationInline(LockedInlineMixin, admin.TabularInline):
     model = RoomAllocation
     extra = 0
 
 
 @admin.register(ExamSession)
-class ExamSessionAdmin(admin.ModelAdmin):
+class ExamSessionAdmin(LockedAfterPublishMixin, admin.ModelAdmin):
     list_display = ("course_code", "course_name", "department", "slot")
     list_filter = ("slot__period", "department")
     search_fields = ("course_code", "course_name")
     filter_horizontal = ("course_teachers",)
     inlines = [RoomAllocationInline]
 
+    def period_of(self, obj):
+        return obj.slot.period if obj.slot_id else None
+
 
 @admin.register(RoomAllocation)
-class RoomAllocationAdmin(admin.ModelAdmin):
+class RoomAllocationAdmin(LockedAfterPublishMixin, admin.ModelAdmin):
     list_display = ("room", "session", "student_count", "invigilators_required")
     list_filter = ("session__slot__period",)
     search_fields = ("room", "session__course_code")
+
+    def period_of(self, obj):
+        return obj.session.slot.period if obj.session_id else None

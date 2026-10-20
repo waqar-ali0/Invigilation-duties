@@ -5,11 +5,17 @@ from django.db import transaction
 from duties.models import Duty
 from faculty.models import Department, Faculty
 
-from ..models import ExamSession, RoomAllocation, TimeSlot, required_invigilators
+from ..models import ExamPeriod, ExamSession, RoomAllocation, TimeSlot, required_invigilators
 from .reader import read_rows
-from .result import ImportResult, is_blank, missing_columns
+from .result import ImportResult, is_blank, length_errors, missing_columns
 
 COLUMNS = ["date", "start_time", "end_time", "course_code", "course_name", "department", "room", "student_count"]
+LIMITS = {
+    "course_code": (ExamSession, "course_code"),
+    "course_name": (ExamSession, "course_name"),
+    "room": (RoomAllocation, "room"),
+}
+DUTIES_EXIST = "This period already has duties. Clear the draft before re-importing the schedule."
 DATE_FORMATS = ("%Y-%m-%d", "%d/%m/%Y")
 TIME_FORMATS = ("%H:%M", "%H:%M:%S")
 
@@ -56,7 +62,7 @@ def import_schedule(period, file):
     student_count, and optionally course_teacher_emails (separated by ';')."""
     period.ensure_editable()
     if Duty.objects.filter(period=period).exists():
-        return ImportResult(errors=["This period already has duties. Clear the draft before re-importing the schedule."])
+        return ImportResult(errors=[DUTIES_EXIST])
 
     rows = read_rows(file)
     if problem := missing_columns(rows, COLUMNS):
@@ -64,13 +70,15 @@ def import_schedule(period, file):
 
     departments = {d.name.lower(): d for d in Department.objects.all()}
     teachers = {e.lower(): pk for pk, e in Faculty.objects.values_list("pk", "email")}
-    slot_ends = {(s.date, s.start_time): s.end_time for s in period.slots.all()}
+    # The file replaces the period's current schedule, so slots are only compared within the file.
+    slot_ends = {}
     seen = {}
     errors, records = [], []
 
     for row in rows:
         n = row["_row"]
         row_errors = [f"Row {n}: {c} is required" for c in COLUMNS if is_blank(row[c])]
+        row_errors += length_errors(n, row, LIMITS)
 
         day = start = end = None
         if not is_blank(row["date"]):
@@ -137,6 +145,10 @@ def import_schedule(period, file):
         return ImportResult(errors=errors)
 
     with transaction.atomic():
+        period = ExamPeriod.lock_for_edit(period.pk)
+        if Duty.objects.filter(period=period).exists():
+            return ImportResult(errors=[DUTIES_EXIST])
+        period.slots.all().delete()  # replaces the old schedule (sessions and rooms cascade)
         for day, start, end, code, name, dept, room, count, teacher_ids in records:
             slot, _ = TimeSlot.objects.get_or_create(
                 period=period, date=day, start_time=start, defaults={"end_time": end}

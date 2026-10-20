@@ -3,7 +3,7 @@ from django.db import transaction
 from faculty.models import Department
 
 from .reader import read_rows
-from .result import ImportResult, is_blank, missing_columns
+from .result import ImportResult, is_blank, length_errors, missing_columns
 
 
 def import_departments(file):
@@ -18,6 +18,8 @@ def import_departments(file):
         n, name = row["_row"], str(row["name"]) if not is_blank(row["name"]) else ""
         if not name:
             errors.append(f"Row {n}: name is required")
+        elif too_long := length_errors(n, {"name": name}, {"name": (Department, "name")}):
+            errors.extend(too_long)
         elif name.lower() in seen:
             errors.append(f"Row {n}: duplicate department '{name}'")
         else:

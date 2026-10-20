@@ -59,7 +59,8 @@ becomes staff and joins the *Exam Office* group.
 8. Download the **roster PDF / Excel** and the **faculty load** sheet.
 
 Every allocation run, manual edit and publish is written to the audit log
-(Admin panel → Audit logs), which nobody can edit or delete.
+(Admin panel → Audit logs), which nobody can edit or delete. Once a period is published,
+its dates, rules, time slots, courses and rooms become read-only in the admin panel too.
 
 ## Spreadsheet formats
 
@@ -77,7 +78,10 @@ Existing faculty are matched by `employee_id` and updated.
 `date`, `start_time`, `end_time`, `course_code`, `course_name`, `department`, `room`,
 `student_count`, and optionally `course_teacher_emails` (separate several with `;`).
 Dates as `YYYY-MM-DD` or `DD/MM/YYYY` (or Excel date cells); times as `HH:MM`.
-The schedule can only be re-imported while the period has no duties (use *Clear draft* first).
+Re-importing **replaces** the period's whole schedule, so always upload the complete,
+corrected file. It is only allowed while the period has no duties (use *Clear draft* first).
+Exams on the same day whose times overlap (e.g. 09:00–12:00 and 10:00–13:00) count as a
+clash: nobody is given both.
 
 ## Tests
 

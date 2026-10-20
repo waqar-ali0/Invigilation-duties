@@ -19,14 +19,19 @@ def read_rows(file):
     blank rows are dropped, and each row carries its spreadsheet row number in "_row".
     """
     name = (getattr(file, "name", "") or "").lower()
-    file.seek(0)
-    if name.endswith(".xlsx"):
-        sheet = load_workbook(io.BytesIO(file.read()), read_only=True, data_only=True).worksheets[0]
-        raw = list(sheet.iter_rows(values_only=True))
-    elif name.endswith(".csv"):
-        raw = list(csv.reader(io.StringIO(file.read().decode("utf-8-sig"))))
-    else:
+    if not name.endswith((".xlsx", ".csv")):
         raise ValueError("Upload an .xlsx or .csv file.")
+    file.seek(0)
+    try:
+        if name.endswith(".xlsx"):
+            sheet = load_workbook(io.BytesIO(file.read()), read_only=True, data_only=True).worksheets[0]
+            raw = list(sheet.iter_rows(values_only=True))
+        else:
+            raw = list(csv.reader(io.StringIO(file.read().decode("utf-8-sig"))))
+    except Exception as exc:  # corrupt, renamed or wrongly encoded files
+        raise ValueError(
+            "Could not read the file. Save it as an Excel workbook (.xlsx) or a UTF-8 .csv and try again."
+        ) from exc
 
     if not raw:
         return []

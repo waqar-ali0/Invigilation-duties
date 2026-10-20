@@ -46,11 +46,11 @@ def check_assignment(faculty, room):
 
 
 def add_duty(faculty, room, actor, allow_warnings=False):
-    period = _period_of(room)
-    period.ensure_editable()
     with transaction.atomic():
-        # Lock the faculty row so two people editing at once cannot double-book them.
-        faculty = Faculty.objects.select_for_update().get(pk=faculty.pk)
+        # Locking the period serialises every change to this draft, so two people
+        # editing at once cannot double-book anyone.
+        ExamPeriod.lock_for_edit(room.session.slot.period_id)
+        faculty = Faculty.objects.get(pk=faculty.pk)
         errors, warnings = check_assignment(faculty, room)
         if errors:
             raise AssignmentBlocked(errors)
@@ -62,8 +62,8 @@ def add_duty(faculty, room, actor, allow_warnings=False):
 
 
 def remove_duty(duty, actor):
-    ExamPeriod.objects.get(pk=duty.period_id).ensure_editable()
     with transaction.atomic():
+        ExamPeriod.lock_for_edit(duty.period_id)
         before = {"faculty": duty.faculty_id, "room": duty.room_allocation_id, "source": duty.source}
         log(actor, "duty.remove", duty, before=before)
         duty.delete()

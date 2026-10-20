@@ -9,7 +9,7 @@ from django.utils import timezone
 
 from audit.log import log
 from duties.models import Duty, DutySource, DutyStatus, Unavailability, UnavailabilityStatus
-from exams.models import ExamSession, PeriodStatus, RoomAllocation
+from exams.models import ExamPeriod, ExamSession, PeriodStatus, RoomAllocation
 from faculty.models import Faculty
 
 from .engine import AllocationResult, CapacityReport, EngineInput, Person, Room, Rules, Slot, allocate, capacity_check
@@ -32,7 +32,7 @@ def build_engine_input(period, exclude_auto=False):
     slots = []
     order_on_date = defaultdict(int)
     for slot in period.slots.order_by("date", "start_time"):
-        slots.append(Slot(slot.id, slot.date, order_on_date[slot.date]))
+        slots.append(Slot(slot.id, slot.date, order_on_date[slot.date], slot.start_time, slot.end_time))
         order_on_date[slot.date] += 1
 
     teachers = defaultdict(set)
@@ -72,8 +72,10 @@ def build_engine_input(period, exclude_auto=False):
 
 def run_allocation(period, actor, seed=None) -> AllocationResult:
     """(Re)allocate the draft: AUTO duties are replaced, manual ones kept."""
+    caller_period = period
     period.ensure_editable()
     with transaction.atomic():
+        period = ExamPeriod.lock_for_edit(period.pk)
         Duty.objects.active().filter(period=period, source=DutySource.AUTO).delete()
         seed = seed or random.randrange(1, 2**31)
         result = allocate(build_engine_input(period), seed)
@@ -96,13 +98,21 @@ def run_allocation(period, actor, seed=None) -> AllocationResult:
         }
         period.save(update_fields=["allocation_seed", "status", "last_run"])
         log(actor, "allocation.run", period, after={**summary, "unfilled_seats": sum(u.count for u in result.unfilled)})
+    _copy_fields(period, caller_period, ["allocation_seed", "status", "last_run"])
     return result
+
+
+def _copy_fields(source, target, fields):
+    """Keep the caller's ExamPeriod object in step with the locked copy that was saved."""
+    for f in fields:
+        setattr(target, f, getattr(source, f))
 
 
 def clear_draft(period, actor) -> int:
     """Delete every duty of the draft (auto and manual)."""
     period.ensure_editable()
     with transaction.atomic():
+        period = ExamPeriod.lock_for_edit(period.pk)
         deleted, _ = Duty.objects.filter(period=period).delete()
         log(actor, "allocation.clear", period, after={"deleted": deleted})
     return deleted
@@ -128,14 +138,17 @@ def unfilled_rooms(period):
 
 
 def publish_period(period, actor, acknowledge_unfilled=False) -> None:
+    caller_period = period
     period.ensure_editable()
-    if not Duty.objects.active().filter(period=period).exists():
-        raise PublishBlocked("There are no duties to publish.")
-    missing = sum(m for _, m, _ in unfilled_rooms(period))
-    if missing and not acknowledge_unfilled:
-        raise PublishBlocked(f"{missing} seats are unfilled. Confirm to publish anyway.")
     with transaction.atomic():
+        period = ExamPeriod.lock_for_edit(period.pk)
+        if not Duty.objects.active().filter(period=period).exists():
+            raise PublishBlocked("There are no duties to publish.")
+        missing = sum(m for _, m, _ in unfilled_rooms(period))
+        if missing and not acknowledge_unfilled:
+            raise PublishBlocked(f"{missing} seats are unfilled. Confirm to publish anyway.")
         period.status = PeriodStatus.PUBLISHED
         period.published_at = timezone.now()
         period.save(update_fields=["status", "published_at"])
         log(actor, "period.publish", period, after={"unfilled_seats": missing})
+    _copy_fields(period, caller_period, ["status", "published_at"])

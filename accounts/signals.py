@@ -8,6 +8,8 @@ EXAM_OFFICE_GROUP = "Exam Office"
 
 # Apps the exam office manages fully in the Django admin.
 FULL_ACCESS_APPS = ("faculty", "exams")
+# Individual models the exam office manages fully, in apps that are otherwise view-only.
+FULL_ACCESS_MODELS = (("duties", "unavailability"),)
 # Apps the exam office may only look at in the Django admin.
 VIEW_ONLY_APPS = ("duties", "audit")
 
@@ -17,6 +19,8 @@ def ensure_exam_office_group():
     perms = Permission.objects.filter(content_type__app_label__in=FULL_ACCESS_APPS) | Permission.objects.filter(
         content_type__app_label__in=VIEW_ONLY_APPS, codename__startswith="view_"
     )
+    for app_label, model in FULL_ACCESS_MODELS:
+        perms = perms | Permission.objects.filter(content_type__app_label=app_label, content_type__model=model)
     group.permissions.set(perms)
     return group
 

@@ -51,6 +51,17 @@ class ExamPeriod(models.Model):
         if self.status == PeriodStatus.CLOSED:
             raise PeriodLockedError("This exam period is closed.")
 
+    @classmethod
+    def lock_for_edit(cls, pk):
+        """Lock the period row and check it is still editable. Call inside transaction.atomic().
+
+        Every change to a draft goes through this, so changes to one period happen one at a time
+        and never act on a status that changed after the page was loaded.
+        """
+        period = cls.objects.select_for_update().get(pk=pk)
+        period.ensure_editable()
+        return period
+
     def cap_for(self, designation):
         """The maximum number of duties for a faculty member with this designation in this period."""
         override = self.designation_caps.filter(designation=designation).first()

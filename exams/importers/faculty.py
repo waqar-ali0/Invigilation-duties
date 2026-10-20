@@ -5,9 +5,14 @@ from django.db import transaction
 from faculty.models import Department, Designation, Faculty
 
 from .reader import read_rows
-from .result import ImportResult, is_blank, missing_columns
+from .result import ImportResult, is_blank, length_errors, missing_columns
 
 COLUMNS = ["employee_id", "name", "email", "department", "designation"]
+LIMITS = {
+    "employee_id": (Faculty, "employee_id"),
+    "name": (Faculty, "name"),
+    "email": (Faculty, "email"),
+}
 
 
 def _designation(value):
@@ -36,6 +41,7 @@ def import_faculty(file):
         n = row["_row"]
         values = {c: ("" if is_blank(row[c]) else str(row[c]).strip()) for c in COLUMNS}
         row_errors = [f"Row {n}: {c} is required" for c in COLUMNS if not values[c]]
+        row_errors += length_errors(n, values, LIMITS)
         if row_errors:
             errors.extend(row_errors)
             continue
