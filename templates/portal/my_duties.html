@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}My duties — Invigilation Duties{% endblock %}
 {% block content %}
 <h1>My duties</h1>
@@ -8,8 +9,8 @@
 <div class="card table-wrap">
   <h2>{{ p.period.name }}</h2>
   <div class="actions" style="margin-bottom:12px">
-    <a class="button secondary" href="{% url 'my_duties_pdf' p.period.pk %}">Download PDF</a>
-    <a class="button secondary" href="{% url 'my_duties_ics' p.period.pk %}">Add to calendar (.ics)</a>
+    <a class="button secondary" href="{% url 'my_duties_pdf' p.period.pk %}">{% icon "download" %}Download PDF</a>
+    <a class="button secondary" href="{% url 'my_duties_ics' p.period.pk %}">{% icon "calendar" %}Add to calendar (.ics)</a>
   </div>
   {% if p.upcoming %}
   <table class="stack">
@@ -29,6 +30,6 @@
   {% endif %}
 </div>
 {% empty %}
-<div class="card"><p class="muted">You have no published duties yet. You'll get an email when the roster is published.</p></div>
+<div class="card empty">{% icon "clipboard" %}<strong>No duties yet</strong>You'll get an email as soon as the roster is published.</div>
 {% endfor %}
 {% endblock %}

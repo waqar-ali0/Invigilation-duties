@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Search — Invigilation Duties{% endblock %}
 {% block content %}
 <h1>Search</h1>
@@ -7,7 +8,7 @@
 <div class="card">
   <form method="get" class="actions">
     <input type="search" name="q" value="{{ q }}" placeholder="e.g. Ali Raza, DEMO012, PHY301, R05" aria-label="Search" autofocus style="max-width:420px">
-    <button type="submit">Search</button>
+    <button type="submit">{% icon "search" %}Search</button>
   </form>
 </div>
 

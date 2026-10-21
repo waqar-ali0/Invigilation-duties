@@ -1,4 +1,4 @@
-{% if rows %}
+{% load ui %}{% if rows %}
 <table>
   <thead><tr><th>Name</th><th>Email</th><th>Department</th>{% if show_invited %}<th>Invited</th>{% endif %}{% if action %}<th></th>{% endif %}</tr></thead>
   <tbody>
@@ -9,7 +9,7 @@
       <td>{{ f.department }}</td>
       {% if show_invited %}<td>{{ f.invited_at|date:"d M Y H:i" }}</td>{% endif %}
       {% if action %}
-      <td><form method="post" action="{% url 'invite_one' f.pk %}">{% csrf_token %}<button class="secondary" type="submit">{{ action }}</button></form></td>
+      <td><form method="post" action="{% url 'invite_one' f.pk %}">{% csrf_token %}<button class="secondary sm" type="submit">{% icon "mail" %}{{ action }}</button></form></td>
       {% endif %}
     </tr>
     {% endfor %}

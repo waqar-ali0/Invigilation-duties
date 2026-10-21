@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Attendance {{ slot }} — Invigilation Duties{% endblock %}
 {% block content %}
 <h1>Attendance</h1>
@@ -18,7 +19,7 @@
   <div class="actions" style="justify-content:space-between">
     <h2 style="margin:0">{{ room.room }} · {{ room.session.course_code }} <span class="muted">({{ room.student_count }} students)</span></h2>
     {% if started %}
-    <form method="post" action="{% url 'attendance_room_present' room.pk %}">{% csrf_token %}<button class="secondary" type="submit">Mark all present</button></form>
+    <form method="post" action="{% url 'attendance_room_present' room.pk %}">{% csrf_token %}<button class="secondary sm" type="submit">{% icon "check-square" %}Mark all present</button></form>
     {% endif %}
   </div>
   {% if room.active_duties %}
@@ -39,8 +40,8 @@
           {% if started and d.can_mark %}
           <form method="post" action="{% url 'attendance_mark' d.pk %}" class="actions pair">
             {% csrf_token %}
-            <button type="submit" name="present" value="1"{% if d.status == "completed" %} class="secondary"{% endif %}>Present</button>
-            <button class="danger" type="submit" name="present" value="0">Absent</button>
+            <button type="submit" name="present" value="1" class="{% if d.status == "completed" %}secondary{% else %}success{% endif %}">{% icon "check" %}Present</button>
+            <button class="danger" type="submit" name="present" value="0">{% icon "x" %}Absent</button>
           </form>
           {% endif %}
         </td>

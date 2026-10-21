@@ -2,10 +2,12 @@
 {% block title %}Log in — Invigilation Duties{% endblock %}
 {% block body_class %}auth{% endblock %}
 {% block content %}
+{% include "_auth_panel.html" %}
+<div class="auth-form">
 <div class="card login">
   <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 12.5l3 3 7-7"/></svg></span>
-  <h1>Invigilation Duties</h1>
-  <p class="subtitle">Log in with your university email.</p>
+  <h1>Welcome back</h1>
+  <p class="subtitle">Log in with your university email to see your duties.</p>
   {% if form.errors %}
     <div class="alert error">Your email or password is incorrect.</div>
   {% endif %}
@@ -23,5 +25,6 @@
     <button type="submit">Log in</button>
   </form>
   <p class="foot"><a href="{% url 'password_reset' %}">Forgot your password?</a></p>
+</div>
 </div>
 {% endblock %}

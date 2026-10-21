@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Publish — {{ period.name }}{% endblock %}
 {% block content %}
 <h1>Publish {{ period.name }}</h1>
@@ -25,7 +26,7 @@
       <label><input type="checkbox" name="acknowledge_unfilled" required> I understand {{ missing }} seat(s) are unfilled and want to publish anyway.</label>
     </div>
     {% endif %}
-    <button type="submit">Publish roster</button>
+    <button type="submit">{% icon "send" %}Publish roster</button>
   </form>
 </div>
 {% endif %}

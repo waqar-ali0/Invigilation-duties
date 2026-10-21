@@ -18,8 +18,8 @@
         <td>
           <form method="post" action="{% url 'swap_respond' s.pk %}" class="actions">
             {% csrf_token %}
-            <button type="submit" name="action" value="accept">Accept</button>
-            <button class="danger" type="submit" name="action" value="decline">Decline</button>
+            <button class="success" type="submit" name="action" value="accept">{% icon "check" %}Accept</button>
+            <button class="danger" type="submit" name="action" value="decline">{% icon "x" %}Decline</button>
           </form>
         </td>
       </tr>

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}{{ title }} — Invigilation Duties{% endblock %}
 {% block content %}
 <h1>{{ title }}</h1>
@@ -23,7 +24,7 @@
   <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
     <div class="field"><input type="file" name="file" accept=".xlsx,.csv" required></div>
-    <button type="submit">Import</button>
+    <button type="submit">{% icon "upload" %}Import</button>
   </form>
 </div>
 {% endblock %}

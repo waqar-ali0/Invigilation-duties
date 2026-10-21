@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 {% block title %}Set your password — Invigilation Duties{% endblock %}
+{% block body_class %}auth{% endblock %}
 {% block content %}
+{% include "_auth_panel.html" %}
+<div class="auth-form">
 <div class="card login">
   <h1>Set your password</h1>
   {% if invalid %}
@@ -21,5 +24,6 @@
       <button type="submit">Save password and log in</button>
     </form>
   {% endif %}
+</div>
 </div>
 {% endblock %}

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Replace {{ duty.faculty.name }} — {{ period.name }}{% endblock %}
 {% block content %}
 <h1>Replace {{ duty.faculty.name }}</h1>
@@ -25,7 +26,7 @@
       <label for="id_reason">Reason</label>
       <input type="text" name="reason" id="id_reason" required maxlength="300" placeholder="e.g. sick, family emergency">
     </div>
-    <button type="submit">Replace</button>
+    <button type="submit">{% icon "repeat" %}Replace</button>
   </form>
   {% else %}
   <p class="muted">Nobody is free for this exam without breaking a rule (same time slot, unavailable, or at a limit).</p>

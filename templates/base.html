@@ -1,67 +1,89 @@
-{% load static %}<!doctype html>
+{% load static ui %}<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <title>{% block title %}Invigilation Duties{% endblock %}</title>
-  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=15">{# bump v= whenever app.css changes, so browsers fetch the new file #}
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%232457d6'/%3E%3Cpath d='M7 12.5l3 3 7-7' stroke='white' stroke-width='2.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=21">{# bump v= whenever app.css changes, so browsers fetch the new file #}
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%232f5bea'/%3E%3Cpath d='M7 12.5l3 3 7-7' stroke='white' stroke-width='2.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 </head>
-<body class="{% block body_class %}{% endblock %}">
-  {% if user.is_authenticated %}
+<body class="{% block body_class %}{% if user.is_authenticated %}app{% endif %}{% endblock %}">
+  {% include "_icons.html" %}
   {% with n=request.resolver_match.url_name %}
-  <header class="top">
-    <div class="inner">
-      <a class="brand" href="{% url 'home' %}">
-        <span class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><path d="M7 12.5l3 3 7-7"/></svg>
-        </span>
-        <span>Invigilation Duties</span>
-      </a>
-      <nav aria-label="Main">
-        {% if user.is_superuser or user.role == "admin" %}
-        <a href="{% url 'period_list' %}" class="{% if n == 'period_list' or n == 'period_dashboard' or n == 'room_detail' or n == 'publish' or n == 'schedule_import' or n == 'replace_duty' or n == 'operations_report' %}active{% endif %}">Exam periods</a>
-        <a href="{% url 'admin_requests' %}" class="{% if n == 'admin_requests' %}active{% endif %}">Requests</a>
-        <a href="{% url 'admin_swaps' %}" class="{% if n == 'admin_swaps' %}active{% endif %}">Swaps</a>
-        <a href="{% url 'attendance' %}" class="{% if n == 'attendance' or n == 'attendance_slot' or n == 'record_stand_in' %}active{% endif %}">Attendance</a>
-        <a href="{% url 'accounts_page' %}" class="{% if n == 'accounts_page' %}active{% endif %}">Accounts</a>
-                <a href="{% url 'email_list' %}" class="{% if n == 'email_list' %}active{% endif %}">Emails</a>
-        <a href="{% url 'audit_log' %}" class="{% if n == 'audit_log' %}active{% endif %}">Audit log</a>
-        {% elif user.role == "exam_staff" %}
-        <a href="{% url 'attendance' %}" class="active">Attendance</a>
-        {% elif user.role == "faculty" or user.role == "hod" %}
-        <a href="{% url 'my_duties' %}" class="{% if n == 'my_duties' or n == 'ask_colleague' %}active{% endif %}">My duties</a>
-        <a href="{% url 'my_unavailability' %}" class="{% if n == 'my_unavailability' %}active{% endif %}">Unavailability</a>
-        <a href="{% url 'swap_requests' %}" class="{% if n == 'swap_requests' %}active{% endif %}">Swaps</a>
-        {% if user.role == "hod" %}
-        <a href="{% url 'department_requests' %}" class="{% if n == 'department_requests' %}active{% endif %}">Approvals</a>
-        <a href="{% url 'department_duties' %}" class="{% if n == 'department_duties' %}active{% endif %}">Department</a>
-        {% endif %}
-        {% endif %}
-      </nav>
+  {% if user.is_authenticated %}
+  <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+    <a class="brand" href="{% url 'home' %}">
+      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 12.5l3 3 7-7"/></svg></span>
+      <span class="brand-text"><strong>Invigilation</strong><small>Duty management</small></span>
+    </a>
+
+    <nav class="side-nav">
       {% if user.is_superuser or user.role == "admin" %}
-      <form class="header-search" method="get" action="{% url 'search' %}" role="search">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-        <input type="search" name="q" placeholder="Search people, ID, course, room" aria-label="Search" value="{% if n == 'search' %}{{ request.GET.q }}{% endif %}">
-      </form>
+      <div class="nav-section">Overview</div>
+      <a href="{% url 'period_list' %}" class="{% if n == 'period_list' or n == 'period_dashboard' or n == 'room_detail' or n == 'publish' or n == 'schedule_import' or n == 'replace_duty' or n == 'operations_report' or n == 'faculty_import' or n == 'department_import' %}active{% endif %}">{% icon "calendar" %}<span>Exam periods</span></a>
+      <a href="{% url 'search' %}" class="{% if n == 'search' %}active{% endif %}">{% icon "search" %}<span>Search</span></a>
+      <div class="nav-section">Operations</div>
+      <a href="{% url 'admin_requests' %}" class="{% if n == 'admin_requests' %}active{% endif %}">{% icon "inbox" %}<span>Requests</span></a>
+      <a href="{% url 'admin_swaps' %}" class="{% if n == 'admin_swaps' %}active{% endif %}">{% icon "repeat" %}<span>Swaps</span></a>
+      <a href="{% url 'attendance' %}" class="{% if n == 'attendance' or n == 'attendance_slot' or n == 'record_stand_in' %}active{% endif %}">{% icon "check-square" %}<span>Attendance</span></a>
+      <div class="nav-section">People &amp; system</div>
+      <a href="{% url 'accounts_page' %}" class="{% if n == 'accounts_page' %}active{% endif %}">{% icon "users" %}<span>Accounts</span></a>
+      <a href="{% url 'email_list' %}" class="{% if n == 'email_list' %}active{% endif %}">{% icon "mail" %}<span>Emails</span></a>
+      <a href="{% url 'audit_log' %}" class="{% if n == 'audit_log' %}active{% endif %}">{% icon "shield" %}<span>Audit log</span></a>
+      <a href="{% url 'admin:index' %}">{% icon "settings" %}<span>Admin panel</span></a>
+      {% elif user.role == "exam_staff" %}
+      <div class="nav-section">Exam day</div>
+      <a href="{% url 'attendance' %}" class="active">{% icon "check-square" %}<span>Attendance</span></a>
+      {% elif user.role == "faculty" or user.role == "hod" %}
+      <div class="nav-section">My work</div>
+      <a href="{% url 'my_duties' %}" class="{% if n == 'my_duties' or n == 'ask_colleague' %}active{% endif %}">{% icon "clipboard" %}<span>My duties</span></a>
+      <a href="{% url 'my_unavailability' %}" class="{% if n == 'my_unavailability' %}active{% endif %}">{% icon "calendar-x" %}<span>Unavailability</span></a>
+      <a href="{% url 'swap_requests' %}" class="{% if n == 'swap_requests' %}active{% endif %}">{% icon "repeat" %}<span>Swaps</span></a>
+      {% if user.role == "hod" %}
+      <div class="nav-section">My department</div>
+      <a href="{% url 'department_requests' %}" class="{% if n == 'department_requests' %}active{% endif %}">{% icon "inbox" %}<span>Approvals</span></a>
+      <a href="{% url 'department_duties' %}" class="{% if n == 'department_duties' %}active{% endif %}">{% icon "building" %}<span>Department</span></a>
       {% endif %}
-      <div class="user">
-        <span class="user-email" title="{{ user.email }}">{{ user.email }}</span>
-        <span class="role">{% if user.is_superuser %}Superuser{% elif user.role == "admin" %}Exam office{% elif user.role == "hod" %}HOD{% else %}{{ user.get_role_display }}{% endif %}</span>
-        {% if user.is_superuser or user.role == "admin" %}<a class="admin-link" href="{% url 'admin:index' %}">Admin panel</a>{% endif %}
-        <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="link" type="submit">Log out</button></form>
-      </div>
+      {% endif %}
+    </nav>
+
+    <div class="side-user">
+      <span class="avatar" aria-hidden="true">{{ user.email|initials }}</span>
+      <span class="who">
+        <span class="who-email" title="{{ user.email }}">{{ user.email }}</span>
+        <span class="who-role">{% if user.is_superuser %}Superuser{% elif user.role == "admin" %}Exam office{% elif user.role == "hod" %}Head of department{% else %}{{ user.get_role_display }}{% endif %}</span>
+      </span>
+      <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="icon-button" type="submit" title="Log out" aria-label="Log out">{% icon "logout" %}</button></form>
     </div>
-  </header>
-  {% endwith %}
+  </aside>
+  <div class="scrim" data-nav-close></div>
+
+  <div class="shell">
+    <header class="topbar">
+      <button class="icon-button menu-toggle" type="button" aria-label="Open menu" aria-controls="sidebar" data-nav-open>{% icon "menu" %}</button>
+      {% if user.is_superuser or user.role == "admin" %}
+      <form class="top-search" method="get" action="{% url 'search' %}" role="search">
+        {% icon "search" %}
+        <input type="search" name="q" placeholder="Search people, employee ID, course or room…" aria-label="Search" value="{% if n == 'search' %}{{ request.GET.q }}{% endif %}">
+      </form>
+      {% else %}
+      <span class="top-title">{% if user.role == "exam_staff" %}Exam day attendance{% else %}Welcome back{% endif %}</span>
+      {% endif %}
+      <span class="top-date">{% now "D d M Y" %}</span>
+    </header>
   {% endif %}
-  <main>
-    {% for message in messages %}
-      <div class="alert {{ message.tags }}" role="status">{{ message }}</div>
-    {% endfor %}
-    {% block content %}{% endblock %}
-  </main>
+    <main>
+      {% for message in messages %}
+        <div class="alert {{ message.tags }}" role="status">{% if message.tags == "success" %}{% icon "check" %}{% elif message.tags == "error" or message.tags == "warning" %}{% icon "alert" %}{% endif %}<span>{{ message }}</span></div>
+      {% endfor %}
+      {% block content %}{% endblock %}
+    </main>
+  {% if user.is_authenticated %}
+  </div>
+  {% endif %}
+  {% endwith %}
   <script src="{% static 'js/filter.js' %}?v=1" defer></script>
+  <script src="{% static 'js/app.js' %}?v=1" defer></script>
 </body>
 </html>

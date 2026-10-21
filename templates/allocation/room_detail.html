@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}{{ room.room }} — {{ period.name }}{% endblock %}
 {% block content %}
 <h1>{{ room.session.course_code }} — {{ room.room }}</h1>
@@ -38,9 +39,9 @@
         {% if published %}<td>{{ d.get_status_display }}</td>{% endif %}
         <td>
           {% if editable %}
-          <form method="post" action="{% url 'remove_duty' period.pk d.pk %}">{% csrf_token %}<button class="danger" type="submit">Remove</button></form>
+          <form method="post" action="{% url 'remove_duty' period.pk d.pk %}">{% csrf_token %}<button class="danger sm" type="submit">{% icon "trash" %}Remove</button></form>
           {% elif can_replace and d.status == "assigned" %}
-          <a class="button secondary" href="{% url 'replace_duty' period.pk d.pk %}">Replace</a>
+          <a class="button secondary" href="{% url 'replace_duty' period.pk d.pk %}">{% icon "repeat" %}Replace</a>
           {% endif %}
         </td>
       </tr>
@@ -66,7 +67,7 @@
         {% endfor %}
       </select>
     </div>
-    <button type="submit">Assign</button>
+    <button type="submit">{% icon "plus" %}Assign</button>
   </form>
   {% else %}
   <p class="muted">No faculty member can take this seat without breaking a hard rule (already busy in this slot, unavailable, or at a cap).</p>

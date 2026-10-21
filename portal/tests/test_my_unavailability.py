@@ -40,7 +40,7 @@ def test_submit_errors_shown(client, open_period, make_member):
 def test_no_form_when_window_closed(client, period, make_member):
     client.force_login(make_member().user)
     page = client.get(reverse("my_unavailability")).content.decode()
-    assert 'name="reason"' not in page and "No exam period is accepting requests" in page
+    assert 'name="reason"' not in page and "No requests open right now" in page
 
 
 def test_exempt_faculty_sees_message(client, open_period, make_member):

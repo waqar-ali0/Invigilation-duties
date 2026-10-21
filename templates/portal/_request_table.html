@@ -15,8 +15,8 @@
           {% csrf_token %}
           <input type="text" name="comment" placeholder="Comment (optional)" aria-label="Comment">
           <div class="actions">
-            <button type="submit" name="decision" value="approve">Approve</button>
-            <button class="danger" type="submit" name="decision" value="reject">Reject</button>
+            <button class="success" type="submit" name="decision" value="approve">{% icon "check" %}Approve</button>
+            <button class="danger" type="submit" name="decision" value="reject">{% icon "x" %}Reject</button>
           </div>
         </form>
       </td>

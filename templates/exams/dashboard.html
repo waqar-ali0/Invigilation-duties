@@ -27,12 +27,12 @@
 
 <div class="grid">
   <div class="card">
-    <h2>Duties</h2>
+    <h2>{% icon "clipboard" %}Duties</h2>
     <div class="stat">{{ duty_count }}</div>
     <div class="muted">assigned · {{ capacity.seats_needed }} seat(s) still empty</div>
   </div>
   <div class="card">
-    <h2>Fairness</h2>
+    <h2>{% icon "chart" %}Fairness</h2>
     <div class="stat">Min {{ stats.min }} · Max {{ stats.max }}</div>
     <div class="muted">Average {{ stats.avg }} per eligible faculty member{% if capped_stats %} at the default cap of {{ settings.max_duties_per_faculty }}{% endif %}{% if period.last_run %} · {{ period.last_run.soft_violations }} soft-rule exception(s) in last run{% endif %}</div>
     {% for label, cap, s in capped_stats %}
@@ -40,7 +40,7 @@
     {% endfor %}
   </div>
   <div class="card">
-    <h2>Rules</h2>
+    <h2>{% icon "settings" %}Rules</h2>
     <div class="muted">
       Max {{ settings.max_duties_per_faculty }} duties per person{% for c in caps %}, {{ c }}{% endfor %}<br>
       Max {{ settings.max_duties_per_day }} per day · 1 invigilator per {{ settings.students_per_invigilator }} students (min {{ settings.min_invigilators_per_room }})<br>
@@ -63,7 +63,7 @@
     {% csrf_token %}
     <label for="id_deadline" style="margin:0">Open until</label>
     <input type="datetime-local" name="deadline" id="id_deadline" required style="max-width:240px">
-    <button type="submit">Open availability</button>
+    <button type="submit">{% icon "calendar" %}Open availability</button>
   </form>
   {% endif %}
 </div>
@@ -73,10 +73,10 @@
   <h2>Actions</h2>
   <div class="actions">
     {% if editable %}
-      <a class="button secondary" href="{% url 'schedule_import' period.pk %}">Import schedule</a>
-      <form method="post" action="{% url 'run_allocation' period.pk %}">{% csrf_token %}<button type="submit">Run allocation</button></form>
-      <form method="post" action="{% url 'clear_draft' period.pk %}" onsubmit="return confirm('Remove every duty in this draft, including manual ones?');">{% csrf_token %}<button class="danger" type="submit">Clear draft</button></form>
-      {% if duty_count %}<a class="button" href="{% url 'publish' period.pk %}">Review and publish</a>{% endif %}
+      <a class="button secondary" href="{% url 'schedule_import' period.pk %}">{% icon "upload" %}Import schedule</a>
+      <form method="post" action="{% url 'run_allocation' period.pk %}">{% csrf_token %}<button type="submit">{% icon "play" %}Run allocation</button></form>
+      <form method="post" action="{% url 'clear_draft' period.pk %}" onsubmit="return confirm('Remove every duty in this draft, including manual ones?');">{% csrf_token %}<button class="danger" type="submit">{% icon "trash" %}Clear draft</button></form>
+      {% if duty_count %}<a class="button" href="{% url 'publish' period.pk %}">{% icon "send" %}Review and publish</a>{% endif %}
     {% else %}
       <span class="muted">This period is {{ period.get_status_display|lower }}; the roster can no longer be edited here.</span>
     {% endif %}
@@ -87,12 +87,12 @@
 <div class="card">
   <h2>Downloads</h2>
   <div class="actions">
-    <a class="button secondary" href="{% url 'roster_pdf' period.pk %}">Roster (PDF)</a>
-    <a class="button secondary" href="{% url 'roster_xlsx' period.pk %}">Roster (Excel)</a>
-    <a class="button secondary" href="{% url 'load_xlsx' period.pk %}">Faculty load (Excel)</a>
+    <a class="button secondary" href="{% url 'roster_pdf' period.pk %}">{% icon "download" %}Roster (PDF)</a>
+    <a class="button secondary" href="{% url 'roster_xlsx' period.pk %}">{% icon "download" %}Roster (Excel)</a>
+    <a class="button secondary" href="{% url 'load_xlsx' period.pk %}">{% icon "download" %}Faculty load (Excel)</a>
     {% if period.status == "published" or period.status == "closed" %}
-    <a class="button secondary" href="{% url 'operations_report' period.pk %}">Attendance &amp; swaps report</a>
-    <a class="button secondary" href="{% url 'attendance' %}">Mark attendance</a>
+    <a class="button secondary" href="{% url 'operations_report' period.pk %}">{% icon "chart" %}Attendance &amp; swaps report</a>
+    <a class="button secondary" href="{% url 'attendance' %}">{% icon "check-square" %}Mark attendance</a>
     {% endif %}
   </div>
 </div>

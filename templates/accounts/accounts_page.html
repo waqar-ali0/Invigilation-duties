@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Faculty accounts — Invigilation Duties{% endblock %}
 {% block content %}
 <h1>Faculty accounts</h1>
@@ -6,7 +7,7 @@
 
 <div class="card">
   <div class="actions">
-    <form method="post" action="{% url 'invite_all' %}">{% csrf_token %}<button type="submit">Send activation emails ({{ groups.none|length }})</button></form>
+    <form method="post" action="{% url 'invite_all' %}">{% csrf_token %}<button type="submit">{% icon "mail" %}Send activation emails ({{ groups.none|length }})</button></form>
     <span class="muted">Sends to everyone in “No account”. Emails go out within a few minutes.</span>
   </div>
 </div>

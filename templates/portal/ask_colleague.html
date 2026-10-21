@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Ask a colleague — Invigilation Duties{% endblock %}
 {% block content %}
 {% with s=duty.room_allocation.session %}
@@ -26,7 +27,7 @@
       <label for="id_message">Message (optional)</label>
       <input type="text" name="message" id="id_message" maxlength="300">
     </div>
-    <button type="submit">Send request</button>
+    <button type="submit">{% icon "send" %}Send request</button>
   </form>
 </div>
 {% else %}

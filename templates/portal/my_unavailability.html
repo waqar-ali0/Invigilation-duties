@@ -21,11 +21,11 @@
       <div class="field">{{ form.date.label_tag }} {{ form.date }} {{ form.date.errors }}</div>
       <div class="field"><label for="{{ form.slot.id_for_label }}">Time slot</label> {{ form.slot }} <span class="muted">Leave as “Whole day” if you can't do any slot that day.</span></div>
       <div class="field">{{ form.reason.label_tag }} {{ form.reason }} {{ form.reason.errors }}</div>
-      <button type="submit">Send request</button>
+      <button type="submit">{% icon "send" %}Send request</button>
     </form>
   </div>
   {% empty %}
-  <div class="card"><p class="muted">No exam period is accepting requests right now. You'll get an email when one opens.</p></div>
+  <div class="card empty">{% icon "calendar-x" %}<strong>No requests open right now</strong>You'll get an email when the exam office opens the window.</div>
   {% endfor %}
   <script>
     // List only the time slots on the chosen date.

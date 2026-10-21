@@ -2,24 +2,35 @@
 {% load ui %}
 {% block title %}Exam periods — Invigilation Duties{% endblock %}
 {% block content %}
-<h1>Exam periods</h1>
-<p class="subtitle">Create a new period in the <a href="{% url 'admin:exams_examperiod_add' %}">admin panel</a>, then import its schedule here. Faculty and departments: <a href="{% url 'department_import' %}">import departments</a> · <a href="{% url 'faculty_import' %}">import faculty</a>.</p>
+<div class="page-head">
+  <div>
+    <h1>Exam periods</h1>
+    <p class="subtitle">Each period has its own schedule, rules and roster. Open one to import its schedule, allocate and publish.</p>
+  </div>
+  <div class="actions">
+    <a class="button secondary" href="{% url 'department_import' %}">{% icon "upload" %}Import departments</a>
+    <a class="button secondary" href="{% url 'faculty_import' %}">{% icon "upload" %}Import faculty</a>
+    <a class="button" href="{% url 'admin:exams_examperiod_add' %}">{% icon "plus" %}New exam period</a>
+  </div>
+</div>
+
 <div class="card table-wrap">
   {% if periods %}
-  <table>
-    <thead><tr><th>Name</th><th>Dates</th><th>Status</th></tr></thead>
+  <table class="stack">
+    <thead><tr><th>Name</th><th>Exam dates</th><th>Status</th><th></th></tr></thead>
     <tbody>
       {% for p in periods %}
       <tr>
-        <td><a href="{% url 'period_dashboard' p.pk %}">{{ p.name }}</a></td>
-        <td>{{ p.start_date|date:"d M Y" }} – {{ p.end_date|date:"d M Y" }}</td>
-        <td><span class="badge {{ p.status|tone }}">{{ p.get_status_display }}</span></td>
+        <td data-label="Name"><a href="{% url 'period_dashboard' p.pk %}">{{ p.name }}</a></td>
+        <td data-label="Exam dates">{{ p.start_date|date:"d M Y" }} – {{ p.end_date|date:"d M Y" }}</td>
+        <td data-label="Status"><span class="badge {{ p.status|tone }}">{{ p.get_status_display }}</span></td>
+        <td><a class="button secondary sm" href="{% url 'period_dashboard' p.pk %}">Open{% icon "arrow-right" %}</a></td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
   {% else %}
-  <p class="muted">No exam periods yet.</p>
+  <div class="empty">{% icon "calendar" %}<strong>No exam periods yet</strong>Create one with <em>New exam period</em>, then import its schedule.</div>
   {% endif %}
 </div>
 {% endblock %}

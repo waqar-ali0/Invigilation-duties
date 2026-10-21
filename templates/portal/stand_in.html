@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Record stand-in — Invigilation Duties{% endblock %}
 {% block content %}
 <h1>Record a stand-in for {{ duty.faculty.name }}</h1>
@@ -20,7 +21,7 @@
       <label for="id_reason">Note</label>
       <input type="text" name="reason" id="id_reason" required maxlength="300" placeholder="e.g. covered from 09:15">
     </div>
-    <button type="submit">Record stand-in</button>
+    <button type="submit">{% icon "check" %}Record stand-in</button>
   </form>
 </div>
 {% endblock %}
