@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Replace {{ duty.faculty.name }} — {{ period.name }}{% endblock %}
+{% block content %}
+<h1>Replace {{ duty.faculty.name }}</h1>
+<p class="subtitle">
+  <a href="{% url 'room_detail' period.pk room.pk %}">← {{ room.session.course_code }} — {{ room.room }}</a>
+  · {{ room.session.slot }}
+</p>
+
+<div class="card">
+  {% if candidates %}
+  <p class="muted">Faculty free at this time and within their limits, fewest duties first. Both people are emailed; any open swap on this duty is cancelled.</p>
+  <form method="post">
+    {% csrf_token %}
+    <div class="field">
+      <label for="id_faculty">Give this duty to</label>
+      <select name="faculty_id" id="id_faculty" required>
+        {% for f, count, warnings in candidates %}
+        <option value="{{ f.pk }}">{{ f.name }} — {{ f.department }} — {{ count }} duties{% if warnings %} (⚠ {{ warnings|join:"; " }}){% endif %}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="id_reason">Reason</label>
+      <input type="text" name="reason" id="id_reason" required maxlength="300" placeholder="e.g. sick, family emergency">
+    </div>
+    <button type="submit">Replace</button>
+  </form>
+  {% else %}
+  <p class="muted">Nobody is free for this exam without breaking a rule (same time slot, unavailable, or at a limit).</p>
+  {% endif %}
+</div>
+{% endblock %}

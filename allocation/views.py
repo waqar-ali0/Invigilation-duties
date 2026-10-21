@@ -1,10 +1,12 @@
 from django.contrib import messages
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from accounts.models import Role
 from accounts.permissions import role_required
+from duties.handover import HandoverBlocked, handover_candidates, replace_duty
 from duties.models import Duty
 from duties.services import (
     AssignmentBlocked,
@@ -37,11 +39,37 @@ def _render_room(request, period, room, pending=None):
         "room": room,
         "duties": Duty.objects.active().filter(room_allocation=room).select_related("faculty__department"),
         "editable": period.status not in (PeriodStatus.PUBLISHED, PeriodStatus.CLOSED),
+        "published": period.status == PeriodStatus.PUBLISHED,
+        "can_replace": period.status == PeriodStatus.PUBLISHED and timezone.now() < room.session.slot.ends_at,
         "pending": pending,  # (faculty, warnings) awaiting confirmation
     }
     if context["editable"]:
         context["candidates"] = eligible_candidates(room)
     return render(request, "allocation/room_detail.html", context)
+
+
+@admin_only
+def replace_duty_view(request, pk, duty_id):
+    duty = get_object_or_404(
+        Duty.objects.active().select_related("faculty", "room_allocation__session__slot", "period"),
+        pk=duty_id,
+        period_id=pk,
+    )
+    room = duty.room_allocation
+    if request.method == "POST":
+        faculty = get_object_or_404(Faculty, pk=request.POST.get("faculty_id") or 0)
+        try:
+            replace_duty(duty, faculty, request.user, request.POST.get("reason", ""))
+        except HandoverBlocked as e:
+            messages.error(request, " ".join(e.errors))
+            return redirect("replace_duty", pk=pk, duty_id=duty.pk)
+        except PeriodLockedError as e:
+            messages.error(request, str(e))
+        else:
+            messages.success(request, f"{faculty.name} now has this duty instead of {duty.faculty.name}. Both are emailed.")
+        return redirect("room_detail", pk=pk, room_id=room.pk)
+    context = {"period": duty.period, "duty": duty, "room": room, "candidates": handover_candidates(duty, require_account=False)}
+    return render(request, "allocation/replace.html", context)
 
 
 @admin_only

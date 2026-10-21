@@ -1,0 +1,6 @@
+Hello,
+
+The exam office has reassigned this duty, so the swap request from {{ swap.requested_by.name }} to {{ swap.requested_with.name }} is cancelled:
+{% include "emails/_swap_duty.txt" %}
+
+— Exam Office

@@ -1,0 +1,8 @@
+Dear {{ person.name }},
+
+The exam office has given you this invigilation duty:
+{% include "emails/_duty_line.txt" %}
+
+A calendar file is attached. All your duties: {{ link }}
+
+— Exam Office
