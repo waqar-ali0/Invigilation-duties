@@ -10,10 +10,10 @@
       <td data-label="Slot">{% if r.slot %}{{ r.slot.start_time|time:"H:i" }}–{{ r.slot.end_time|time:"H:i" }}{% else %}Whole day{% endif %}</td>
       <td data-label="Reason">{{ r.reason }}</td>
       {% if decide %}
-      <td>
+      <td class="decide">
         <form method="post" action="{% url 'decide_request' r.pk %}">
           {% csrf_token %}
-          <input type="text" name="comment" placeholder="Comment (optional)" style="margin-bottom:6px">
+          <input type="text" name="comment" placeholder="Comment (optional)" aria-label="Comment">
           <div class="actions">
             <button type="submit" name="decision" value="approve">Approve</button>
             <button class="danger" type="submit" name="decision" value="reject">Reject</button>

@@ -325,3 +325,13 @@ body.auth main { display: grid; place-items: center; min-height: 100vh; padding:
 }
 
 .field .muted { display: block; margin-top: 4px; font-size: 0.85rem; }
+
+/* Approve / reject cell: comment on top, the two buttons side by side. */
+td.decide { min-width: 250px; }
+td.decide input { margin-bottom: 8px; max-width: none; }
+td.decide .actions { flex-wrap: nowrap; }
+td.decide .actions button { flex: 1; }
+@media (max-width: 640px) { td.decide .actions { flex-direction: row; } }
+
+/* Tablets: logo mark only, so the menu has room. */
+@media (min-width: 641px) and (max-width: 960px) { .brand > span:not(.brand-mark) { display: none; } header.top .inner { gap: 14px; } }
