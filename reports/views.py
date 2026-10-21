@@ -1,12 +1,13 @@
 from django.http import HttpResponse
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
 from django.utils.text import slugify
 
 from accounts.models import Role
 from accounts.permissions import role_required
 from exams.models import ExamPeriod
 
-from .excel import load_xlsx, roster_xlsx
+from .excel import load_xlsx, operations_xlsx, roster_xlsx
+from .operations import department_summary, faculty_records, handover_history
 from .pdf import roster_pdf
 
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -31,3 +32,20 @@ def roster_xlsx_view(request, pk):
 @role_required(Role.ADMIN)
 def load_xlsx_view(request, pk):
     return _download(get_object_or_404(ExamPeriod, pk=pk), load_xlsx, "load.xlsx", XLSX)
+
+
+@role_required(Role.ADMIN)
+def operations_report(request, pk):
+    period = get_object_or_404(ExamPeriod, pk=pk)
+    context = {
+        "period": period,
+        "records": faculty_records(period),
+        "departments": department_summary(period),
+        "history": handover_history(period),
+    }
+    return render(request, "reports/operations.html", context)
+
+
+@role_required(Role.ADMIN)
+def operations_xlsx_view(request, pk):
+    return _download(get_object_or_404(ExamPeriod, pk=pk), operations_xlsx, "operations.xlsx", XLSX)

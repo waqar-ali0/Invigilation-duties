@@ -31,6 +31,7 @@ from duties.unavailability import RequestRejected, can_decide, decide_request, s
 from exams.models import ExamPeriod, PeriodLockedError, PeriodStatus, RoomAllocation, TimeSlot
 from faculty.models import Department, Faculty
 from reports.excel import department_rows, department_xlsx
+from reports.operations import department_summary
 from reports.personal import VISIBLE_STATUSES, duties_ics, duties_pdf, faculty_duties
 
 from .forms import RequestForm
@@ -101,7 +102,14 @@ def department_duties(request):
     periods = list(ExamPeriod.objects.filter(status__in=VISIBLE_STATUSES).order_by("-start_date"))
     selected = next((p for p in periods if str(p.pk) == request.GET.get("period")), periods[0] if periods else None)
     rows = department_rows(selected, request.hod_departments) if selected else []
-    context = {"periods": periods, "selected": selected, "rows": rows, "departments": request.hod_departments}
+    summary = department_summary(selected, request.hod_departments) if selected else []
+    context = {
+        "periods": periods,
+        "selected": selected,
+        "rows": rows,
+        "summary": summary,
+        "departments": request.hod_departments,
+    }
     return render(request, "portal/department_duties.html", context)
 
 

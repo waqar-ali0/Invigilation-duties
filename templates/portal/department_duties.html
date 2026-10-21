@@ -15,6 +15,12 @@
     <a class="button secondary" href="{% url 'department_duties_xlsx' selected.pk %}">Download Excel</a>
   </form>
 </div>
+{% if summary %}
+<div class="card table-wrap">
+  <h2>Summary</h2>
+  {% include "reports/_summary_table.html" with rows=summary %}
+</div>
+{% endif %}
 <div class="card table-wrap">
   <table>
     <thead><tr><th>Name</th><th>Duties</th><th>Dates and rooms</th></tr></thead>

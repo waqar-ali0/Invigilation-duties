@@ -1,5 +1,6 @@
 import io
 
+from django.utils import timezone
 from openpyxl import Workbook
 from openpyxl.styles import Font
 
@@ -84,6 +85,62 @@ def department_rows(period, departments):
         )
         rows.append({"faculty": f, "duties": duties, "summary": summary})
     return rows
+
+
+def operations_xlsx(period):
+    """Faculty record, department summary and swap/replacement history for `period`."""
+    from .operations import department_summary, faculty_records, handover_history
+
+    labels = ["Assigned", "Completed", "Absent", "Not yet marked", "Swapped away", "Taken over", "Replaced"]
+    wb, ws = _sheet("Faculty record", ["Name", "Department", *labels, "Absence dates"])
+    for r in faculty_records(period):
+        _append(
+            ws,
+            [
+                r.faculty.name,
+                r.faculty.department.name,
+                r.assigned,
+                r.completed,
+                r.absent,
+                r.unmarked,
+                r.swapped_away,
+                r.taken_over,
+                r.replaced,
+                ", ".join(f"{d:%d %b}" for d in r.absence_dates),
+            ],
+        )
+    ws.column_dimensions["A"].width = 30
+    ws.column_dimensions["B"].width = 22
+
+    summary = wb.create_sheet("Department summary")
+    summary.append(["Department", *labels])
+    for row in department_summary(period):
+        _append(
+            summary,
+            [row["department"], row["assigned"], row["completed"], row["absent"], row["unmarked"], row["swapped_away"], row["taken_over"], row["replaced"]],
+        )
+    summary.column_dimensions["A"].width = 26
+
+    history = wb.create_sheet("Swaps and replacements")
+    history.append(["When", "Exam", "Room", "Type", "From", "To", "Reason / message", "By"])
+    for row in handover_history(period):
+        _append(
+            history,
+            [
+                timezone.localtime(row["when"]).strftime("%Y-%m-%d %H:%M"),
+                str(row["slot"]),
+                row["room"],
+                row["type"],
+                row["from"].name,
+                row["to"].name,
+                row["note"],
+                row["by"].email if row["by"] else "",
+            ],
+        )
+    for sheet in (summary, history):
+        for cell in sheet[1]:
+            cell.font = Font(bold=True)
+    return _save(wb)
 
 
 def load_xlsx(period):

@@ -88,6 +88,10 @@
     <a class="button secondary" href="{% url 'roster_pdf' period.pk %}">Roster (PDF)</a>
     <a class="button secondary" href="{% url 'roster_xlsx' period.pk %}">Roster (Excel)</a>
     <a class="button secondary" href="{% url 'load_xlsx' period.pk %}">Faculty load (Excel)</a>
+    {% if period.status == "published" or period.status == "closed" %}
+    <a class="button secondary" href="{% url 'operations_report' period.pk %}">Attendance &amp; swaps report</a>
+    <a class="button secondary" href="{% url 'attendance' %}">Mark attendance</a>
+    {% endif %}
   </div>
 </div>
 {% endif %}

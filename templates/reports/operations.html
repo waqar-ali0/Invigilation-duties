@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Reports — {{ period.name }}{% endblock %}
+{% block content %}
+<h1>Reports — {{ period.name }}</h1>
+<p class="subtitle">
+  <a href="{% url 'period_dashboard' period.pk %}">← Dashboard</a> ·
+  <a href="{% url 'operations_xlsx' period.pk %}">Download Excel</a> ·
+  “Completed” counts duties marked present; absences are listed but not counted as done.
+</p>
+
+<div class="card table-wrap">
+  <h2>Departments</h2>
+  {% if departments %}{% include "reports/_summary_table.html" with rows=departments %}{% else %}<p class="muted">No duties yet.</p>{% endif %}
+</div>
+
+<div class="card table-wrap">
+  <h2>Faculty</h2>
+  {% if records %}
+  <table>
+    <thead><tr><th>Name</th><th>Department</th><th>Assigned</th><th>Completed</th><th>Absent</th><th>Not yet marked</th><th>Swapped away</th><th>Taken over</th><th>Replaced</th><th>Absences</th></tr></thead>
+    <tbody>
+      {% for r in records %}
+      <tr>
+        <td>{{ r.faculty.name }}</td><td>{{ r.faculty.department }}</td>
+        <td>{{ r.assigned }}</td><td>{{ r.completed }}</td>
+        <td>{% if r.absent %}<span class="badge short">{{ r.absent }}</span>{% else %}0{% endif %}</td>
+        <td>{{ r.unmarked }}</td><td>{{ r.swapped_away }}</td><td>{{ r.taken_over }}</td><td>{{ r.replaced }}</td>
+        <td>{% for d in r.absence_dates %}{{ d|date:"d M" }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p class="muted">No duties yet.</p>{% endif %}
+</div>
+
+<div class="card table-wrap">
+  <h2>Swaps and replacements</h2>
+  {% if history %}
+  <table>
+    <thead><tr><th>When</th><th>Exam</th><th>Room</th><th>Type</th><th>From</th><th>To</th><th>Reason / message</th><th>By</th></tr></thead>
+    <tbody>
+      {% for h in history %}
+      <tr><td>{{ h.when|date:"d M H:i" }}</td><td>{{ h.slot }}</td><td>{{ h.room }}</td><td><span class="badge">{{ h.type }}</span></td>
+        <td>{{ h.from.name }}</td><td>{{ h.to.name }}</td><td>{{ h.note|default:"—" }}</td><td>{{ h.by.email|default:"—" }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p class="muted">No swaps or replacements.</p>{% endif %}
+</div>
+{% endblock %}
