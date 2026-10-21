@@ -72,6 +72,12 @@ class Duty(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     reminder_sent_at = models.DateTimeField(null=True, blank=True)
+    # The duty this one took over (by swap or replacement); the old one stays, cancelled.
+    replaces = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL, related_name="replaced_by")
+    attendance_marked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    attendance_marked_at = models.DateTimeField(null=True, blank=True)
 
     objects = DutyQuerySet.as_manager()
 
@@ -91,3 +97,47 @@ class Duty(models.Model):
 
     def __str__(self):
         return f"{self.faculty.name} — {self.room_allocation}"
+
+
+class SwapStatus(models.TextChoices):
+    PENDING_PEER = "pending_peer", "Waiting for colleague"
+    PENDING_ADMIN = "pending_admin", "Waiting for exam office"
+    APPROVED = "approved", "Approved"
+    DECLINED = "declined", "Declined by colleague"
+    REJECTED = "rejected", "Rejected by exam office"
+    CANCELLED = "cancelled", "Cancelled"
+    EXPIRED = "expired", "Expired"
+
+
+OPEN_SWAP_STATUSES = (SwapStatus.PENDING_PEER, SwapStatus.PENDING_ADMIN)
+
+
+class SwapRequest(models.Model):
+    """A faculty member asking a colleague to take over one of their duties."""
+
+    duty = models.ForeignKey(Duty, on_delete=models.CASCADE, related_name="swap_requests")
+    requested_by = models.ForeignKey(Faculty, on_delete=models.CASCADE, related_name="swap_requests")
+    requested_with = models.ForeignKey(Faculty, on_delete=models.CASCADE, related_name="swap_invitations")
+    message = models.TextField(blank=True)
+    status = models.CharField(max_length=15, choices=SwapStatus.choices, default=SwapStatus.PENDING_PEER)
+    created_at = models.DateTimeField(auto_now_add=True)
+    responded_at = models.DateTimeField(null=True, blank=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+    decided_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    comment = models.TextField(blank=True)
+    new_duty = models.ForeignKey(Duty, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["duty"], condition=Q(status__in=OPEN_SWAP_STATUSES), name="one_open_swap_per_duty"
+            )
+        ]
+
+    @property
+    def is_open(self):
+        return self.status in OPEN_SWAP_STATUSES
+
+    def __str__(self):
+        return f"{self.requested_by.name} → {self.requested_with.name}: {self.duty.room_allocation}"

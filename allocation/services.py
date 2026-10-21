@@ -20,10 +20,11 @@ class PublishBlocked(Exception):
     """Publishing is not possible (yet) for the reason in the message."""
 
 
-def build_engine_input(period, exclude_auto=False, include_pending=False):
+def build_engine_input(period, exclude_auto=False, include_pending=False, exclude_duty_ids=()):
     """Describe `period` for the engine. Existing active duties become `fixed`
-    (AUTO ones are left out when `exclude_auto`). Approved unavailability blocks people;
-    with `include_pending`, pending requests do too (for "what if all are approved")."""
+    (AUTO ones are left out when `exclude_auto`; duties in `exclude_duty_ids` are left out,
+    e.g. one being handed over). Approved unavailability blocks people; with
+    `include_pending`, pending requests do too (for "what if all are approved")."""
     s = period.settings
     caps = {c.designation: c.max_duties for c in period.designation_caps.all()}
     people = [
@@ -60,6 +61,8 @@ def build_engine_input(period, exclude_auto=False, include_pending=False):
     duties = Duty.objects.active().filter(period=period)
     if exclude_auto:
         duties = duties.exclude(source=DutySource.AUTO)
+    if exclude_duty_ids:
+        duties = duties.exclude(pk__in=exclude_duty_ids)
     fixed = tuple(duties.values_list("faculty_id", "room_allocation_id"))
 
     return EngineInput(

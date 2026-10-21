@@ -1,4 +1,5 @@
 import math
+from datetime import datetime
 
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
@@ -73,6 +74,17 @@ class ExamPeriod(models.Model):
         period.ensure_editable()
         return period
 
+    @classmethod
+    def lock_published(cls, pk):
+        """Lock the period row for a change to its published roster (swap, replacement, attendance).
+
+        Call inside transaction.atomic(). Closed periods are final.
+        """
+        period = cls.objects.select_for_update().get(pk=pk)
+        if period.status != PeriodStatus.PUBLISHED:
+            raise PeriodLockedError("Only a published roster can be changed this way.")
+        return period
+
     def cap_for(self, designation):
         """The maximum number of duties for a faculty member with this designation in this period."""
         override = self.designation_caps.filter(designation=designation).first()
@@ -92,6 +104,9 @@ class PeriodSettings(models.Model):
     avoid_back_to_back = models.BooleanField(default=True, help_text="Soft rule: avoid consecutive slots on a day.")
     exclude_course_teacher = models.BooleanField(
         default=True, help_text="Soft rule: avoid assigning a teacher to their own course's exam."
+    )
+    swap_cutoff_hours = models.PositiveIntegerField(
+        default=24, help_text="Faculty can ask for and accept swaps until this many hours before the exam."
     )
 
     class Meta:
@@ -125,6 +140,19 @@ class TimeSlot(models.Model):
 
     def __str__(self):
         return f"{self.date:%a %d %b %Y} {self.start_time:%H:%M}–{self.end_time:%H:%M}"
+
+    @property
+    def starts_at(self):
+        """When the exam starts, as an aware datetime in the local time zone."""
+        from django.utils import timezone
+
+        return timezone.make_aware(datetime.combine(self.date, self.start_time))
+
+    @property
+    def ends_at(self):
+        from django.utils import timezone
+
+        return timezone.make_aware(datetime.combine(self.date, self.end_time))
 
     def clean(self):
         errors = {}
