@@ -62,7 +62,8 @@ def test_my_duties_shows_only_own_published_duties(client, small_period, admin_u
     Duty.objects.create(faculty=me, room_allocation=rooms[0], source=DutySource.MANUAL)
     Duty.objects.create(faculty=other, room_allocation=rooms[1], source=DutySource.MANUAL)
     client.force_login(me.user)
-    assert rooms[0].room not in client.get(reverse("my_duties")).content.decode()  # draft: hidden
+    main = client.get(reverse("my_duties")).content.decode().split("<main>")[1]  # skip the CSRF token in the header
+    assert rooms[0].room not in main  # draft: hidden
     run_allocation(small_period, admin_user, seed=1)
     publish_period(small_period, admin_user, acknowledge_unfilled=True)
     page = client.get(reverse("my_duties")).content.decode()
