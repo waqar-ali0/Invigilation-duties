@@ -335,3 +335,8 @@ td.decide .actions button { flex: 1; }
 
 /* Tablets: logo mark only, so the menu has room. */
 @media (min-width: 641px) and (max-width: 960px) { .brand > span:not(.brand-mark) { display: none; } header.top .inner { gap: 14px; } }
+
+/* Present / Absent side by side, also on phones. */
+.actions.pair { flex-wrap: nowrap; }
+.actions.pair button { flex: 1; min-width: 96px; }
+@media (max-width: 640px) { table.stack td .actions.pair { flex-direction: row; } }

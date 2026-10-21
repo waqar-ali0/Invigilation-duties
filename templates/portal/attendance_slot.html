@@ -32,7 +32,7 @@
         </td>
         <td>
           {% if started and d.can_mark %}
-          <form method="post" action="{% url 'attendance_mark' d.pk %}" class="actions">
+          <form method="post" action="{% url 'attendance_mark' d.pk %}" class="actions pair">
             {% csrf_token %}
             <button type="submit" name="present" value="1"{% if d.status == "completed" %} class="secondary"{% endif %}>Present</button>
             <button class="danger" type="submit" name="present" value="0">Absent</button>
