@@ -78,3 +78,20 @@ def test_xlsx_views_download(admin_client, allocated_period):
     for name, filename in (("roster_xlsx", "fall-2026-finals-roster.xlsx"), ("load_xlsx", "fall-2026-finals-load.xlsx")):
         r = admin_client.get(reverse(name, args=[allocated_period.pk]))
         assert r.status_code == 200 and f'filename="{filename}"' in r["Content-Disposition"]
+
+
+def test_roster_pdf_keeps_markup_like_course_names(allocated_period, monkeypatch):
+    import reports.pdf
+    from exams.models import ExamSession
+
+    texts = []
+
+    class Spy(reports.pdf.Paragraph):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            texts.append(self.getPlainText())
+
+    ExamSession.objects.filter(course_code="CS101").update(course_name="Data <Structures> & Algorithms")
+    monkeypatch.setattr(reports.pdf, "Paragraph", Spy)
+    roster_pdf(allocated_period)
+    assert "CS101 — Data <Structures> & Algorithms" in texts

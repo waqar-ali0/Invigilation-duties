@@ -10,6 +10,7 @@ from .models import EmailStatus, OutboundEmail
 from .outbox import resend, send_queued
 
 admin_only = role_required(Role.ADMIN)
+SEND_NOW_LIMIT = 50  # the page waits on the mail server, so send a batch per click and leave the rest queued
 
 
 @admin_only
@@ -28,8 +29,13 @@ def email_list(request):
 @admin_only
 @require_POST
 def send_emails_now(request):
-    sent, failed = send_queued()
-    messages.success(request, f"Sent {sent} email(s).{f' {failed} failed.' if failed else ''}")
+    sent, failed = send_queued(limit=SEND_NOW_LIMIT)
+    remaining = OutboundEmail.objects.filter(status=EmailStatus.QUEUED).count()
+    messages.success(
+        request,
+        f"Sent {sent} email(s).{f' {failed} failed.' if failed else ''}"
+        f"{f' {remaining} still queued — send again or wait for the scheduled run.' if remaining else ''}",
+    )
     return redirect("email_list")
 
 

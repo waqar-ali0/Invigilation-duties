@@ -65,3 +65,11 @@ def test_cannot_withdraw_someone_elses_request(client, open_period, make_member)
     assert client.post(reverse("withdraw_request", args=[req.pk])).status_code == 404
     req.refresh_from_db()
     assert req.status == UnavailabilityStatus.PENDING
+
+
+def test_slot_options_carry_their_date_for_filtering(client, open_period, make_member, make_room):
+    make_room(day=3, start="14:00", end="17:00", course="Z")
+    client.force_login(make_member().user)
+    page = client.get(reverse("my_unavailability")).content.decode()
+    assert page.count('data-date="2026-12-02"') == 1 and page.count('data-date="2026-12-03"') == 1
+    assert "data-slot-filter" in page

@@ -52,3 +52,33 @@ def test_department_xlsx(my_duties, period, dept):
     assert rows[0] == ["Name", "Department", "Duties", "Dates and rooms"]
     ali = next(r for r in rows if r[0] == "Ali Raza")
     assert ali[2] == 2 and "Hall A" in ali[3]
+
+
+def test_pdf_keeps_markup_like_course_names(my_duties, period, monkeypatch):
+    import reports.personal
+
+    texts = []
+
+    class Spy(reports.personal.Paragraph):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            texts.append(self.getPlainText())
+
+    duty = faculty_duties(my_duties, period)[0]
+    duty.room_allocation.session.course_name = "Data <Structures> & Algorithms"
+    duty.room_allocation.session.save()
+    monkeypatch.setattr(reports.personal, "Paragraph", Spy)
+    duties_pdf(my_duties, period)
+    assert "CS101 — Data <Structures> & Algorithms" in texts
+
+
+def test_ics_strips_carriage_returns_and_folds_long_lines(my_duties, period):
+    duty = faculty_duties(my_duties, period)[0]
+    duty.room_allocation.session.course_name = "Line one\r\nline two " + "é" * 60
+    duty.room_allocation.session.save()
+    text = duties_ics(my_duties, faculty_duties(my_duties, period))
+    lines = text.split("\r\n")
+    assert "\r" not in "".join(lines) and "\n" not in "".join(lines)
+    assert all(len(line.encode()) <= 75 for line in lines)
+    unfolded = text.replace("\r\n ", "")
+    assert "DESCRIPTION:Line one\\nline two " + "é" * 60 + "\r\n" in unfolded

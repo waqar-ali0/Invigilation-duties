@@ -106,3 +106,26 @@ def test_withdraw_rules(open_period, make_member):
     req.refresh_from_db()
     assert req.status == UnavailabilityStatus.WITHDRAWN
     assert errors_of(withdraw_request, req, me) == ["Only pending requests can be withdrawn."]
+
+
+def test_submit_locks_faculty_row(open_period, make_member):
+    from unittest import mock
+
+    from django.db.models import QuerySet
+
+    from faculty.models import Faculty
+
+    me = make_member()
+    with mock.patch.object(QuerySet, "select_for_update", autospec=True, side_effect=QuerySet.select_for_update) as spy:
+        submit_request(me, open_period, D, None, "x")
+    assert any(call.args[0].model is Faculty for call in spy.call_args_list)
+
+
+def test_withdraw_is_audited(open_period, make_member):
+    from audit.models import AuditLog
+
+    me = make_member()
+    req = submit_request(me, open_period, D, None, "x")
+    withdraw_request(req, me)
+    entry = AuditLog.objects.get(action="unavailability.withdraw")
+    assert entry.actor == me.user and entry.object_id == str(req.pk)

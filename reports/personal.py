@@ -2,6 +2,7 @@
 
 import io
 from datetime import datetime, timezone as dt_timezone
+from xml.sax.saxutils import escape
 
 from django.utils import timezone
 from reportlab.lib import colors
@@ -39,7 +40,7 @@ def duties_pdf(faculty, period):
             [
                 f"{s.slot.date:%a %d %b %Y}",
                 f"{s.slot.start_time:%H:%M}–{s.slot.end_time:%H:%M}",
-                Paragraph(f"{s.course_code} — {s.course_name}", styles["BodyText"]),
+                Paragraph(escape(f"{s.course_code} — {s.course_name}"), styles["BodyText"]),
                 d.room_allocation.room,
             ]
         )
@@ -54,14 +55,29 @@ def duties_pdf(faculty, period):
             ]
         )
     )
-    story = [Paragraph(title, styles["Title"]), table if len(data) > 1 else Paragraph("No duties.", styles["BodyText"])]
+    story = [Paragraph(escape(title), styles["Title"]), table if len(data) > 1 else Paragraph("No duties.", styles["BodyText"])]
     buf = io.BytesIO()
     SimpleDocTemplate(buf, pagesize=A4, title=title, leftMargin=15 * mm, rightMargin=15 * mm).build(story)
     return buf.getvalue()
 
 
 def _ics_text(value):
-    return str(value).replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\n", "\\n")
+    value = str(value).replace("\r\n", "\n").replace("\r", "\n")
+    return value.replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\n", "\\n")
+
+
+def _ics_fold(line):
+    """Split a line into pieces of at most 75 octets, each continued with CRLF and a space (RFC 5545 3.1)."""
+    pieces, current, size, limit = [], "", 0, 75
+    for char in line:
+        octets = len(char.encode())
+        if size + octets > limit:
+            pieces.append(current)
+            current, size, limit = "", 0, 74  # the leading space counts toward the 75
+        current += char
+        size += octets
+    pieces.append(current)
+    return "\r\n ".join(pieces)
 
 
 def _ics_time(day, t):
@@ -87,4 +103,4 @@ def duties_ics(faculty, duties):
             "END:VEVENT",
         ]
     lines.append("END:VCALENDAR")
-    return "\r\n".join(lines) + "\r\n"
+    return "\r\n".join(_ics_fold(line) for line in lines) + "\r\n"

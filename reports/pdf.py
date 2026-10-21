@@ -1,5 +1,6 @@
 import io
 from itertools import groupby
+from xml.sax.saxutils import escape
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -23,7 +24,7 @@ def roster_pdf(period):
     if period.status not in (PeriodStatus.PUBLISHED, PeriodStatus.CLOSED):
         title += " (DRAFT)"
 
-    story = [Paragraph(title, styles["Title"])]
+    story = [Paragraph(escape(title), styles["Title"])]
     rows = roster_rows(period)
     if not rows:
         story.append(Paragraph("No exams scheduled.", styles["BodyText"]))
@@ -34,10 +35,10 @@ def roster_pdf(period):
         for r in group:
             data.append(
                 [
-                    Paragraph(f"{r.course_code} — {r.course_name}", cell),
+                    Paragraph(escape(f"{r.course_code} — {r.course_name}"), cell),
                     r.room,
                     str(r.student_count),
-                    Paragraph(", ".join(r.invigilators) or "—", cell),
+                    Paragraph(escape(", ".join(r.invigilators)) or "—", cell),
                 ]
             )
         table = Table(data, colWidths=[60 * mm, 20 * mm, 18 * mm, 82 * mm], repeatRows=1)

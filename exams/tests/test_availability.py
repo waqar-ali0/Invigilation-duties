@@ -83,3 +83,30 @@ def test_close_view_and_dashboard(admin_client, period, admin_user):
 def test_availability_views_admin_only(client, faculty_user, period):
     client.force_login(faculty_user)
     assert client.post(reverse("open_availability", args=[period.pk])).status_code == 403
+
+
+def test_extending_open_window_sends_no_emails(period, make_member, admin_user):
+    make_member()
+    assert open_availability(period, soon(), admin_user) == 1
+    assert open_availability(period, soon(5), admin_user) == 0
+    period.refresh_from_db()
+    assert OutboundEmail.objects.filter(kind=EmailKind.AVAILABILITY_OPEN).count() == 1
+    assert timezone.localtime(period.availability_deadline).date() == timezone.localtime(soon(5)).date()
+
+
+def test_reopening_after_close_sends_no_emails(period, make_member, admin_user):
+    make_member()
+    open_availability(period, soon(), admin_user)
+    close_availability(period, admin_user)
+    assert open_availability(period, soon(), admin_user) == 0
+    period.refresh_from_db()
+    assert period.availability_is_open
+    assert OutboundEmail.objects.filter(kind=EmailKind.AVAILABILITY_OPEN).count() == 1
+
+
+def test_extend_view_reports_no_emails(admin_client, period, make_member, admin_user):
+    make_member()
+    open_availability(period, soon(), admin_user)
+    deadline = timezone.localtime(soon(5)).strftime("%Y-%m-%dT%H:%M")
+    r = admin_client.post(reverse("open_availability", args=[period.pk]), {"deadline": deadline}, follow=True)
+    assert "0 faculty will be emailed." in r.content.decode()

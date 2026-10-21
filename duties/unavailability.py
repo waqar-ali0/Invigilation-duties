@@ -1,6 +1,7 @@
 """Faculty requests for dates they cannot invigilate, and decisions on them."""
 
 from django.core.exceptions import PermissionDenied
+from django.db import transaction
 from django.db.models import Q
 
 from .models import Unavailability, UnavailabilityStatus
@@ -16,6 +17,8 @@ class RequestRejected(Exception):
 
 def submit_request(faculty, period, day, slot, reason):
     """Create a pending request for `day` (whole day when `slot` is None)."""
+    from faculty.models import Faculty
+
     reason = (reason or "").strip()
     errors = []
     if faculty.is_exempt:
@@ -28,16 +31,19 @@ def submit_request(faculty, period, day, slot, reason):
         errors.append("That time slot is not on the chosen date.")
     if not reason:
         errors.append("A reason is required.")
-    overlapping = Unavailability.objects.filter(
-        faculty=faculty, date=day, status__in=[UnavailabilityStatus.PENDING, UnavailabilityStatus.APPROVED]
-    )
-    if slot is not None:
-        overlapping = overlapping.filter(Q(slot__isnull=True) | Q(slot=slot))
-    if overlapping.exists():
-        errors.append("You already have a request covering this date and slot.")
-    if errors:
-        raise RequestRejected(errors)
-    return Unavailability.objects.create(faculty=faculty, period=period, date=day, slot=slot, reason=reason)
+    with transaction.atomic():
+        # One submission per faculty member at a time, so a double-click can't slip past the duplicate check.
+        Faculty.objects.select_for_update().get(pk=faculty.pk)
+        overlapping = Unavailability.objects.filter(
+            faculty=faculty, date=day, status__in=[UnavailabilityStatus.PENDING, UnavailabilityStatus.APPROVED]
+        )
+        if slot is not None:
+            overlapping = overlapping.filter(Q(slot__isnull=True) | Q(slot=slot))
+        if overlapping.exists():
+            errors.append("You already have a request covering this date and slot.")
+        if errors:
+            raise RequestRejected(errors)
+        return Unavailability.objects.create(faculty=faculty, period=period, date=day, slot=slot, reason=reason)
 
 
 def can_decide(user, req):
@@ -56,7 +62,6 @@ def can_decide(user, req):
 
 
 def decide_request(req, actor, approve, comment=""):
-    from django.db import transaction
     from django.urls import reverse
     from django.utils import timezone
 
@@ -93,11 +98,15 @@ def decide_request(req, actor, approve, comment=""):
 
 
 def withdraw_request(req, faculty):
+    from audit.log import log
+
     if req.faculty_id != faculty.id:
         raise PermissionDenied
     if req.status != UnavailabilityStatus.PENDING:
         raise RequestRejected(["Only pending requests can be withdrawn."])
     if not req.period.availability_is_open:
         raise RequestRejected([MSG_WINDOW_CLOSED])
-    req.status = UnavailabilityStatus.WITHDRAWN
-    req.save(update_fields=["status"])
+    with transaction.atomic():
+        req.status = UnavailabilityStatus.WITHDRAWN
+        req.save(update_fields=["status"])
+        log(faculty.user, "unavailability.withdraw", req, after={"faculty": req.faculty_id, "date": req.date.isoformat()})

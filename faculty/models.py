@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.db.models.functions import Lower
 
 
 class Designation(models.TextChoices):
@@ -47,6 +48,13 @@ class Faculty(models.Model):
     class Meta:
         ordering = ["name"]
         verbose_name_plural = "faculty"
+        constraints = [
+            models.UniqueConstraint(
+                Lower("email"),
+                name="faculty_email_ci_unique",
+                violation_error_message="A faculty member with this email already exists.",
+            )
+        ]
 
     def __str__(self):
         return f"{self.name} ({self.department})"

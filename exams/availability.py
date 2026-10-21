@@ -18,18 +18,24 @@ class AvailabilityError(Exception):
 
 
 def open_availability(period, deadline, actor):
-    """Open the window until `deadline` and email faculty. Returns the number of emails queued."""
+    """Open the window until `deadline` and email faculty. Returns the number of emails queued.
+
+    Faculty are emailed only when the window first opens; moving the deadline of an open window sends nothing.
+    """
     if deadline <= timezone.now():
         raise AvailabilityError("The deadline must be in the future.")
     if timezone.localtime(deadline).date() > period.end_date:
         raise AvailabilityError("The deadline must be on or before the last exam day.")
     with transaction.atomic():
         period = ExamPeriod.lock_for_edit(period.pk)
+        already_open = period.status == PeriodStatus.AVAILABILITY_OPEN
         period.status = PeriodStatus.AVAILABILITY_OPEN
         period.availability_deadline = deadline
         period.save(update_fields=["status", "availability_deadline"])
         link = absolute_url(reverse("my_unavailability"))
         recipients = Faculty.objects.eligible().filter(user__isnull=False, user__is_active=True).select_related("user")
+        if already_open:
+            recipients = recipients.none()
         count = 0
         for faculty in recipients:
             subject, body = render_email(

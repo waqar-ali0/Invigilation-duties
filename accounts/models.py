@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.db.models.functions import Lower
 
 from .managers import UserManager
 
@@ -20,6 +21,15 @@ class User(AbstractUser):
     REQUIRED_FIELDS = []
 
     objects = UserManager()
+
+    class Meta(AbstractUser.Meta):
+        constraints = [
+            models.UniqueConstraint(
+                Lower("email"),
+                name="user_email_ci_unique",
+                violation_error_message="A user with this email already exists.",
+            )
+        ]
 
     def save(self, *args, **kwargs):
         # The exam office works in the Django admin, so admins must be staff.

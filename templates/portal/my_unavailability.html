@@ -26,6 +26,21 @@
   {% empty %}
   <div class="card"><p class="muted">No exam period is accepting requests right now. You'll get an email when one opens.</p></div>
   {% endfor %}
+  <script>
+    // List only the time slots on the chosen date.
+    document.querySelectorAll("select[data-slot-filter]").forEach(function (select) {
+      var date = select.form.elements["date"];
+      function filter() {
+        Array.prototype.forEach.call(select.options, function (option) {
+          if (option.dataset.date) option.hidden = option.disabled = option.dataset.date !== date.value;
+        });
+        if (select.selectedOptions[0] && select.selectedOptions[0].disabled) select.value = "";
+      }
+      date.addEventListener("change", filter);
+      date.addEventListener("input", filter);
+      filter();
+    });
+  </script>
 {% endif %}
 
 {% if requests %}
