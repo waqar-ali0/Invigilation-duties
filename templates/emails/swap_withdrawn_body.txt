@@ -1,0 +1,6 @@
+Hello,
+
+{{ swap.requested_by.name }} withdrew the request for {{ swap.requested_with.name }} to take over this duty. The duty stays with {{ swap.requested_by.name }}, and {{ swap.requested_with.name }} doesn't need to attend:
+{% include "emails/_swap_duty.txt" %}
+
+— Exam Office

@@ -1,0 +1,1 @@
+{{ swap.requested_by.name }} withdrew the swap request for {{ swap.duty.room_allocation.session.slot.date|date:"d M" }}

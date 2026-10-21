@@ -21,6 +21,7 @@ class EmailKind(models.TextChoices):
     SWAP_APPROVED = "swap_approved", "Swap approved"
     SWAP_REJECTED = "swap_rejected", "Swap rejected"
     SWAP_CANCELLED = "swap_cancelled", "Swap cancelled"
+    SWAP_WITHDRAWN = "swap_withdrawn", "Swap withdrawn by requester"
     REPLACED_OUT = "replaced_out", "Replaced (duty removed)"
     REPLACED_IN = "replaced_in", "Replaced (duty given)"
 

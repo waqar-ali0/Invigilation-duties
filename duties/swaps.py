@@ -14,7 +14,7 @@ from audit.log import log
 from exams.models import ExamPeriod, PeriodLockedError, PeriodStatus
 
 from .handover import handover_check
-from .models import DutyStatus, SwapRequest, SwapStatus
+from .models import OPEN_SWAP_STATUSES, DutyStatus, SwapRequest, SwapStatus
 
 MSG_TOO_LATE = "It is too late to swap this duty. Contact the exam office."
 MSG_NOT_OPEN = "This request is no longer open."
@@ -39,9 +39,13 @@ def cutoff_passed(duty, now=None):
 
 
 def expire_if_started(swap):
+    """Mark an open swap expired once its exam has started.
+
+    Conditional update, so a swap decided meanwhile (e.g. approved) is never overwritten.
+    """
     if swap.is_open and timezone.now() >= _slot(swap.duty).starts_at:
-        swap.status = SwapStatus.EXPIRED
-        swap.save(update_fields=["status"])
+        SwapRequest.objects.filter(pk=swap.pk, status__in=OPEN_SWAP_STATUSES).update(status=SwapStatus.EXPIRED)
+        swap.refresh_from_db(fields=["status"])
     return swap
 
 
@@ -195,7 +199,10 @@ def cancel_swap(swap, faculty):
         swap = _locked_swap(swap)
         if not swap.is_open:
             raise SwapError([MSG_NOT_OPEN])
+        was_accepted = swap.status == SwapStatus.PENDING_ADMIN
         swap.status = SwapStatus.CANCELLED
         swap.save(update_fields=["status"])
         log(faculty.user, "swap.cancel", swap)
+        # The colleague may be planning to come; the exam office was asked to approve.
+        _emails(swap, "swap_withdrawn", [_addr(swap.requested_with)] + (_admin_addresses() if was_accepted else []))
     return swap
