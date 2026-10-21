@@ -22,11 +22,11 @@
 </div>
 {% endif %}
 <div class="card table-wrap">
-  <table>
+  <table class="stack">
     <thead><tr><th>Name</th><th>Duties</th><th>Dates and rooms</th></tr></thead>
     <tbody>
       {% for r in rows %}
-      <tr><td>{{ r.faculty.name }}{% if r.faculty.is_exempt %} <span class="badge">exempt</span>{% endif %}</td><td>{{ r.duties|length }}</td><td>{{ r.summary|default:"—" }}</td></tr>
+      <tr><td data-label="Name">{{ r.faculty.name }}{% if r.faculty.is_exempt %} <span class="badge">exempt</span>{% endif %}</td><td data-label="Duties">{{ r.duties|length }}</td><td data-label="Dates and rooms">{{ r.summary|default:"—" }}</td></tr>
       {% endfor %}
     </tbody>
   </table>

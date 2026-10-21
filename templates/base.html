@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Invigilation Duties{% endblock %}</title>
-  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=2">{# bump v= whenever app.css changes, so browsers fetch the new file #}
 </head>
 <body>
   {% if user.is_authenticated %}

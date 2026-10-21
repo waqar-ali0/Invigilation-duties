@@ -1,14 +1,11 @@
 {% with s=d.room_allocation.session %}
 <tr>
-  <td>{{ s.slot.date|date:"D d M Y" }}</td>
-  <td>{{ s.slot.start_time|time:"H:i" }}–{{ s.slot.end_time|time:"H:i" }}</td>
-  <td>{{ s.course_code }} — {{ s.course_name }}</td>
-  <td>{{ d.room_allocation.room }}</td>
+  <td data-label="Date">{{ s.slot.date|date:"D d M Y" }}</td>
+  <td data-label="Time">{{ s.slot.start_time|time:"H:i" }}–{{ s.slot.end_time|time:"H:i" }}</td>
+  <td data-label="Course">{{ s.course_code }} — {{ s.course_name }}</td>
+  <td data-label="Room">{{ d.room_allocation.room }}</td>
   {% if swap_col %}
-  <td>
-    {% if d.open_swap %}<a class="badge" href="{% url 'swap_requests' %}">Swap: {{ d.open_swap.get_status_display|lower }}</a>
-    {% elif d.can_swap %}<a class="button secondary" href="{% url 'ask_colleague' d.pk %}">Ask a colleague</a>{% endif %}
-  </td>
+  <td>{% if d.open_swap %}<a class="badge" href="{% url 'swap_requests' %}">Swap: {{ d.open_swap.get_status_display|lower }}</a>{% elif d.can_swap %}<a class="button secondary" href="{% url 'ask_colleague' d.pk %}">Ask a colleague</a>{% endif %}</td>
   {% endif %}
 </tr>
 {% endwith %}

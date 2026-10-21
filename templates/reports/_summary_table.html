@@ -1,8 +1,8 @@
-<table>
+<table class="stack">
   <thead><tr><th>{{ first_label|default:"Department" }}</th><th>Assigned</th><th>Completed</th><th>Absent</th><th>Not yet marked</th><th>Swapped away</th><th>Taken over</th><th>Replaced</th></tr></thead>
   <tbody>
     {% for r in rows %}
-    <tr><td>{{ r.department }}</td><td>{{ r.assigned }}</td><td>{{ r.completed }}</td><td>{{ r.absent }}</td><td>{{ r.unmarked }}</td><td>{{ r.swapped_away }}</td><td>{{ r.taken_over }}</td><td>{{ r.replaced }}</td></tr>
+    <tr><td data-label="Department">{{ r.department }}</td><td data-label="Assigned">{{ r.assigned }}</td><td data-label="Completed">{{ r.completed }}</td><td data-label="Absent">{{ r.absent }}</td><td data-label="Not yet marked">{{ r.unmarked }}</td><td data-label="Swapped away">{{ r.swapped_away }}</td><td data-label="Taken over">{{ r.taken_over }}</td><td data-label="Replaced">{{ r.replaced }}</td></tr>
     {% endfor %}
   </tbody>
 </table>

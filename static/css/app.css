@@ -101,3 +101,25 @@ input[type=text], input[type=email], input[type=password], select {
 code { background: #eef1f6; padding: 1px 5px; border-radius: 4px; font-size: 0.9em; }
 
 .login { max-width: 380px; margin: 60px auto; }
+
+/* Phones: tables marked .stack turn each row into a small card with labelled lines. */
+@media (max-width: 640px) {
+  main { padding: 16px 12px 40px; }
+  .card { padding: 14px; }
+  table.stack thead { display: none; }
+  table.stack, table.stack tbody, table.stack tr, table.stack td { display: block; width: 100%; }
+  table.stack tr { border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 12px; margin-bottom: 10px; }
+  table.stack td { border: none; padding: 3px 0; }
+  table.stack td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  table.stack td:empty { display: none; }
+  table.stack td .actions, table.stack td form { width: 100%; }
+  table.stack td .button, table.stack td button:not(.link) { width: 100%; text-align: center; margin-top: 4px; }
+  table.stack td .actions { flex-direction: column; align-items: stretch; }
+  header.top .brand { width: 100%; }
+}

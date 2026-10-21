@@ -46,16 +46,16 @@
 {% if requests %}
 <div class="card table-wrap">
   <h2>My requests</h2>
-  <table>
+  <table class="stack">
     <thead><tr><th>Period</th><th>Date</th><th>Slot</th><th>Reason</th><th>Status</th><th></th></tr></thead>
     <tbody>
       {% for r in requests %}
       <tr>
-        <td>{{ r.period.name }}</td>
-        <td>{{ r.date|date:"D d M Y" }}</td>
-        <td>{% if r.slot %}{{ r.slot.start_time|time:"H:i" }}–{{ r.slot.end_time|time:"H:i" }}{% else %}Whole day{% endif %}</td>
-        <td>{{ r.reason }}</td>
-        <td><span class="badge">{{ r.get_status_display }}</span>{% if r.review_comment %}<div class="muted">{{ r.review_comment }}</div>{% endif %}</td>
+        <td data-label="Period">{{ r.period.name }}</td>
+        <td data-label="Date">{{ r.date|date:"D d M Y" }}</td>
+        <td data-label="Slot">{% if r.slot %}{{ r.slot.start_time|time:"H:i" }}–{{ r.slot.end_time|time:"H:i" }}{% else %}Whole day{% endif %}</td>
+        <td data-label="Reason">{{ r.reason }}</td>
+        <td data-label="Status"><span class="badge">{{ r.get_status_display }}</span>{% if r.review_comment %}<div class="muted">{{ r.review_comment }}</div>{% endif %}</td>
         <td>{% if r.status == "pending" and r.period.availability_is_open %}
           <form method="post" action="{% url 'withdraw_request' r.pk %}">{% csrf_token %}<button class="secondary" type="submit">Withdraw</button></form>
         {% endif %}</td>
