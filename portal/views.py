@@ -4,7 +4,7 @@ from itertools import groupby
 from django.contrib import messages
 from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import PermissionDenied
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Q
 from django.http import Http404, HttpResponse
 from django.utils.text import slugify
 from django.shortcuts import get_object_or_404, redirect, render
@@ -103,7 +103,11 @@ def department_duties(request):
     selected = next((p for p in periods if str(p.pk) == request.GET.get("period")), periods[0] if periods else None)
     rows = department_rows(selected, request.hod_departments) if selected else []
     summary = department_summary(selected, request.hod_departments) if selected else []
+    q = request.GET.get("q", "").strip().lower()
+    if q:
+        rows = [r for r in rows if q in r["faculty"].name.lower() or q in r["faculty"].employee_id.lower()]
     context = {
+        "q": request.GET.get("q", "").strip(),
         "periods": periods,
         "selected": selected,
         "rows": rows,
@@ -324,6 +328,41 @@ def swap_decide(request, pk):
     except SwapError as e:
         _swap_message(request, e)
     return redirect("admin_swaps")
+
+
+MIN_QUERY = 2
+
+
+@role_required(Role.ADMIN)
+def search(request):
+    """Find faculty (name, employee ID, email) and exams (course code or name, room)."""
+    q = request.GET.get("q", "").strip()
+    faculty, rooms = [], []
+    if len(q) >= MIN_QUERY:
+        faculty = list(
+            Faculty.objects.filter(Q(name__icontains=q) | Q(employee_id__icontains=q) | Q(email__icontains=q))
+            .select_related("department", "user")
+            .order_by("name")[:50]
+        )
+        duties = (
+            Duty.objects.active()
+            .filter(faculty__in=faculty)
+            .select_related("period", "room_allocation__session__slot")
+            .order_by("-period__start_date", "room_allocation__session__slot__date", "room_allocation__session__slot__start_time")
+        )
+        by_faculty = {}
+        for d in duties:
+            by_faculty.setdefault(d.faculty_id, []).append(d)
+        for f in faculty:
+            f.found_duties = by_faculty.get(f.pk, [])
+        rooms = list(
+            RoomAllocation.objects.filter(
+                Q(session__course_code__icontains=q) | Q(session__course_name__icontains=q) | Q(room__icontains=q)
+            )
+            .select_related("session__slot__period")
+            .order_by("-session__slot__period__start_date", "session__slot__date", "session__slot__start_time", "room")[:50]
+        )
+    return render(request, "portal/search.html", {"q": q, "faculty": faculty, "rooms": rooms, "min_query": MIN_QUERY})
 
 
 @role_required(Role.EXAM_STAFF)

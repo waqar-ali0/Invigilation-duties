@@ -11,6 +11,10 @@
   </div>
 </div>
 
+<div class="card filter-bar">
+  <input type="search" data-filter="#account-lists" data-filter-items="tbody tr" placeholder="Find by name, email or department" aria-label="Filter faculty">
+</div>
+<div id="account-lists">
 <div class="card table-wrap">
   <h2>No account ({{ groups.none|length }})</h2>
   {% include "accounts/_faculty_rows.html" with rows=groups.none action="Invite" %}
@@ -22,5 +26,6 @@
 <div class="card table-wrap">
   <h2>Active ({{ groups.active|length }})</h2>
   {% include "accounts/_faculty_rows.html" with rows=groups.active %}
+</div>
 </div>
 {% endblock %}

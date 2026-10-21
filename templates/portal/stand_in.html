@@ -11,8 +11,9 @@
     {% csrf_token %}
     <div class="field">
       <label for="id_faculty">Who covered</label>
+      <input type="search" data-filter-select="#id_faculty" placeholder="Type a name, department or ID to narrow the list" aria-label="Filter list" style="margin-bottom:8px">
       <select name="faculty_id" id="id_faculty" required>
-        {% for f in candidates %}<option value="{{ f.pk }}">{{ f.name }} — {{ f.department }}</option>{% endfor %}
+        {% for f in candidates %}<option value="{{ f.pk }}">{{ f.name }} ({{ f.employee_id }}) — {{ f.department }}</option>{% endfor %}
       </select>
     </div>
     <div class="field">

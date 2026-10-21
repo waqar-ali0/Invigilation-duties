@@ -15,9 +15,10 @@
     {% csrf_token %}
     <div class="field">
       <label for="id_colleague">Colleague</label>
+      <input type="search" data-filter-select="#id_colleague" placeholder="Type a name, department or ID to narrow the list" aria-label="Filter list" style="margin-bottom:8px">
       <select name="colleague_id" id="id_colleague" required>
         {% for f, count, warnings in candidates %}
-        <option value="{{ f.pk }}">{{ f.name }} — {{ f.department }} — {{ count }} duties{% if warnings %} (⚠ {{ warnings|join:"; " }}){% endif %}</option>
+        <option value="{{ f.pk }}">{{ f.name }} ({{ f.employee_id }}) — {{ f.department }} — {{ count }} duties{% if warnings %} (⚠ {{ warnings|join:"; " }}){% endif %}</option>
         {% endfor %}
       </select>
     </div>

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <title>{% block title %}Invigilation Duties{% endblock %}</title>
-  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=9">{# bump v= whenever app.css changes, so browsers fetch the new file #}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=15">{# bump v= whenever app.css changes, so browsers fetch the new file #}
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%232457d6'/%3E%3Cpath d='M7 12.5l3 3 7-7' stroke='white' stroke-width='2.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 </head>
 <body class="{% block body_class %}{% endblock %}">
@@ -26,8 +26,7 @@
         <a href="{% url 'admin_swaps' %}" class="{% if n == 'admin_swaps' %}active{% endif %}">Swaps</a>
         <a href="{% url 'attendance' %}" class="{% if n == 'attendance' or n == 'attendance_slot' or n == 'record_stand_in' %}active{% endif %}">Attendance</a>
         <a href="{% url 'accounts_page' %}" class="{% if n == 'accounts_page' %}active{% endif %}">Accounts</a>
-        <a href="{% url 'faculty_import' %}" class="{% if n == 'faculty_import' or n == 'department_import' %}active{% endif %}">Imports</a>
-        <a href="{% url 'email_list' %}" class="{% if n == 'email_list' %}active{% endif %}">Emails</a>
+                <a href="{% url 'email_list' %}" class="{% if n == 'email_list' %}active{% endif %}">Emails</a>
         <a href="{% url 'audit_log' %}" class="{% if n == 'audit_log' %}active{% endif %}">Audit log</a>
         {% elif user.role == "exam_staff" %}
         <a href="{% url 'attendance' %}" class="active">Attendance</a>
@@ -41,6 +40,12 @@
         {% endif %}
         {% endif %}
       </nav>
+      {% if user.is_superuser or user.role == "admin" %}
+      <form class="header-search" method="get" action="{% url 'search' %}" role="search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input type="search" name="q" placeholder="Search people, ID, course, room" aria-label="Search" value="{% if n == 'search' %}{{ request.GET.q }}{% endif %}">
+      </form>
+      {% endif %}
       <div class="user">
         <span class="user-email" title="{{ user.email }}">{{ user.email }}</span>
         <span class="role">{% if user.is_superuser %}Superuser{% elif user.role == "admin" %}Exam office{% elif user.role == "hod" %}HOD{% else %}{{ user.get_role_display }}{% endif %}</span>
@@ -57,5 +62,6 @@
     {% endfor %}
     {% block content %}{% endblock %}
   </main>
+  <script src="{% static 'js/filter.js' %}?v=1" defer></script>
 </body>
 </html>

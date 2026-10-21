@@ -8,8 +8,13 @@
 <div class="alert warning">This exam hasn't started yet. Attendance can be marked from {{ slot.start_time|time:"H:i" }}.</div>
 {% endif %}
 
+<div class="card filter-bar">
+  <input type="search" data-filter="#rooms" data-filter-items=".room-card" placeholder="Find a name, room or course" aria-label="Filter rooms">
+</div>
+<div id="rooms">
+<p class="muted" data-filter-empty hidden>Nothing matches.</p>
 {% for room in rooms %}
-<div class="card table-wrap">
+<div class="card table-wrap room-card">
   <div class="actions" style="justify-content:space-between">
     <h2 style="margin:0">{{ room.room }} · {{ room.session.course_code }} <span class="muted">({{ room.student_count }} students)</span></h2>
     {% if started %}
@@ -48,4 +53,5 @@
 {% empty %}
 <div class="card"><p class="muted">No rooms in this time slot.</p></div>
 {% endfor %}
+</div>
 {% endblock %}

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Search — Invigilation Duties{% endblock %}
+{% block content %}
+<h1>Search</h1>
+<p class="subtitle">Find a faculty member by name, employee ID or email, or an exam by course code, course name or room.</p>
+
+<div class="card">
+  <form method="get" class="actions">
+    <input type="search" name="q" value="{{ q }}" placeholder="e.g. Ali Raza, DEMO012, PHY301, R05" aria-label="Search" autofocus style="max-width:420px">
+    <button type="submit">Search</button>
+  </form>
+</div>
+
+{% if q and q|length < min_query %}
+<div class="card"><p class="muted">Type at least {{ min_query }} characters.</p></div>
+{% elif q %}
+<div class="card table-wrap">
+  <h2>Faculty ({{ faculty|length }})</h2>
+  {% if faculty %}
+  <table class="stack">
+    <thead><tr><th>Name</th><th>Employee ID</th><th>Department</th><th>Duties</th></tr></thead>
+    <tbody>
+      {% for f in faculty %}
+      <tr>
+        <td data-label="Name">
+          <a href="{% url 'admin:faculty_faculty_change' f.pk %}">{{ f.name }}</a>
+          <div class="muted">{{ f.email }}</div>
+          {% if f.is_exempt %}<span class="badge">exempt</span>{% endif %}{% if not f.is_active %}<span class="badge">inactive</span>{% endif %}
+        </td>
+        <td data-label="Employee ID"><code>{{ f.employee_id }}</code></td>
+        <td data-label="Department">{{ f.department }}<div class="muted">{{ f.get_designation_display }}</div></td>
+        <td data-label="Duties">
+          {% for d in f.found_duties %}
+            {% with s=d.room_allocation.session %}
+            <div><a href="{% url 'room_detail' d.period_id d.room_allocation_id %}">{{ s.slot.date|date:"D d M" }} {{ s.slot.start_time|time:"H:i" }} · {{ s.course_code }} · {{ d.room_allocation.room }}</a> <span class="muted">{{ d.period.name }}</span></div>
+            {% endwith %}
+          {% empty %}<span class="muted">No duties</span>{% endfor %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p class="muted">No faculty match “{{ q }}”.</p>{% endif %}
+</div>
+
+<div class="card table-wrap">
+  <h2>Exams and rooms ({{ rooms|length }})</h2>
+  {% if rooms %}
+  <table class="stack">
+    <thead><tr><th>When</th><th>Course</th><th>Room</th><th>Period</th></tr></thead>
+    <tbody>
+      {% for r in rooms %}
+      <tr>
+        <td data-label="When">{{ r.session.slot }}</td>
+        <td data-label="Course">{{ r.session.course_code }} — {{ r.session.course_name }}</td>
+        <td data-label="Room"><a href="{% url 'room_detail' r.session.slot.period_id r.pk %}">{{ r.room }}</a></td>
+        <td data-label="Period">{{ r.session.slot.period.name }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p class="muted">No exams match “{{ q }}”.</p>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

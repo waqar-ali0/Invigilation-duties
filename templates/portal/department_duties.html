@@ -11,7 +11,8 @@
     <select name="period" id="id_period" style="max-width:280px" onchange="this.form.submit()">
       {% for p in periods %}<option value="{{ p.pk }}"{% if p == selected %} selected{% endif %}>{{ p.name }}</option>{% endfor %}
     </select>
-    <noscript><button type="submit">Show</button></noscript>
+    <input type="search" name="q" value="{{ q }}" placeholder="Name or employee ID" aria-label="Search faculty" style="max-width:220px">
+    <button class="secondary" type="submit">Search</button>
     <a class="button secondary" href="{% url 'department_duties_xlsx' selected.pk %}">Download Excel</a>
   </form>
 </div>

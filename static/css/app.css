@@ -72,7 +72,7 @@ header.top {
   z-index: 10;
 }
 header.top .inner {
-  max-width: 1180px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 0 20px;
   min-height: 60px;
@@ -258,7 +258,7 @@ a.badge:hover { text-decoration: none; filter: brightness(0.97); }
 
 /* ---- Forms ------------------------------------------------------------- */
 label { display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 6px; }
-input[type=text], input[type=email], input[type=password], input[type=date], input[type=datetime-local], input[type=file], select, textarea {
+input[type=text], input[type=search], input[type=email], input[type=password], input[type=date], input[type=datetime-local], input[type=file], select, textarea {
   font: inherit;
   font-size: 0.95rem;
   color: var(--text);
@@ -340,3 +340,24 @@ td.decide .actions button { flex: 1; }
 .actions.pair { flex-wrap: nowrap; }
 .actions.pair button { flex: 1; min-width: 96px; }
 @media (max-width: 640px) { table.stack td .actions.pair { flex-direction: row; } }
+
+/* Header search (exam office). */
+.header-search { position: relative; margin: 0; flex: 0 1 230px; min-width: 150px; }
+.header-search svg { position: absolute; left: 10px; top: 50%; width: 16px; height: 16px; transform: translateY(-50%);
+  fill: none; stroke: var(--header-text); stroke-width: 2; stroke-linecap: round; opacity: 0.7; pointer-events: none; }
+.header-search input { width: 100%; max-width: none; padding: 7px 10px 7px 32px; font-size: 0.88rem; color: #fff;
+  background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 8px; }
+.header-search input::placeholder { color: var(--header-text); opacity: 0.7; }
+.header-search input:focus { background: rgba(255, 255, 255, 0.14); border-color: rgba(255, 255, 255, 0.35); box-shadow: none; }
+input[type=search] { font: inherit; }
+@media (max-width: 640px) { .header-search { order: 4; flex-basis: 100%; margin-bottom: 6px; } }
+
+.filter-bar { padding: 12px 16px; position: sticky; top: 72px; z-index: 5; }
+.filter-bar input { max-width: 420px; }
+@media (max-width: 640px) { .filter-bar { top: 8px; } }
+
+[hidden] { display: none !important; }
+
+/* The header search sits on its own row under the menu, so the menu always has room. */
+header.top .inner { flex-wrap: wrap; }
+.header-search { order: 5; flex: 1 1 100%; max-width: none; margin: 0 0 10px; }

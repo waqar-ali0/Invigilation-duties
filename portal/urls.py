@@ -18,6 +18,7 @@ urlpatterns = [
     path("my/unavailability/", views.my_unavailability, name="my_unavailability"),
     path("my/unavailability/<int:pk>/withdraw/", views.withdraw_request_view, name="withdraw_request"),
     path("staff/", views.staff_home, name="staff_home"),
+    path("search/", views.search, name="search"),
     path("attendance/", views.attendance, name="attendance"),
     path("attendance/slots/<int:slot_id>/", views.attendance_slot, name="attendance_slot"),
     path("attendance/duties/<int:duty_id>/", views.attendance_mark, name="attendance_mark"),

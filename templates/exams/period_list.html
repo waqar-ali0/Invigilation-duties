@@ -3,7 +3,7 @@
 {% block title %}Exam periods — Invigilation Duties{% endblock %}
 {% block content %}
 <h1>Exam periods</h1>
-<p class="subtitle">Create a new period in the <a href="{% url 'admin:exams_examperiod_add' %}">admin panel</a>, then import its schedule here.</p>
+<p class="subtitle">Create a new period in the <a href="{% url 'admin:exams_examperiod_add' %}">admin panel</a>, then import its schedule here. Faculty and departments: <a href="{% url 'department_import' %}">import departments</a> · <a href="{% url 'faculty_import' %}">import faculty</a>.</p>
 <div class="card table-wrap">
   {% if periods %}
   <table>
