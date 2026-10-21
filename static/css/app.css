@@ -192,6 +192,7 @@ button, .button {
   color: #fff;
   cursor: pointer;
   text-decoration: none;
+  white-space: nowrap;
   transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
 }
 button:hover, .button:hover { background: var(--primary-hover); border-color: var(--primary-hover); text-decoration: none; }
