@@ -1,10 +1,10 @@
-{% if rows %}
+{% load ui %}{% if rows %}
 <table class="stack">
   <thead><tr><th>Faculty</th><th>Period</th><th>Date</th><th>Slot</th><th>Reason</th>{% if decide %}<th>Decision</th>{% else %}<th>Status</th>{% endif %}</tr></thead>
   <tbody>
     {% for r in rows %}
     <tr>
-      <td data-label="Faculty">{{ r.faculty.name }}<div class="muted">{{ r.faculty.department }}</div>{% if r.is_hod_request %}<span class="badge short">HOD request</span>{% endif %}</td>
+      <td data-label="Faculty">{{ r.faculty.name }}<div class="muted">{{ r.faculty.department }}</div>{% if r.is_hod_request %}<span class="badge warn">HOD request</span>{% endif %}</td>
       <td data-label="Period">{{ r.period.name }}</td>
       <td data-label="Date">{{ r.date|date:"D d M Y" }}</td>
       <td data-label="Slot">{% if r.slot %}{{ r.slot.start_time|time:"H:i" }}–{{ r.slot.end_time|time:"H:i" }}{% else %}Whole day{% endif %}</td>
@@ -21,7 +21,7 @@
         </form>
       </td>
       {% else %}
-      <td data-label="Status"><span class="badge">{{ r.get_status_display }}</span>{% if r.review_comment %}<div class="muted">{{ r.review_comment }}</div>{% endif %}</td>
+      <td data-label="Status"><span class="badge {{ r.status|tone }}">{{ r.get_status_display }}</span>{% if r.review_comment %}<div class="muted">{{ r.review_comment }}</div>{% endif %}</td>
       {% endif %}
     </tr>
     {% endfor %}

@@ -23,10 +23,10 @@
       <tr>
         <td>{{ d.faculty.name }}</td>
         <td>
-          {% if d.status == "completed" %}<span class="badge">Present</span>
-          {% elif d.status == "absent" %}<span class="badge short">Absent</span>
+          {% if d.status == "completed" %}<span class="badge ok">Present</span>
+          {% elif d.status == "absent" %}<span class="badge danger">Absent</span>
           {% else %}<span class="muted">Not marked</span>{% endif %}
-          {% if d.source == "stand_in" %}<span class="badge">Stand-in</span>{% endif %}
+          {% if d.source == "stand_in" %}<span class="badge info">Stand-in</span>{% endif %}
           {% if d.attendance_marked_by %}<div class="muted">by {{ d.attendance_marked_by.email }} {{ d.attendance_marked_at|date:"H:i" }}</div>{% endif %}
           {% if d.needs_stand_in %}<div><a href="{% url 'record_stand_in' d.pk %}">Record stand-in</a></div>{% endif %}
         </td>

@@ -23,7 +23,7 @@
       <tr>
         <td>{{ r.faculty.name }}</td><td>{{ r.faculty.department }}</td>
         <td>{{ r.assigned }}</td><td>{{ r.completed }}</td>
-        <td>{% if r.absent %}<span class="badge short">{{ r.absent }}</span>{% else %}0{% endif %}</td>
+        <td>{% if r.absent %}<span class="badge danger">{{ r.absent }}</span>{% else %}0{% endif %}</td>
         <td>{{ r.unmarked }}</td><td>{{ r.swapped_away }}</td><td>{{ r.taken_over }}</td><td>{{ r.replaced }}</td>
         <td>{% for d in r.absence_dates %}{{ d|date:"d M" }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
       </tr>

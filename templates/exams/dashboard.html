@@ -1,10 +1,11 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}{{ period.name }} — Invigilation Duties{% endblock %}
 {% block content %}
 <h1>{{ period.name }}</h1>
 <p class="subtitle">
   {{ period.start_date|date:"d M Y" }} – {{ period.end_date|date:"d M Y" }}
-  · <span class="badge">{{ period.get_status_display }}</span>
+  · <span class="badge {{ period.status|tone }}">{{ period.get_status_display }}</span>
   · <a href="{% url 'admin:exams_examperiod_change' period.pk %}">Edit dates and settings</a>
 </p>
 
@@ -124,7 +125,7 @@
         <td>{{ r.room.student_count }}</td>
         <td>
           {{ r.names|join:", "|default:"—" }}
-          {% if r.short %}<span class="badge short">{{ r.names|length }}/{{ r.room.invigilators_required }}</span>{% endif %}
+          {% if r.short %}<span class="badge danger">{{ r.names|length }}/{{ r.room.invigilators_required }}</span>{% endif %}
         </td>
       </tr>
       {% endfor %}

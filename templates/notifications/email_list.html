@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Emails — Invigilation Duties{% endblock %}
 {% block content %}
 <h1>Emails</h1>
@@ -41,7 +42,7 @@
     <thead><tr><th>Created</th><th>To</th><th>Subject</th><th>Status</th></tr></thead>
     <tbody>
       {% for e in recent %}
-      <tr><td>{{ e.created_at|date:"d M Y H:i" }}</td><td>{{ e.to }}</td><td>{{ e.subject }}</td><td><span class="badge">{{ e.get_status_display }}</span></td></tr>
+      <tr><td>{{ e.created_at|date:"d M Y H:i" }}</td><td>{{ e.to }}</td><td>{{ e.subject }}</td><td><span class="badge {{ e.status|tone }}">{{ e.get_status_display }}</span></td></tr>
       {% endfor %}
     </tbody>
   </table>

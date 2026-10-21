@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Exam periods — Invigilation Duties{% endblock %}
 {% block content %}
 <h1>Exam periods</h1>
@@ -12,7 +13,7 @@
       <tr>
         <td><a href="{% url 'period_dashboard' p.pk %}">{{ p.name }}</a></td>
         <td>{{ p.start_date|date:"d M Y" }} – {{ p.end_date|date:"d M Y" }}</td>
-        <td><span class="badge">{{ p.get_status_display }}</span></td>
+        <td><span class="badge {{ p.status|tone }}">{{ p.get_status_display }}</span></td>
       </tr>
       {% endfor %}
     </tbody>

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Swap requests — Invigilation Duties{% endblock %}
 {% block content %}
 <h1>Swap requests</h1>
@@ -38,7 +39,7 @@
       <tr>
         <td data-label="To">{{ s.requested_with.name }}</td>
         <td data-label="Duty">{% include "portal/_swap_duty.html" %}</td>
-        <td data-label="Status"><span class="badge">{{ s.get_status_display }}</span>{% if s.comment %}<div class="muted">{{ s.comment }}</div>{% endif %}</td>
+        <td data-label="Status"><span class="badge {{ s.status|tone }}">{{ s.get_status_display }}</span>{% if s.comment %}<div class="muted">{{ s.comment }}</div>{% endif %}</td>
         <td>{% if s.is_open %}<form method="post" action="{% url 'swap_cancel' s.pk %}">{% csrf_token %}<button class="secondary" type="submit">Cancel</button></form>{% endif %}</td>
       </tr>
       {% endfor %}
@@ -53,7 +54,7 @@
   <table class="stack">
     <tbody>
       {% for s in incoming_other %}
-      <tr><td data-label="From">{{ s.requested_by.name }}</td><td data-label="Duty">{% include "portal/_swap_duty.html" %}</td><td data-label="Status"><span class="badge">{{ s.get_status_display }}</span></td></tr>
+      <tr><td data-label="From">{{ s.requested_by.name }}</td><td data-label="Duty">{% include "portal/_swap_duty.html" %}</td><td data-label="Status"><span class="badge {{ s.status|tone }}">{{ s.get_status_display }}</span></td></tr>
       {% endfor %}
     </tbody>
   </table>

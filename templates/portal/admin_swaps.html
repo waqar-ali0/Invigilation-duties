@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Swaps — Invigilation Duties{% endblock %}
 {% block content %}
 <h1>Swaps</h1>
@@ -41,7 +42,7 @@
     <tbody>
       {% for s in recent %}
       <tr><td>{{ s.requested_by.name }}</td><td>{{ s.requested_with.name }}</td><td>{% include "portal/_swap_duty.html" %}</td>
-        <td><span class="badge">{{ s.get_status_display }}</span>{% if s.comment %}<div class="muted">{{ s.comment }}</div>{% endif %}</td>
+        <td><span class="badge {{ s.status|tone }}">{{ s.get_status_display }}</span>{% if s.comment %}<div class="muted">{{ s.comment }}</div>{% endif %}</td>
         <td>{{ s.decided_by.email|default:"—" }} · {{ s.decided_at|date:"d M H:i" }}</td></tr>
       {% endfor %}
     </tbody>
