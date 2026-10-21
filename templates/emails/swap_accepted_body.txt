@@ -1,0 +1,4 @@
+{{ swap.requested_with.name }} agreed to take over this duty from {{ swap.requested_by.name }}:
+{% include "emails/_swap_duty.txt" %}
+
+Approve or reject it on the Swaps page of the invigilation duties system.

@@ -1,0 +1,8 @@
+Dear {{ swap.requested_by.name }},
+
+{{ swap.requested_with.name }} declined to take over this duty, so it is still yours:
+{% include "emails/_swap_duty.txt" %}
+
+You can ask someone else here: {{ link }}
+
+— Exam Office

@@ -1,0 +1,1 @@
+{% with sess=s.duty.room_allocation.session %}{{ sess.slot.date|date:"D d M Y" }} {{ sess.slot.start_time|time:"H:i" }}–{{ sess.slot.end_time|time:"H:i" }} · {{ sess.course_code }} · room {{ s.duty.room_allocation.room }}{% endwith %}

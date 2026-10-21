@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Ask a colleague — Invigilation Duties{% endblock %}
+{% block content %}
+{% with s=duty.room_allocation.session %}
+<h1>Ask a colleague</h1>
+<p class="subtitle"><a href="{% url 'my_duties' %}">← My duties</a> · {{ s.slot }} · {{ s.course_code }} — {{ s.course_name }} · room {{ duty.room_allocation.room }}</p>
+{% endwith %}
+
+{% if too_late %}
+<div class="card"><p>It is too late to swap this duty. Contact the exam office.</p></div>
+{% elif candidates %}
+<div class="card">
+  <p class="muted">Only colleagues who are free at this time, within their limits and have an account are listed, fewest duties first. If they accept, the exam office makes the final decision.</p>
+  <form method="post">
+    {% csrf_token %}
+    <div class="field">
+      <label for="id_colleague">Colleague</label>
+      <select name="colleague_id" id="id_colleague" required>
+        {% for f, count, warnings in candidates %}
+        <option value="{{ f.pk }}">{{ f.name }} — {{ f.department }} — {{ count }} duties{% if warnings %} (⚠ {{ warnings|join:"; " }}){% endif %}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="id_message">Message (optional)</label>
+      <input type="text" name="message" id="id_message" maxlength="300">
+    </div>
+    <button type="submit">Send request</button>
+  </form>
+</div>
+{% else %}
+<div class="card"><p class="muted">No colleague is free for this exam right now. Contact the exam office if you can't attend.</p></div>
+{% endif %}
+{% endblock %}

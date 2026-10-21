@@ -13,9 +13,9 @@
   </div>
   {% if p.upcoming %}
   <table>
-    <thead><tr><th>Date</th><th>Time</th><th>Course</th><th>Room</th></tr></thead>
+    <thead><tr><th>Date</th><th>Time</th><th>Course</th><th>Room</th><th></th></tr></thead>
     <tbody>
-      {% for d in p.upcoming %}{% include "portal/_duty_row.html" %}{% endfor %}
+      {% for d in p.upcoming %}{% include "portal/_duty_row.html" with swap_col=True %}{% endfor %}
     </tbody>
   </table>
   {% else %}

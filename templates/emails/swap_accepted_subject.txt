@@ -1,0 +1,1 @@
+Swap waiting for approval: {{ swap.requested_by.name }} → {{ swap.requested_with.name }}

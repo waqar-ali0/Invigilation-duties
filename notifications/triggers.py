@@ -19,6 +19,25 @@ def _address(faculty):
     return faculty.user.email if faculty.user_id else faculty.email
 
 
+def duty_ics_attachment(duty):
+    """(filename, bytes, mimetype) calendar file for one duty."""
+    from reports.personal import duties_ics
+
+    ics = duties_ics(duty.faculty, [duty]).encode("utf-8")
+    return (f"duty-{duty.pk}.ics", ics, "text/calendar")
+
+
+def queue_swap_email(swap, name, recipients, attachment=None, **extra):
+    """Queue the `emails/<name>_*` email about `swap` to each address in `recipients`."""
+    subject, body = render_email(name, {"swap": swap, "link": absolute_url(reverse("swap_requests")), **extra})
+    for to in recipients:
+        queue_email(to, subject, body, name, attachment=attachment)
+
+
+def address_of(faculty):
+    return _address(faculty)
+
+
 def queue_roster_published(period):
     """One email per faculty member with duties in `period`: their list plus a calendar file."""
     from reports.personal import duties_ics

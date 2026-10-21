@@ -1,0 +1,11 @@
+Dear {{ swap.requested_with.name }},
+
+{{ swap.requested_by.name }} asks if you can take over this invigilation duty:
+{% include "emails/_swap_duty.txt" %}
+{% if swap.message %}
+Their message: {{ swap.message }}
+{% endif %}
+Accept or decline here: {{ link }}
+If you accept, the exam office makes the final decision.
+
+— Exam Office

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Swap requests — Invigilation Duties{% endblock %}
+{% block content %}
+<h1>Swap requests</h1>
+
+<div class="card table-wrap">
+  <h2>Asked of you ({{ incoming_open|length }})</h2>
+  {% if incoming_open %}
+  <table>
+    <thead><tr><th>From</th><th>Duty</th><th>Message</th><th></th></tr></thead>
+    <tbody>
+      {% for s in incoming_open %}
+      <tr>
+        <td>{{ s.requested_by.name }}</td>
+        <td>{% include "portal/_swap_duty.html" %}</td>
+        <td>{{ s.message|default:"—" }}</td>
+        <td>
+          <form method="post" action="{% url 'swap_respond' s.pk %}" class="actions">
+            {% csrf_token %}
+            <button type="submit" name="action" value="accept">Accept</button>
+            <button class="danger" type="submit" name="action" value="decline">Decline</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p class="muted">Nobody is asking you right now.</p>{% endif %}
+</div>
+
+<div class="card table-wrap">
+  <h2>Your requests</h2>
+  {% if outgoing %}
+  <table>
+    <thead><tr><th>To</th><th>Duty</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      {% for s in outgoing %}
+      <tr>
+        <td>{{ s.requested_with.name }}</td>
+        <td>{% include "portal/_swap_duty.html" %}</td>
+        <td><span class="badge">{{ s.get_status_display }}</span>{% if s.comment %}<div class="muted">{{ s.comment }}</div>{% endif %}</td>
+        <td>{% if s.is_open %}<form method="post" action="{% url 'swap_cancel' s.pk %}">{% csrf_token %}<button class="secondary" type="submit">Cancel</button></form>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p class="muted">You haven't asked anyone. Use “Ask a colleague” on <a href="{% url 'my_duties' %}">My duties</a>.</p>{% endif %}
+</div>
+
+{% if incoming_other %}
+<div class="card table-wrap">
+  <h2>Earlier requests to you</h2>
+  <table>
+    <tbody>
+      {% for s in incoming_other %}
+      <tr><td>{{ s.requested_by.name }}</td><td>{% include "portal/_swap_duty.html" %}</td><td><span class="badge">{{ s.get_status_display }}</span></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

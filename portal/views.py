@@ -11,10 +11,12 @@ from django.views.decorators.http import require_POST
 
 from accounts.models import Role
 from accounts.permissions import faculty_required, hod_required, role_required
-from duties.models import Unavailability, UnavailabilityStatus
+from duties.handover import handover_candidates
+from duties.models import OPEN_SWAP_STATUSES, Duty, DutyStatus, SwapRequest, SwapStatus, Unavailability, UnavailabilityStatus
+from duties.swaps import SwapError, accept_swap, cancel_swap, cutoff_passed, decline_swap, expire_if_started, request_swap
 from duties.unavailability import RequestRejected, can_decide, decide_request, submit_request, withdraw_request
 from exams.models import ExamPeriod, PeriodLockedError, PeriodStatus
-from faculty.models import Department
+from faculty.models import Department, Faculty
 from reports.excel import department_rows, department_xlsx
 from reports.personal import VISIBLE_STATUSES, duties_ics, duties_pdf, faculty_duties
 
@@ -37,9 +39,20 @@ def home(request):
 @faculty_required
 def my_duties(request):
     today = timezone.localdate()
+    open_swaps = {
+        s.duty_id: s for s in SwapRequest.objects.filter(requested_by=request.faculty, status__in=OPEN_SWAP_STATUSES)
+    }
     periods = []
     for period, duties in groupby(faculty_duties(request.faculty), key=lambda d: d.period):
         duties = list(duties)
+        for d in duties:
+            d.open_swap = open_swaps.get(d.pk)
+            d.can_swap = (
+                period.status == PeriodStatus.PUBLISHED
+                and d.status == DutyStatus.ASSIGNED
+                and d.open_swap is None
+                and not cutoff_passed(d)
+            )
         upcoming = [d for d in duties if d.room_allocation.session.slot.date >= today]
         past = [d for d in duties if d.room_allocation.session.slot.date < today]
         periods.append({"period": period, "upcoming": upcoming, "past": past})
@@ -180,6 +193,81 @@ def decide_request_view(request, pk):
     else:
         messages.success(request, f"Request from {req.faculty.name} {'approved' if decision == 'approve' else 'rejected'}.")
     return redirect(back)
+
+
+def _swap_message(request, e):
+    messages.error(request, " ".join(e.errors))
+
+
+@faculty_required
+def ask_colleague(request, duty_id):
+    duty = get_object_or_404(
+        Duty.objects.active().select_related("room_allocation__session__slot", "period"),
+        pk=duty_id,
+        faculty=request.faculty,
+        period__status=PeriodStatus.PUBLISHED,
+    )
+    if request.method == "POST":
+        colleague = get_object_or_404(Faculty, pk=request.POST.get("colleague_id") or 0)
+        try:
+            request_swap(duty, colleague, request.POST.get("message", ""))
+        except SwapError as e:
+            _swap_message(request, e)
+            return redirect("ask_colleague", duty_id=duty.pk)
+        messages.success(request, f"Request sent to {colleague.name}.")
+        return redirect("swap_requests")
+    context = {
+        "duty": duty,
+        "too_late": cutoff_passed(duty),
+        "candidates": handover_candidates(duty, require_account=True),
+    }
+    return render(request, "portal/ask_colleague.html", context)
+
+
+@faculty_required
+def swap_requests(request):
+    me = request.faculty
+    related = "duty__room_allocation__session__slot", "requested_by", "requested_with"
+    incoming = [expire_if_started(s) for s in SwapRequest.objects.filter(requested_with=me).select_related(*related)]
+    outgoing = [expire_if_started(s) for s in SwapRequest.objects.filter(requested_by=me).select_related(*related)]
+    context = {
+        "incoming_open": [s for s in incoming if s.status == SwapStatus.PENDING_PEER],
+        "incoming_other": [s for s in incoming if s.status != SwapStatus.PENDING_PEER],
+        "outgoing": outgoing,
+    }
+    return render(request, "portal/swap_requests.html", context)
+
+
+@faculty_required
+@require_POST
+def swap_respond(request, pk):
+    swap = get_object_or_404(SwapRequest, pk=pk, requested_with=request.faculty)
+    action = request.POST.get("action")
+    try:
+        if action == "accept":
+            accept_swap(swap, request.faculty)
+            messages.success(request, "Accepted. The exam office will make the final decision.")
+        elif action == "decline":
+            decline_swap(swap, request.faculty)
+            messages.success(request, "Declined.")
+        else:
+            messages.error(request, "Choose accept or decline.")
+    except SwapError as e:
+        _swap_message(request, e)
+    return redirect("swap_requests")
+
+
+@faculty_required
+@require_POST
+def swap_cancel(request, pk):
+    swap = get_object_or_404(SwapRequest, pk=pk, requested_by=request.faculty)
+    try:
+        cancel_swap(swap, request.faculty)
+    except SwapError as e:
+        _swap_message(request, e)
+    else:
+        messages.success(request, "Request cancelled.")
+    return redirect("swap_requests")
 
 
 @role_required(Role.EXAM_STAFF)

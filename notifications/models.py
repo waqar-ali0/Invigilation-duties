@@ -15,6 +15,14 @@ class EmailKind(models.TextChoices):
     REQUEST_DECISION = "request_decision", "Request decision"
     ROSTER_PUBLISHED = "roster_published", "Roster published"
     REMINDER = "reminder", "Duty reminder"
+    SWAP_REQUESTED = "swap_requested", "Swap requested"
+    SWAP_ACCEPTED = "swap_accepted", "Swap accepted"
+    SWAP_DECLINED = "swap_declined", "Swap declined"
+    SWAP_APPROVED = "swap_approved", "Swap approved"
+    SWAP_REJECTED = "swap_rejected", "Swap rejected"
+    SWAP_CANCELLED = "swap_cancelled", "Swap cancelled"
+    REPLACED_OUT = "replaced_out", "Replaced (duty removed)"
+    REPLACED_IN = "replaced_in", "Replaced (duty given)"
 
 
 class OutboundEmail(models.Model):
