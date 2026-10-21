@@ -323,3 +323,5 @@ body.auth main { display: grid; place-items: center; min-height: 100vh; padding:
   table.stack td .actions { flex-direction: column; align-items: stretch; }
   .grid { gap: 12px; }
 }
+
+.field .muted { display: block; margin-top: 4px; font-size: 0.85rem; }

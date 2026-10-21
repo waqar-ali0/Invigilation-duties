@@ -19,12 +19,28 @@ SLOT_TIMES = [(time(9), time(12)), (time(14), time(17))]
 
 
 class Command(BaseCommand):
-    help = "Create demo data: 20 departments, 200 faculty and a 10-day 'Demo Finals' exam period."
+    help = (
+        "Create demo data: 20 departments, 200 faculty (once) and a 10-day exam period "
+        "(default 'Demo Finals' from 2026-12-01). Run again with --name/--start for more periods."
+    )
+
+    def add_arguments(self, parser):
+        parser.add_argument("--name", default=PERIOD_NAME, help="Exam period name.")
+        parser.add_argument("--start", default="2026-12-01", help="First exam day (YYYY-MM-DD).")
+        parser.add_argument(
+            "--courses", type=int, default=15, help="Courses per time slot (2 rooms each); lower = lighter load."
+        )
 
     @transaction.atomic
     def handle(self, *args, **options):
-        if ExamPeriod.objects.filter(name=PERIOD_NAME).exists():
-            raise CommandError(f"{PERIOD_NAME} already exists.")
+        name = options["name"]
+        if ExamPeriod.objects.filter(name=name).exists():
+            raise CommandError(f"{name} already exists.")
+        try:
+            start = date.fromisoformat(options["start"])
+        except ValueError as exc:
+            raise CommandError("Use --start YYYY-MM-DD.") from exc
+        courses = options["courses"]
         rng = random.Random(2026)
 
         departments = []
@@ -35,7 +51,12 @@ class Command(BaseCommand):
         faculty_by_dept = {}
         exempt = set(rng.sample(range(200), 5))
         n = 0
-        for dept in departments:
+        existing = Faculty.objects.filter(employee_id__startswith="DEMO")
+        if existing.exists():  # a later demo period reuses the demo faculty
+            for f in existing:
+                faculty_by_dept.setdefault(f.department_id, []).append(f)
+            n = existing.count()
+        for dept in departments if not faculty_by_dept else []:
             people = []
             for designation in MIX:
                 people.append(
@@ -51,15 +72,14 @@ class Command(BaseCommand):
                 n += 1
             faculty_by_dept[dept.id] = Faculty.objects.bulk_create(people)
 
-        start = date(2026, 12, 1)
-        period = ExamPeriod.objects.create(name=PERIOD_NAME, start_date=start, end_date=start + timedelta(days=9))
+        period = ExamPeriod.objects.create(name=name, start_date=start, end_date=start + timedelta(days=9))
         DesignationCap.objects.create(period=period, designation=Designation.PROFESSOR, max_duties=4)
 
         rooms = []
         for day in range(10):
             for slot_no, (t1, t2) in enumerate(SLOT_TIMES):
                 slot = TimeSlot.objects.create(period=period, date=start + timedelta(days=day), start_time=t1, end_time=t2)
-                for c in range(15):
+                for c in range(courses):
                     dept = departments[(day * 2 + slot_no + c) % 20]
                     session = ExamSession.objects.create(
                         slot=slot,
@@ -82,7 +102,7 @@ class Command(BaseCommand):
         seats = sum(r.invigilators_required for r in rooms)
         self.stdout.write(
             self.style.SUCCESS(
-                f"Created {len(departments)} departments, {n} faculty and '{PERIOD_NAME}' "
+                f"Created {len(departments)} departments, {n} faculty and '{name}' "
                 f"with 20 time slots, {len(rooms)} rooms and {seats} seats."
             )
         )
