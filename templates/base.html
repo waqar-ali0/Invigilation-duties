@@ -21,6 +21,7 @@
         <a href="{% url 'attendance' %}">Attendance</a>
         <a href="{% url 'accounts_page' %}">Accounts</a>
         <a href="{% url 'email_list' %}">Emails</a>
+        <a href="{% url 'audit_log' %}">Audit log</a>
         <a href="{% url 'admin:index' %}">Admin panel</a>
         {% elif user.role == "exam_staff" %}
         <a href="{% url 'attendance' %}">Attendance</a>

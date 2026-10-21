@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Audit log — Invigilation Duties{% endblock %}
+{% block content %}
+<h1>Audit log</h1>
+<p class="subtitle">Every change to rosters, requests, swaps, attendance and accounts. Entries can't be edited or deleted.</p>
+
+<div class="card">
+  <form method="get" class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));align-items:end">
+    <div><label for="id_action">Action</label>
+      <select name="action" id="id_action"><option value="">All</option>
+        {% for a in actions %}<option value="{{ a }}"{% if a == filters.action %} selected{% endif %}>{{ a }}</option>{% endfor %}
+      </select></div>
+    <div><label for="id_actor">Who (email)</label><input type="text" name="actor" id="id_actor" value="{{ filters.actor }}"></div>
+    <div><label for="id_from">From</label><input type="date" name="date_from" id="id_from" value="{{ filters.date_from }}"></div>
+    <div><label for="id_to">To</label><input type="date" name="date_to" id="id_to" value="{{ filters.date_to }}"></div>
+    <div><label for="id_period">Exam period</label>
+      <select name="period" id="id_period"><option value="">All</option>
+        {% for p in periods %}<option value="{{ p.pk }}"{% if p.pk == filters.period %} selected{% endif %}>{{ p.name }}</option>{% endfor %}
+      </select></div>
+    <div class="actions"><button type="submit">Filter</button><a class="button secondary" href="{% url 'audit_log' %}">Clear</a></div>
+  </form>
+</div>
+
+<div class="card table-wrap">
+  {% if page.object_list %}
+  <table>
+    <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Object</th><th>Changes</th></tr></thead>
+    <tbody>
+      {% for e in page.object_list %}
+      <tr>
+        <td>{{ e.timestamp|date:"d M Y H:i" }}</td>
+        <td>{{ e.actor.email|default:"system" }}</td>
+        <td><code>{{ e.action }}</code></td>
+        <td>{{ e.object_type }} #{{ e.object_id }}</td>
+        <td>{% for line in e.changes %}<div>{{ line }}</div>{% empty %}<span class="muted">—</span>{% endfor %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <div class="actions" style="margin-top:12px">
+    {% if page.has_previous %}<a class="button secondary" href="?{{ query }}&page={{ page.previous_page_number }}">← Newer</a>{% endif %}
+    <span class="muted">Page {{ page.number }} of {{ page.paginator.num_pages }} · {{ page.paginator.count }} entries</span>
+    {% if page.has_next %}<a class="button secondary" href="?{{ query }}&page={{ page.next_page_number }}">Older →</a>{% endif %}
+  </div>
+  {% else %}
+  <p class="muted">No entries match.</p>
+  {% endif %}
+</div>
+{% endblock %}
