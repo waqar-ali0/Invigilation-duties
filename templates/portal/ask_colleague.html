@@ -10,7 +10,7 @@
 <div class="card"><p>It is too late to swap this duty. Contact the exam office.</p></div>
 {% elif candidates %}
 <div class="card">
-  <p class="muted">Only colleagues who are free at this time, within their limits and have an account are listed, fewest duties first. If they accept, the exam office makes the final decision.</p>
+  <p class="muted">Only colleagues who are free at this time, within their limits and have an account are listed, best matches first (no rule warnings, then fewest duties). If they accept, the exam office makes the final decision.</p>
   <form method="post">
     {% csrf_token %}
     <div class="field">

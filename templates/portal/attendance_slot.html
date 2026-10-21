@@ -29,7 +29,7 @@
           {% if d.attendance_marked_by %}<div class="muted">by {{ d.attendance_marked_by.email }} {{ d.attendance_marked_at|date:"H:i" }}</div>{% endif %}
         </td>
         <td>
-          {% if started %}
+          {% if started and d.can_mark %}
           <form method="post" action="{% url 'attendance_mark' d.pk %}" class="actions">
             {% csrf_token %}
             <button type="submit" name="present" value="1"{% if d.status == "completed" %} class="secondary"{% endif %}>Present</button>

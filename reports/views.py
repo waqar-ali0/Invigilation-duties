@@ -37,10 +37,11 @@ def load_xlsx_view(request, pk):
 @role_required(Role.ADMIN)
 def operations_report(request, pk):
     period = get_object_or_404(ExamPeriod, pk=pk)
+    records = faculty_records(period)
     context = {
         "period": period,
-        "records": faculty_records(period),
-        "departments": department_summary(period),
+        "records": records,
+        "departments": department_summary(period, records=records),
         "history": handover_history(period),
     }
     return render(request, "reports/operations.html", context)

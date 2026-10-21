@@ -63,9 +63,10 @@ def faculty_records(period, departments=None):
     return sorted(records.values(), key=lambda r: r.faculty.name)
 
 
-def department_summary(period, departments=None):
+def department_summary(period, departments=None, records=None):
+    """Counts per department; pass `records` (from faculty_records) to avoid building them again."""
     totals = defaultdict(lambda: dict.fromkeys(COUNT_FIELDS, 0))
-    for r in faculty_records(period, departments):
+    for r in faculty_records(period, departments) if records is None else records:
         row = totals[r.faculty.department.name]
         for f in COUNT_FIELDS:
             row[f] += getattr(r, f)

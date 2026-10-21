@@ -2,7 +2,8 @@ from datetime import date, datetime, time, timedelta
 
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import CharField, Q
+from django.db.models.functions import Cast
 from django.shortcuts import render
 from django.utils import timezone
 from django.views.decorators.http import require_GET
@@ -33,15 +34,23 @@ def _parse_date(value, request):
 
 
 def _period_filter(period):
+    """Entries about `period` or anything in it; object ids are matched by subquery (AuditLog stores them as text)."""
     from duties.models import Duty, SwapRequest, Unavailability
+    from exams.models import ExamSession, RoomAllocation, TimeSlot
 
-    ids = lambda qs: [str(pk) for pk in qs.values_list("pk", flat=True)]  # noqa: E731
-    return (
-        Q(object_type="exams.ExamPeriod", object_id=str(period.pk))
-        | Q(object_type="duties.Duty", object_id__in=ids(Duty.objects.filter(period=period)))
-        | Q(object_type="duties.SwapRequest", object_id__in=ids(SwapRequest.objects.filter(duty__period=period)))
-        | Q(object_type="duties.Unavailability", object_id__in=ids(Unavailability.objects.filter(period=period)))
+    ids = lambda qs: qs.annotate(text_pk=Cast("pk", CharField())).values("text_pk")  # noqa: E731
+    in_period = (
+        (TimeSlot, {"period": period}),
+        (ExamSession, {"slot__period": period}),
+        (RoomAllocation, {"session__slot__period": period}),
+        (Duty, {"period": period}),
+        (SwapRequest, {"duty__period": period}),
+        (Unavailability, {"period": period}),
     )
+    q = Q(object_type="exams.ExamPeriod", object_id=str(period.pk))
+    for model, lookup in in_period:
+        q |= Q(object_type=model._meta.label, object_id__in=ids(model.objects.filter(**lookup)))
+    return q
 
 
 @role_required(Role.ADMIN)

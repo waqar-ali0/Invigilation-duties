@@ -92,8 +92,9 @@ def operations_xlsx(period):
     from .operations import department_summary, faculty_records, handover_history
 
     labels = ["Assigned", "Completed", "Absent", "Not yet marked", "Swapped away", "Taken over", "Replaced"]
+    records = faculty_records(period)
     wb, ws = _sheet("Faculty record", ["Name", "Department", *labels, "Absence dates"])
-    for r in faculty_records(period):
+    for r in records:
         _append(
             ws,
             [
@@ -114,7 +115,7 @@ def operations_xlsx(period):
 
     summary = wb.create_sheet("Department summary")
     summary.append(["Department", *labels])
-    for row in department_summary(period):
+    for row in department_summary(period, records=records):
         _append(
             summary,
             [row["department"], row["assigned"], row["completed"], row["absent"], row["unmarked"], row["swapped_away"], row["taken_over"], row["replaced"]],

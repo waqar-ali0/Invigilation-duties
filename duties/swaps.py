@@ -11,15 +11,14 @@ from django.db.models import Q
 from django.utils import timezone
 
 from audit.log import log
-from exams.models import ExamPeriod, PeriodLockedError, PeriodStatus
+from exams.models import ExamPeriod, PeriodLockedError
 
 from .handover import handover_check
-from .models import OPEN_SWAP_STATUSES, DutyStatus, SwapRequest, SwapStatus
+from .models import OPEN_SWAP_STATUSES, Duty, DutyStatus, SwapRequest, SwapStatus
 
 MSG_TOO_LATE = "It is too late to swap this duty. Contact the exam office."
 MSG_NOT_OPEN = "This request is no longer open."
 MSG_NOT_SWAPPABLE = "This duty can no longer be swapped."
-MSG_NOT_PUBLISHED = "Only a published roster can be changed this way."
 
 
 class SwapError(Exception):
@@ -44,7 +43,8 @@ def expire_if_started(swap):
     Conditional update, so a swap decided meanwhile (e.g. approved) is never overwritten.
     """
     if swap.is_open and timezone.now() >= _slot(swap.duty).starts_at:
-        SwapRequest.objects.filter(pk=swap.pk, status__in=OPEN_SWAP_STATUSES).update(status=SwapStatus.EXPIRED)
+        if SwapRequest.objects.filter(pk=swap.pk, status__in=OPEN_SWAP_STATUSES).update(status=SwapStatus.EXPIRED):
+            log(None, "swap.expire", swap)
         swap.refresh_from_db(fields=["status"])
     return swap
 
@@ -75,22 +75,27 @@ def _addr(faculty):
 
 
 def request_swap(duty, colleague, message=""):
-    errors = []
-    if duty.period.status != PeriodStatus.PUBLISHED:
-        errors.append(MSG_NOT_PUBLISHED)
-    if duty.status != DutyStatus.ASSIGNED:
-        errors.append(MSG_NOT_SWAPPABLE)
-    if cutoff_passed(duty):
-        errors.append(MSG_TOO_LATE)
-    if SwapRequest.objects.filter(duty=duty, status__in=[SwapStatus.PENDING_PEER, SwapStatus.PENDING_ADMIN]).exists():
-        errors.append("There is already an open swap request for this duty.")
-    if not _has_account(colleague):
-        errors.append(f"{colleague.name} has no active account.")
-    errors += handover_check(duty, colleague)[0]
-    if errors:
-        raise SwapError(errors)
     try:
         with transaction.atomic():
+            try:
+                ExamPeriod.lock_published(duty.period_id)
+            except PeriodLockedError as e:
+                raise SwapError([str(e)]) from None
+            duty = Duty.objects.select_for_update().select_related(
+                "faculty__user", "period__settings", "room_allocation__session__slot"
+            ).get(pk=duty.pk)
+            errors = []
+            if duty.status != DutyStatus.ASSIGNED:
+                errors.append(MSG_NOT_SWAPPABLE)
+            if cutoff_passed(duty):
+                errors.append(MSG_TOO_LATE)
+            if SwapRequest.objects.filter(duty=duty, status__in=OPEN_SWAP_STATUSES).exists():
+                errors.append("There is already an open swap request for this duty.")
+            if not _has_account(colleague):
+                errors.append(f"{colleague.name} has no active account.")
+            errors += handover_check(duty, colleague)[0]
+            if errors:
+                raise SwapError(errors)
             swap = SwapRequest.objects.create(
                 duty=duty, requested_by=duty.faculty, requested_with=colleague, message=(message or "").strip()
             )
@@ -120,6 +125,8 @@ def accept_swap(swap, faculty):
         swap = _locked_swap(swap)
         if swap.status != SwapStatus.PENDING_PEER:
             raise SwapError([MSG_NOT_OPEN])
+        if swap.duty.status != DutyStatus.ASSIGNED:
+            raise SwapError([MSG_NOT_SWAPPABLE])
         if cutoff_passed(swap.duty):
             raise SwapError([MSG_TOO_LATE])
         errors = handover_check(swap.duty, swap.requested_with)[0]

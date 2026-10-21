@@ -13,7 +13,7 @@ from django.views.decorators.http import require_POST
 
 from accounts.models import Role
 from accounts.permissions import faculty_required, hod_required, role_required
-from duties.attendance import AttendanceError, mark_attendance, mark_room_present
+from duties.attendance import AttendanceError, can_change_mark, mark_attendance, mark_room_present
 from duties.handover import handover_candidates
 from duties.models import OPEN_SWAP_STATUSES, Duty, DutyStatus, SwapRequest, SwapStatus, Unavailability, UnavailabilityStatus
 from duties.swaps import (
@@ -358,6 +358,9 @@ def attendance_slot(request, slot_id):
         .prefetch_related(Prefetch("duties", queryset=duties, to_attr="active_duties"))
         .order_by("room")
     )
+    for room in rooms:
+        for d in room.active_duties:
+            d.can_mark = can_change_mark(request.user, d)
     context = {"slot": slot, "rooms": rooms, "started": timezone.now() >= slot.starts_at}
     return render(request, "portal/attendance_slot.html", context)
 
@@ -366,8 +369,12 @@ def attendance_slot(request, slot_id):
 @require_POST
 def attendance_mark(request, duty_id):
     duty = get_object_or_404(Duty.objects.select_related("room_allocation__session"), pk=duty_id)
+    present = request.POST.get("present")
+    if present not in ("1", "0"):
+        messages.error(request, "Choose Present or Absent.")
+        return redirect("attendance_slot", slot_id=duty.room_allocation.session.slot_id)
     try:
-        mark_attendance(duty, request.user, present=request.POST.get("present") == "1")
+        mark_attendance(duty, request.user, present=present == "1")
     except (AttendanceError, PeriodLockedError) as e:
         messages.error(request, str(e))
     return redirect("attendance_slot", slot_id=duty.room_allocation.session.slot_id)

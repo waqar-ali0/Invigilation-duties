@@ -9,7 +9,7 @@
 
 <div class="card">
   {% if candidates %}
-  <p class="muted">Faculty free at this time and within their limits, fewest duties first. Both people are emailed; any open swap on this duty is cancelled.</p>
+  <p class="muted">Faculty free at this time and within their limits, best matches first (no rule warnings, then fewest duties). Both people are emailed; any open swap on this duty is cancelled.</p>
   <form method="post">
     {% csrf_token %}
     <div class="field">

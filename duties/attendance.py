@@ -51,9 +51,10 @@ def mark_attendance(duty, actor, present):
 
 
 def mark_room_present(room, actor):
-    """Mark every not-yet-marked duty in `room` present. Returns how many were marked."""
-    count = 0
-    for duty in Duty.objects.filter(room_allocation=room, status=DutyStatus.ASSIGNED):
-        mark_attendance(duty, actor, present=True)
-        count += 1
-    return count
+    """Mark every not-yet-marked duty in `room` present, all or none. Returns how many were marked."""
+    with transaction.atomic():
+        ExamPeriod.lock_published(room.session.slot.period_id)
+        duties = list(Duty.objects.filter(room_allocation=room, status=DutyStatus.ASSIGNED))
+        for duty in duties:
+            mark_attendance(duty, actor, present=True)
+    return len(duties)

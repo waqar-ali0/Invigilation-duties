@@ -22,7 +22,7 @@ def faculty_duties(faculty, period=None):
     duties = (
         Duty.objects.active()
         .filter(faculty=faculty, period__status__in=VISIBLE_STATUSES)
-        .select_related("period", "room_allocation__session__slot")
+        .select_related("period__settings", "room_allocation__session__slot")
         .order_by("room_allocation__session__slot__date", "room_allocation__session__slot__start_time")
     )
     if period is not None:
