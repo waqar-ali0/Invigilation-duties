@@ -172,9 +172,26 @@ That turns on secure cookies, redirects http to https, and enables HSTS. Leave i
 
 ## Tests
 
+Unit and integration tests:
+
 ```powershell
 .venv\Scripts\python -m pytest
 ```
+
+Full-system audit — a fresh throw-away database, every workflow through the real pages:
+
+```powershell
+.venv\Scripts\python scripts\audit_e2e.py
+```
+
+Page crawl — opens every page each role can reach in your local database (read-only).
+By default it logs in as the demo accounts; pass other emails to check real accounts:
+
+```powershell
+.venv\Scripts\python scripts\audit_crawl.py
+```
+
+Both print what they checked and exit with an error status if anything failed.
 
 ## Configuration
 
