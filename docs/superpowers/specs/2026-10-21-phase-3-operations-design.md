@@ -89,6 +89,7 @@ Phase 1's `ensure_editable` forbids changes once published. Phase 3 actions are 
 - Exam Staff may change marks they made on the same local date; after that (or for marks by others) only Admin can change them. Admin uses the same page (linked from the dashboard).
 - Each mark sets `status`, `attendance_marked_by`, `attendance_marked_at`; audit `duty.attendance` with before/after status. Cancelled duties cannot be marked.
 - Absences are recorded only — no emails.
+- **Stand-in (added 2026-10-21 at the user's request):** for a duty marked absent, exam staff or the exam office can **Record stand-in**: choose who covered and give a note. The absence stays; the stand-in gets a new duty (`source=stand_in`, `replaces=<absent duty>`) already marked completed. Only a clash with another room at the same time blocks it (caps and unavailability don't — the person did it). One stand-in per absent duty; audited as `duty.stand_in`; no emails. Reports count it as "taken over" for the stand-in and list it in the history as "Stand-in".
 
 ## 7. Reports (Admin; Excel download each)
 

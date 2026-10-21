@@ -21,6 +21,7 @@ urlpatterns = [
     path("attendance/", views.attendance, name="attendance"),
     path("attendance/slots/<int:slot_id>/", views.attendance_slot, name="attendance_slot"),
     path("attendance/duties/<int:duty_id>/", views.attendance_mark, name="attendance_mark"),
+    path("attendance/duties/<int:duty_id>/stand-in/", views.record_stand_in_view, name="record_stand_in"),
     path("attendance/rooms/<int:room_id>/present/", views.attendance_room_present, name="attendance_room_present"),
     path("department/requests/", views.department_requests, name="department_requests"),
     path("requests/", views.admin_requests, name="admin_requests"),

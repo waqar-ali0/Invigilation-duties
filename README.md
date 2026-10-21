@@ -96,7 +96,9 @@ HODs never decide their own requests; those appear on the exam office's **Reques
    - **Attendance:** exam staff (or the exam office) open **Attendance**, pick the time
      slot once it has started, and mark each invigilator *Present* or *Absent*
      (or *Mark all present* for a room). Staff can correct their own marks the same day;
-     later corrections are made by the exam office.
+     later corrections are made by the exam office. If someone was absent and a colleague
+     covered, use **Record stand-in** on the absent person's row: the absence stays on
+     record and the stand-in is credited with a completed duty.
    - **Reports:** on the dashboard, *Attendance & swaps report* shows per person and per
      department how many duties were assigned, completed, absent, swapped and replaced,
      plus the full swap/replacement history (Excel download). *Completed* counts only

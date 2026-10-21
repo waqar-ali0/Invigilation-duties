@@ -13,9 +13,9 @@ from django.views.decorators.http import require_POST
 
 from accounts.models import Role
 from accounts.permissions import faculty_required, hod_required, role_required
-from duties.attendance import AttendanceError, can_change_mark, mark_attendance, mark_room_present
+from duties.attendance import AttendanceError, can_change_mark, mark_attendance, mark_room_present, record_stand_in
 from duties.handover import handover_candidates
-from duties.models import OPEN_SWAP_STATUSES, Duty, DutyStatus, SwapRequest, SwapStatus, Unavailability, UnavailabilityStatus
+from duties.models import OPEN_SWAP_STATUSES, Duty, DutySource, DutyStatus, SwapRequest, SwapStatus, Unavailability, UnavailabilityStatus
 from duties.swaps import (
     SwapError,
     accept_swap,
@@ -358,11 +358,44 @@ def attendance_slot(request, slot_id):
         .prefetch_related(Prefetch("duties", queryset=duties, to_attr="active_duties"))
         .order_by("room")
     )
+    covered = set(
+        Duty.objects.filter(replaces__room_allocation__session__slot=slot, source=DutySource.STAND_IN).values_list(
+            "replaces_id", flat=True
+        )
+    )
     for room in rooms:
         for d in room.active_duties:
             d.can_mark = can_change_mark(request.user, d)
+            d.needs_stand_in = d.status == DutyStatus.ABSENT and d.pk not in covered
     context = {"slot": slot, "rooms": rooms, "started": timezone.now() >= slot.starts_at}
     return render(request, "portal/attendance_slot.html", context)
+
+
+@attendance_roles
+def record_stand_in_view(request, duty_id):
+    duty = get_object_or_404(
+        Duty.objects.select_related("faculty", "room_allocation__session__slot", "period"),
+        pk=duty_id,
+        status=DutyStatus.ABSENT,
+        period__status=PeriodStatus.PUBLISHED,
+    )
+    slot = duty.room_allocation.session.slot
+    if request.method == "POST":
+        faculty = get_object_or_404(Faculty, pk=request.POST.get("faculty_id") or 0)
+        try:
+            record_stand_in(duty, faculty, request.user, request.POST.get("reason", ""))
+        except (AttendanceError, PeriodLockedError) as e:
+            messages.error(request, str(e))
+            return redirect("record_stand_in", duty_id=duty.pk)
+        messages.success(request, f"{faculty.name} recorded as stand-in for {duty.faculty.name}.")
+        return redirect("attendance_slot", slot_id=slot.pk)
+    busy = Duty.objects.active().filter(
+        room_allocation__session__slot__date=slot.date,
+        room_allocation__session__slot__start_time__lt=slot.end_time,
+        room_allocation__session__slot__end_time__gt=slot.start_time,
+    ).values_list("faculty_id", flat=True)
+    candidates = Faculty.objects.filter(is_active=True).exclude(pk__in=busy).select_related("department").order_by("name")
+    return render(request, "portal/stand_in.html", {"duty": duty, "slot": slot, "candidates": candidates})
 
 
 @attendance_roles

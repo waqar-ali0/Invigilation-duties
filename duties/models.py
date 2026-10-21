@@ -56,6 +56,7 @@ class DutySource(models.TextChoices):
     MANUAL = "manual", "Manual"
     SWAP = "swap", "Swap"
     REPLACEMENT = "replacement", "Replacement"
+    STAND_IN = "stand_in", "Stand-in"  # covered for someone marked absent
 
 
 class DutyQuerySet(models.QuerySet):

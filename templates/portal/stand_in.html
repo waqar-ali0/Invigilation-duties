@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Record stand-in — Invigilation Duties{% endblock %}
+{% block content %}
+<h1>Record a stand-in for {{ duty.faculty.name }}</h1>
+<p class="subtitle">
+  <a href="{% url 'attendance_slot' slot.pk %}">← Attendance</a> · {{ slot }} · {{ duty.room_allocation.session.course_code }} · room {{ duty.room_allocation.room }}
+</p>
+<div class="card">
+  <p class="muted">{{ duty.faculty.name }} stays recorded as absent. The person who covered gets this duty marked present. People invigilating another room at this time aren't listed.</p>
+  <form method="post">
+    {% csrf_token %}
+    <div class="field">
+      <label for="id_faculty">Who covered</label>
+      <select name="faculty_id" id="id_faculty" required>
+        {% for f in candidates %}<option value="{{ f.pk }}">{{ f.name }} — {{ f.department }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="id_reason">Note</label>
+      <input type="text" name="reason" id="id_reason" required maxlength="300" placeholder="e.g. covered from 09:15">
+    </div>
+    <button type="submit">Record stand-in</button>
+  </form>
+</div>
+{% endblock %}

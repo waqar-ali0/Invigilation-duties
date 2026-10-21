@@ -7,7 +7,8 @@ from datetime import date
 from audit.models import AuditLog
 from duties.models import Duty, DutySource, DutyStatus, SwapRequest, SwapStatus
 
-COUNT_FIELDS = ("assigned", "completed", "absent", "unmarked", "swapped_away", "taken_over", "replaced")
+HISTORY_TYPES = {DutySource.SWAP: "Swap", DutySource.REPLACEMENT: "Replacement", DutySource.STAND_IN: "Stand-in"}
+COUNT_FIELDS =("assigned", "completed", "absent", "unmarked", "swapped_away", "taken_over", "replaced")
 
 
 @dataclass
@@ -41,7 +42,7 @@ def faculty_records(period, departments=None):
     records = {}
     for d in duties:
         r = records.setdefault(d.faculty_id, FacultyRecord(d.faculty))
-        if d.source in (DutySource.SWAP, DutySource.REPLACEMENT):
+        if d.source in (DutySource.SWAP, DutySource.REPLACEMENT, DutySource.STAND_IN):
             r.taken_over += 1
         if d.status == DutyStatus.CANCELLED:
             source = successor_source.get(d.pk)
@@ -74,7 +75,7 @@ def department_summary(period, departments=None, records=None):
 
 
 def handover_history(period):
-    """Every swap and replacement in the period, newest first."""
+    """Every swap, replacement and stand-in in the period, newest first."""
     new_duties = list(
         Duty.objects.filter(period=period, replaces__isnull=False).select_related(
             "faculty", "replaces__faculty", "room_allocation__session__slot"
@@ -87,7 +88,9 @@ def handover_history(period):
     replace_logs = {
         int(e.object_id): e
         for e in AuditLog.objects.filter(
-            action="duty.replace", object_type="duties.Duty", object_id__in=[str(d.replaces_id) for d in new_duties]
+            action__in=["duty.replace", "duty.stand_in"],
+            object_type="duties.Duty",
+            object_id__in=[str(d.replaces_id) for d in new_duties],
         ).select_related("actor")
     }
     rows = []
@@ -108,7 +111,7 @@ def handover_history(period):
                 "room": d.room_allocation.room,
                 "from": d.replaces.faculty,
                 "to": d.faculty,
-                "type": "Swap" if d.source == DutySource.SWAP else "Replacement",
+                "type": HISTORY_TYPES.get(d.source, "Replacement"),
                 "note": note,
                 "by": by,
             }
