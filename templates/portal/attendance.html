@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Attendance — Invigilation Duties{% endblock %}
+{% block content %}
+<h1>Attendance</h1>
+<div class="card">
+  <form method="get" class="actions">
+    <label for="id_date" style="margin:0">Date</label>
+    <input type="date" name="date" id="id_date" value="{{ day|date:'Y-m-d' }}" style="max-width:200px">
+    <button class="secondary" type="submit">Show</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>{{ day|date:"l d F Y" }}</h2>
+  {% if slots %}
+  <div class="actions">
+    {% for s in slots %}
+    <a class="button" href="{% url 'attendance_slot' s.pk %}">{{ s.start_time|time:"H:i" }}–{{ s.end_time|time:"H:i" }} · {{ s.period.name }}</a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="muted">No published exams on this date.</p>
+  {% endif %}
+</div>
+{% endblock %}

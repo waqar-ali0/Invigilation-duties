@@ -39,11 +39,6 @@ def test_login_redirects_to_home(client, make_member):
     assert r.url == reverse("home")
 
 
-def test_staff_home_placeholder(client):
-    client.force_login(User.objects.create_user("staff@uni.edu", "x", role=Role.EXAM_STAFF))
-    assert "Attendance marking arrives in Phase 3." in client.get(reverse("staff_home")).content.decode()
-
-
 def test_unlinked_faculty_user_sees_message(client, faculty_user):
     client.force_login(faculty_user)
     r = client.get(reverse("my_duties"))

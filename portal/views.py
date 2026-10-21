@@ -1,8 +1,10 @@
+from datetime import date
 from itertools import groupby
 
 from django.contrib import messages
 from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import PermissionDenied
+from django.db.models import Prefetch
 from django.http import Http404, HttpResponse
 from django.utils.text import slugify
 from django.shortcuts import get_object_or_404, redirect, render
@@ -11,6 +13,7 @@ from django.views.decorators.http import require_POST
 
 from accounts.models import Role
 from accounts.permissions import faculty_required, hod_required, role_required
+from duties.attendance import AttendanceError, mark_attendance, mark_room_present
 from duties.handover import handover_candidates
 from duties.models import OPEN_SWAP_STATUSES, Duty, DutyStatus, SwapRequest, SwapStatus, Unavailability, UnavailabilityStatus
 from duties.swaps import (
@@ -25,7 +28,7 @@ from duties.swaps import (
     request_swap,
 )
 from duties.unavailability import RequestRejected, can_decide, decide_request, submit_request, withdraw_request
-from exams.models import ExamPeriod, PeriodLockedError, PeriodStatus
+from exams.models import ExamPeriod, PeriodLockedError, PeriodStatus, RoomAllocation, TimeSlot
 from faculty.models import Department, Faculty
 from reports.excel import department_rows, department_xlsx
 from reports.personal import VISIBLE_STATUSES, duties_ics, duties_pdf, faculty_duties
@@ -317,4 +320,59 @@ def swap_decide(request, pk):
 
 @role_required(Role.EXAM_STAFF)
 def staff_home(request):
-    return render(request, "portal/staff_home.html")
+    return redirect("attendance")
+
+
+attendance_roles = role_required(Role.EXAM_STAFF, Role.ADMIN)
+
+
+@attendance_roles
+def attendance(request):
+    day = timezone.localdate()
+    if request.GET.get("date"):
+        try:
+            day = date.fromisoformat(request.GET["date"])
+        except ValueError:
+            messages.error(request, "Choose a valid date.")
+    slots = TimeSlot.objects.filter(period__status=PeriodStatus.PUBLISHED, date=day).select_related("period").order_by(
+        "start_time"
+    )
+    return render(request, "portal/attendance.html", {"day": day, "slots": slots})
+
+
+@attendance_roles
+def attendance_slot(request, slot_id):
+    slot = get_object_or_404(TimeSlot.objects.select_related("period"), pk=slot_id, period__status=PeriodStatus.PUBLISHED)
+    duties = Duty.objects.active().select_related("faculty", "attendance_marked_by").order_by("faculty__name")
+    rooms = (
+        RoomAllocation.objects.filter(session__slot=slot)
+        .select_related("session")
+        .prefetch_related(Prefetch("duties", queryset=duties, to_attr="active_duties"))
+        .order_by("room")
+    )
+    context = {"slot": slot, "rooms": rooms, "started": timezone.now() >= slot.starts_at}
+    return render(request, "portal/attendance_slot.html", context)
+
+
+@attendance_roles
+@require_POST
+def attendance_mark(request, duty_id):
+    duty = get_object_or_404(Duty.objects.select_related("room_allocation__session"), pk=duty_id)
+    try:
+        mark_attendance(duty, request.user, present=request.POST.get("present") == "1")
+    except (AttendanceError, PeriodLockedError) as e:
+        messages.error(request, str(e))
+    return redirect("attendance_slot", slot_id=duty.room_allocation.session.slot_id)
+
+
+@attendance_roles
+@require_POST
+def attendance_room_present(request, room_id):
+    room = get_object_or_404(RoomAllocation.objects.select_related("session"), pk=room_id)
+    try:
+        count = mark_room_present(room, request.user)
+    except (AttendanceError, PeriodLockedError) as e:
+        messages.error(request, str(e))
+    else:
+        messages.success(request, f"{room.room}: {count} marked present.")
+    return redirect("attendance_slot", slot_id=room.session.slot_id)

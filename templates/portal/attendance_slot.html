@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Attendance {{ slot }} — Invigilation Duties{% endblock %}
+{% block content %}
+<h1>Attendance</h1>
+<p class="subtitle"><a href="{% url 'attendance' %}?date={{ slot.date|date:'Y-m-d' }}">← {{ slot.date|date:"D d M Y" }}</a> · {{ slot.start_time|time:"H:i" }}–{{ slot.end_time|time:"H:i" }} · {{ slot.period.name }}</p>
+
+{% if not started %}
+<div class="alert warning">This exam hasn't started yet. Attendance can be marked from {{ slot.start_time|time:"H:i" }}.</div>
+{% endif %}
+
+{% for room in rooms %}
+<div class="card table-wrap">
+  <div class="actions" style="justify-content:space-between">
+    <h2 style="margin:0">{{ room.room }} · {{ room.session.course_code }} <span class="muted">({{ room.student_count }} students)</span></h2>
+    {% if started %}
+    <form method="post" action="{% url 'attendance_room_present' room.pk %}">{% csrf_token %}<button class="secondary" type="submit">Mark all present</button></form>
+    {% endif %}
+  </div>
+  {% if room.active_duties %}
+  <table>
+    <tbody>
+      {% for d in room.active_duties %}
+      <tr>
+        <td>{{ d.faculty.name }}</td>
+        <td>
+          {% if d.status == "completed" %}<span class="badge">Present</span>
+          {% elif d.status == "absent" %}<span class="badge short">Absent</span>
+          {% else %}<span class="muted">Not marked</span>{% endif %}
+          {% if d.attendance_marked_by %}<div class="muted">by {{ d.attendance_marked_by.email }} {{ d.attendance_marked_at|date:"H:i" }}</div>{% endif %}
+        </td>
+        <td>
+          {% if started %}
+          <form method="post" action="{% url 'attendance_mark' d.pk %}" class="actions">
+            {% csrf_token %}
+            <button type="submit" name="present" value="1"{% if d.status == "completed" %} class="secondary"{% endif %}>Present</button>
+            <button class="danger" type="submit" name="present" value="0">Absent</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p class="muted">No invigilators assigned.</p>{% endif %}
+</div>
+{% empty %}
+<div class="card"><p class="muted">No rooms in this time slot.</p></div>
+{% endfor %}
+{% endblock %}
