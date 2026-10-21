@@ -13,8 +13,14 @@ invigilate; HODs approve their department's requests; the system emails people w
 availability opens, when a request is decided, when the roster is published, and the
 evening before each duty.
 
+**Phase 3 (operations):** after publishing, faculty swap duties with colleagues (the
+exam office approves), the exam office replaces people in emergencies, exam staff mark
+who was present or absent, and the exam office gets attendance/swap reports and an
+audit-log viewer.
+
 Designs: [`Phase 1 spec`](docs/superpowers/specs/2026-10-20-invigilation-duty-system-design.md),
-[`Phase 2 spec`](docs/superpowers/specs/2026-10-20-phase-2-faculty-facing-design.md).
+[`Phase 2 spec`](docs/superpowers/specs/2026-10-20-phase-2-faculty-facing-design.md),
+[`Phase 3 spec`](docs/superpowers/specs/2026-10-21-phase-3-operations-design.md).
 
 ## Setup (Windows)
 
@@ -43,10 +49,10 @@ Every user logs in with their email address. Roles:
 
 | Role | Access |
 |---|---|
-| **Admin** (exam office) | Exam periods, imports, allocation, publishing, unavailability requests, faculty accounts, emails, and the Django admin panel. |
-| **HOD** | Their own duties and requests, plus *Department requests* (approve/reject) and *Department duties*. |
-| **Faculty** | *My duties* (with PDF and calendar download) and *My unavailability*. |
-| Exam Staff | A placeholder page; attendance marking arrives in Phase 3. |
+| **Admin** (exam office) | Exam periods, imports, allocation, publishing, unavailability requests, swaps, replacements, attendance, reports, audit log, faculty accounts, emails, and the Django admin panel. |
+| **HOD** | Their own duties, requests and swaps, plus *Department requests* (approve/reject) and *Department duties* (with an attendance/swap summary). |
+| **Faculty** | *My duties* (PDF and calendar download, *Ask a colleague* to swap), *My unavailability*, *Swap requests*. |
+| **Exam Staff** | *Attendance*: mark invigilators present or absent, room by room. |
 
 To create an exam office user: open **Admin panel → Users → Add user**, enter the
 email and password, and set **Role** to *Admin (exam office)*. That user automatically
@@ -80,8 +86,24 @@ HODs never decide their own requests; those appear on the exam office's **Reques
    duties is emailed their list with a calendar file attached.
 8. Download the **roster PDF / Excel** and the **faculty load** sheet.
 
-Every allocation run, manual edit and publish is written to the audit log
-(Admin panel → Audit logs), which nobody can edit or delete. Once a period is published,
+9. **After publishing:**
+   - **Swaps:** a faculty member uses *Ask a colleague* on My duties (until the period's
+     *swap cut-off*, default 24 hours before the exam; change it in the period settings).
+     The colleague accepts on *Swap requests*, then the exam office approves on **Swaps**.
+     Approval re-checks every rule; both people are emailed.
+   - **Emergencies:** on a room page, **Replace** gives a duty to someone else (a reason
+     is required); both people are emailed and any open swap on that duty is cancelled.
+   - **Attendance:** exam staff (or the exam office) open **Attendance**, pick the time
+     slot once it has started, and mark each invigilator *Present* or *Absent*
+     (or *Mark all present* for a room). Staff can correct their own marks the same day;
+     later corrections are made by the exam office.
+   - **Reports:** on the dashboard, *Attendance & swaps report* shows per person and per
+     department how many duties were assigned, completed, absent, swapped and replaced,
+     plus the full swap/replacement history (Excel download). *Completed* counts only
+     duties marked present.
+
+Every allocation run, edit, publish, swap, replacement and attendance mark is written to
+the audit log (**Audit log** page, with filters), which nobody can edit or delete. Once a period is published,
 its dates, rules, time slots, courses and rooms become read-only in the admin panel too.
 
 ## Spreadsheet formats
@@ -152,5 +174,4 @@ Set in `.env` (see `.env.example`): `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`,
 
 ## Coming next
 
-- **Phase 3:** swaps, emergency replacements, attendance by exam staff, reports, audit viewer.
 - **Phase 4:** Docker deployment (PostgreSQL, Nginx, HTTPS), nightly backups, pilot run.
