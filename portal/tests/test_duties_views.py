@@ -62,5 +62,6 @@ def test_department_duties_hide_drafts(client, setup, period):
     _, hod = setup
     ExamPeriod.objects.filter(pk=period.pk).update(status=PeriodStatus.ALLOCATING)
     client.force_login(hod.user)
-    assert "R1" not in client.get(reverse("department_duties")).content.decode()
+    main = client.get(reverse("department_duties")).content.decode().split("<main>")[1]  # skip the CSRF token in the header
+    assert "R1" not in main
     assert client.get(reverse("department_duties_xlsx", args=[period.pk])).status_code == 404
