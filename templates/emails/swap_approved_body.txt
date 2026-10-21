@@ -1,0 +1,8 @@
+Hello,
+
+The exam office approved the swap. This duty now belongs to {{ swap.requested_with.name }} (previously {{ swap.requested_by.name }}):
+{% include "emails/_swap_duty.txt" %}
+
+{{ swap.requested_with.name }}: a calendar file for the duty is attached to your copy of this email.
+
+— Exam Office

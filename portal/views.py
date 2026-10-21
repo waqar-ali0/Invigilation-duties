@@ -13,7 +13,17 @@ from accounts.models import Role
 from accounts.permissions import faculty_required, hod_required, role_required
 from duties.handover import handover_candidates
 from duties.models import OPEN_SWAP_STATUSES, Duty, DutyStatus, SwapRequest, SwapStatus, Unavailability, UnavailabilityStatus
-from duties.swaps import SwapError, accept_swap, cancel_swap, cutoff_passed, decline_swap, expire_if_started, request_swap
+from duties.swaps import (
+    SwapError,
+    accept_swap,
+    approve_swap,
+    cancel_swap,
+    cutoff_passed,
+    decline_swap,
+    expire_if_started,
+    reject_swap,
+    request_swap,
+)
 from duties.unavailability import RequestRejected, can_decide, decide_request, submit_request, withdraw_request
 from exams.models import ExamPeriod, PeriodLockedError, PeriodStatus
 from faculty.models import Department, Faculty
@@ -268,6 +278,41 @@ def swap_cancel(request, pk):
     else:
         messages.success(request, "Request cancelled.")
     return redirect("swap_requests")
+
+
+@role_required(Role.ADMIN)
+def admin_swaps(request):
+    related = "duty__room_allocation__session__slot", "requested_by", "requested_with", "decided_by"
+    waiting = [
+        expire_if_started(s)
+        for s in SwapRequest.objects.filter(status=SwapStatus.PENDING_ADMIN).select_related(*related).order_by("responded_at")
+    ]
+    context = {
+        "waiting": [s for s in waiting if s.status == SwapStatus.PENDING_ADMIN],
+        "recent": SwapRequest.objects.filter(status__in=[SwapStatus.APPROVED, SwapStatus.REJECTED])
+        .select_related(*related)
+        .order_by("-decided_at")[:50],
+    }
+    return render(request, "portal/admin_swaps.html", context)
+
+
+@role_required(Role.ADMIN)
+@require_POST
+def swap_decide(request, pk):
+    swap = get_object_or_404(SwapRequest, pk=pk)
+    decision = request.POST.get("decision")
+    try:
+        if decision == "approve":
+            approve_swap(swap, request.user)
+            messages.success(request, f"Swap approved: {swap.requested_with.name} now has the duty.")
+        elif decision == "reject":
+            reject_swap(swap, request.user, request.POST.get("comment", ""))
+            messages.success(request, "Swap rejected.")
+        else:
+            messages.error(request, "Choose approve or reject.")
+    except SwapError as e:
+        _swap_message(request, e)
+    return redirect("admin_swaps")
 
 
 @role_required(Role.EXAM_STAFF)

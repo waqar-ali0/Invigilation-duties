@@ -1,0 +1,1 @@
+Swap approved: {{ swap.requested_with.name }} takes the duty on {{ swap.duty.room_allocation.session.slot.date|date:"d M" }}

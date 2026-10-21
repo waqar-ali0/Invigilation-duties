@@ -1,0 +1,8 @@
+Hello,
+
+The exam office did not approve the swap from {{ swap.requested_by.name }} to {{ swap.requested_with.name }}. The duty stays with {{ swap.requested_by.name }}:
+{% include "emails/_swap_duty.txt" %}
+{% if swap.comment %}
+Comment: {{ swap.comment }}
+{% endif %}
+— Exam Office

@@ -144,6 +144,50 @@ def decline_swap(swap, faculty):
     return swap
 
 
+def approve_swap(swap, actor):
+    """Exam office approval: re-check the rules, then hand the duty to the colleague."""
+    from notifications.triggers import duty_ics_attachment
+
+    from .handover import transfer_duty
+    from .models import DutySource
+
+    with transaction.atomic():
+        swap = _locked_swap(swap)
+        if swap.status != SwapStatus.PENDING_ADMIN:
+            raise SwapError(["This request is no longer waiting for approval."])
+        duty = swap.duty
+        if duty.status != DutyStatus.ASSIGNED:
+            raise SwapError([MSG_NOT_SWAPPABLE])
+        errors = handover_check(duty, swap.requested_with)[0]
+        if errors:
+            raise SwapError(errors)
+        new_duty = transfer_duty(duty, swap.requested_with, DutySource.SWAP)
+        swap.status = SwapStatus.APPROVED
+        swap.decided_by = actor
+        swap.decided_at = timezone.now()
+        swap.new_duty = new_duty
+        swap.save(update_fields=["status", "decided_by", "decided_at", "new_duty"])
+        log(actor, "swap.approve", swap, before={"faculty": duty.faculty_id}, after={"faculty": new_duty.faculty_id, "duty": new_duty.pk})
+        _emails(swap, "swap_approved", [_addr(swap.requested_by)])
+        _emails(swap, "swap_approved", [_addr(swap.requested_with)], attachment=duty_ics_attachment(new_duty))
+    return new_duty
+
+
+def reject_swap(swap, actor, comment=""):
+    with transaction.atomic():
+        swap = _locked_swap(swap)
+        if swap.status != SwapStatus.PENDING_ADMIN:
+            raise SwapError(["This request is no longer waiting for approval."])
+        swap.status = SwapStatus.REJECTED
+        swap.decided_by = actor
+        swap.decided_at = timezone.now()
+        swap.comment = (comment or "").strip()
+        swap.save(update_fields=["status", "decided_by", "decided_at", "comment"])
+        log(actor, "swap.reject", swap, after={"comment": swap.comment})
+        _emails(swap, "swap_rejected", [_addr(swap.requested_by), _addr(swap.requested_with)])
+    return swap
+
+
 def cancel_swap(swap, faculty):
     if swap.requested_by_id != faculty.id:
         raise PermissionDenied

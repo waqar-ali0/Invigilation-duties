@@ -1,0 +1,1 @@
+Swap not approved for the duty on {{ swap.duty.room_allocation.session.slot.date|date:"d M" }}

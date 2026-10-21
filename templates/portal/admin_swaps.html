@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Swaps — Invigilation Duties{% endblock %}
+{% block content %}
+<h1>Swaps</h1>
+<p class="subtitle">Swaps the colleague has accepted. Approving re-checks every rule and hands the duty over; both people are emailed.</p>
+
+<div class="card table-wrap">
+  <h2>Waiting for approval ({{ waiting|length }})</h2>
+  {% if waiting %}
+  <table>
+    <thead><tr><th>From</th><th>To</th><th>Duty</th><th>Message</th><th>Decision</th></tr></thead>
+    <tbody>
+      {% for s in waiting %}
+      <tr>
+        <td>{{ s.requested_by.name }}</td>
+        <td>{{ s.requested_with.name }}</td>
+        <td>{% include "portal/_swap_duty.html" %}</td>
+        <td>{{ s.message|default:"—" }}</td>
+        <td>
+          <form method="post" action="{% url 'swap_decide' s.pk %}">
+            {% csrf_token %}
+            <input type="text" name="comment" placeholder="Comment (optional, sent if rejected)" style="margin-bottom:6px">
+            <div class="actions">
+              <button type="submit" name="decision" value="approve">Approve</button>
+              <button class="danger" type="submit" name="decision" value="reject">Reject</button>
+            </div>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p class="muted">No swaps are waiting.</p>{% endif %}
+</div>
+
+{% if recent %}
+<div class="card table-wrap">
+  <h2>Recently decided</h2>
+  <table>
+    <thead><tr><th>From</th><th>To</th><th>Duty</th><th>Decision</th><th>By</th></tr></thead>
+    <tbody>
+      {% for s in recent %}
+      <tr><td>{{ s.requested_by.name }}</td><td>{{ s.requested_with.name }}</td><td>{% include "portal/_swap_duty.html" %}</td>
+        <td><span class="badge">{{ s.get_status_display }}</span>{% if s.comment %}<div class="muted">{{ s.comment }}</div>{% endif %}</td>
+        <td>{{ s.decided_by.email|default:"—" }} · {{ s.decided_at|date:"d M H:i" }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

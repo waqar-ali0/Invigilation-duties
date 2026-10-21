@@ -12,7 +12,7 @@ from accounts.models import Role
 from accounts.permissions import role_required
 from allocation.engine import fairness_stats
 from allocation.services import capacity_report, pending_capacity, unfilled_rooms
-from duties.models import Duty
+from duties.models import Duty, SwapRequest, SwapStatus
 from faculty.models import Designation
 from reports.queries import faculty_load
 
@@ -75,6 +75,7 @@ def period_dashboard(request, pk):
         "caps": period.designation_caps.all(),
         "capacity": capacity,
         "pending": pending_capacity(period),
+        "swaps_waiting": SwapRequest.objects.filter(duty__period=period, status=SwapStatus.PENDING_ADMIN).count(),
         "slot_shortages": [(slot_names[sid], needed, avail) for sid, needed, avail in capacity.slot_shortages],
         "stats": stats,
         "capped_stats": capped_stats,
