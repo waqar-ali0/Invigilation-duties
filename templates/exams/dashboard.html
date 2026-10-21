@@ -12,6 +12,7 @@
 {% if not capacity.ok %}
   <div class="alert warning">Need {{ capacity.seats_needed }} duties, only {{ capacity.capacity }} possible. Raise the cap or add faculty.</div>
 {% endif %}
+{% include "allocation/_conflicts.html" %}
 {% if swaps_waiting %}
   <div class="alert warning">{{ swaps_waiting }} swap(s) waiting for approval. <a href="{% url 'admin_swaps' %}">Review swaps</a></div>
 {% endif %}

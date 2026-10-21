@@ -141,6 +141,29 @@ def pending_capacity(period):
     return pending, capacity_check(build_engine_input(period, include_pending=True))
 
 
+def roster_conflicts(period):
+    """[(duty, reason)] for duties that break a rule made after they were assigned: an approved
+    unavailability for that time, or a faculty member who is now inactive or exempt."""
+    duties = list(
+        Duty.objects.filter(period=period, status=DutyStatus.ASSIGNED)
+        .select_related("faculty", "room_allocation__session__slot")
+        .order_by("room_allocation__session__slot__date", "room_allocation__session__slot__start_time")
+    )
+    blocked = set()
+    for faculty_id, day, slot_id in Unavailability.objects.filter(
+        period=period, status=UnavailabilityStatus.APPROVED
+    ).values_list("faculty_id", "date", "slot_id"):
+        blocked.add((faculty_id, day, slot_id))
+    conflicts = []
+    for d in duties:
+        slot = d.room_allocation.session.slot
+        if not d.faculty.is_active or d.faculty.is_exempt:
+            conflicts.append((d, "Faculty is now inactive or exempt"))
+        elif (d.faculty_id, slot.date, None) in blocked or (d.faculty_id, slot.date, slot.id) in blocked:
+            conflicts.append((d, "Approved as unavailable at this time"))
+    return conflicts
+
+
 def unfilled_rooms(period):
     """[(room, missing seats, reason from the last run or "")] from the current duties."""
     reasons = {u["room_id"]: u["reason"] for u in (period.last_run or {}).get("unfilled", [])}

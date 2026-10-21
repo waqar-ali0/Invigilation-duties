@@ -18,7 +18,7 @@ from duties.services import (
 from exams.models import ExamPeriod, PeriodLockedError, PeriodStatus, RoomAllocation
 from faculty.models import Faculty
 
-from .services import PublishBlocked, clear_draft, publish_period, run_allocation, unfilled_rooms
+from .services import PublishBlocked, clear_draft, publish_period, roster_conflicts, run_allocation, unfilled_rooms
 
 admin_only = role_required(Role.ADMIN)
 
@@ -129,6 +129,7 @@ def publish_view(request, pk):
         "duty_count": Duty.objects.active().filter(period=period).count(),
         "unfilled": unfilled,
         "missing": sum(m for _, m, _ in unfilled),
+        "conflicts": roster_conflicts(period),
         "editable": period.status not in (PeriodStatus.PUBLISHED, PeriodStatus.CLOSED),
     }
     return render(request, "allocation/publish.html", context)

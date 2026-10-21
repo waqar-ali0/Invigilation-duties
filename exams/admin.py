@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.core.exceptions import PermissionDenied
+from django.forms.models import BaseInlineFormSet
 
 from .models import (
     DesignationCap,
@@ -63,8 +64,25 @@ class LockedInlineMixin:
         return not self._locked(obj) and super().has_delete_permission(request, obj)
 
 
+class PeriodSettingsFormSet(BaseInlineFormSet):
+    """A new period gets default settings as soon as it is saved, so the form updates those
+    instead of trying to create a second set."""
+
+    def save_new(self, form, commit=True):
+        existing = PeriodSettings.objects.filter(period=self.instance).first()
+        if existing is None:
+            return super().save_new(form, commit=commit)
+        for name, value in form.cleaned_data.items():
+            if name in {f.name for f in PeriodSettings._meta.concrete_fields} and name not in ("id", "period"):
+                setattr(existing, name, value)
+        if commit:
+            existing.save()
+        return existing
+
+
 class PeriodSettingsInline(LockedInlineMixin, admin.StackedInline):
     model = PeriodSettings
+    formset = PeriodSettingsFormSet
     can_delete = False
 
 

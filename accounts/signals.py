@@ -22,6 +22,11 @@ def ensure_exam_office_group():
     )
     for app_label, model in FULL_ACCESS_MODELS:
         perms = perms | Permission.objects.filter(content_type__app_label=app_label, content_type__model=model)
+    # User accounts: view, add and change (never delete; deactivate instead). UserAdmin keeps
+    # superusers and permission fields out of reach.
+    perms = perms | Permission.objects.filter(
+        content_type__app_label="accounts", codename__in=["view_user", "add_user", "change_user"]
+    )
     group.permissions.set(perms)
     return group
 

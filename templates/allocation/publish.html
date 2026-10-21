@@ -10,6 +10,7 @@
 <div class="card">
   <p>Publishing makes this roster final. After that, changes go through swaps and replacements, and every change is logged.</p>
   <p><strong>{{ duty_count }}</strong> duties will be published.</p>
+  {% include "allocation/_conflicts.html" %}
 
   {% if missing %}
   <div class="alert warning">{{ missing }} seat(s) are still unfilled:

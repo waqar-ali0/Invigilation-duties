@@ -80,6 +80,9 @@ HODs never decide their own requests; those appear on the exam office's **Reques
    can also enter requests directly in **Admin panel → Unavailability**.)
 5. **Run allocation**. Check the capacity warnings, fairness (min/max/average) and the
    unfilled-seats list. Re-run as often as you like: manual assignments are kept.
+   If a request is approved, or someone is made exempt or inactive, *after* allocation, the
+   dashboard and the publish page list the **duty conflicts** so nobody is published on a day
+   they were approved off; re-run the allocation (or use Replace once published) to fix them.
 6. Click a room to **add or remove** invigilators. Hard rules (same slot, unavailable,
    caps) are always enforced; soft rules ask for confirmation.
 7. **Review and publish**. After publishing the roster is locked, and everyone with
@@ -161,6 +164,11 @@ schtasks /create /tn "Invigilation reminders" /sc daily /st 18:00 /tr "\"%CD%\.v
 ```
 
 To test reminders for a particular day: `manage.py send_reminders --date 2026-12-01`.
+
+## Production security
+
+On the real server, after HTTPS is working, set `HTTPS=True` and `CSRF_TRUSTED_ORIGINS` in `.env`.
+That turns on secure cookies, redirects http to https, and enables HSTS. Leave it off for local testing.
 
 ## Tests
 

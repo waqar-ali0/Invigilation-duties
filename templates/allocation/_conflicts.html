@@ -1,0 +1,12 @@
+{% if conflicts %}
+<div class="alert error">
+  <strong>{{ conflicts|length }} duty conflict(s)</strong> — rules changed after these duties were assigned.
+  {% if period.status != "published" %}Re-running the allocation fixes automatic duties; manual ones need a change on the room page.{% else %}Use <em>Replace</em> on the room page.{% endif %}
+  <ul>
+    {% for d, reason in conflicts|slice:":15" %}
+    <li><a href="{% url 'room_detail' period.pk d.room_allocation_id %}">{{ d.room_allocation.session.slot }} · {{ d.room_allocation.room }}</a>: {{ d.faculty.name }} — {{ reason }}</li>
+    {% endfor %}
+    {% if conflicts|length > 15 %}<li>…and {{ conflicts|length|add:"-15" }} more</li>{% endif %}
+  </ul>
+</div>
+{% endif %}
