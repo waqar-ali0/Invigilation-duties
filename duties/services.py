@@ -11,7 +11,7 @@ from faculty.models import Faculty
 
 from .models import Duty, DutySource
 
-MSG_INELIGIBLE = "Faculty is inactive or exempt"
+MSG_INELIGIBLE = "Faculty is inactive or exempt in this period"
 MSG_ROOM_FULL = "Room already has its required invigilators"
 
 
@@ -39,10 +39,11 @@ def _warnings(state, faculty_id, room_id):
 
 
 def check_assignment(faculty, room):
-    """(hard errors, soft warnings) for giving `faculty` a seat in `room`."""
-    if not faculty.is_active or faculty.is_exempt:
-        return [MSG_INELIGIBLE], []
+    """(hard errors, soft warnings) for giving `faculty` a seat in `room`. Eligibility follows the
+    period's workload rules (exempt this period, or an exception for someone inactive)."""
     state = AllocationState(build_engine_input(_period_of(room)))
+    if faculty.id not in state.people:
+        return [MSG_INELIGIBLE], []
     return state.hard_errors(faculty.id, room.id), _warnings(state, faculty.id, room.id)
 
 
@@ -75,7 +76,7 @@ def eligible_candidates(room):
     """[(faculty, duty count, warnings)] who could take a seat in `room`, best first."""
     state = AllocationState(build_engine_input(_period_of(room)))
     result = []
-    for faculty in Faculty.objects.eligible().select_related("department"):
+    for faculty in Faculty.objects.filter(pk__in=list(state.people)).select_related("department"):
         if state.hard_errors(faculty.id, room.id):
             continue
         result.append((faculty, state.count(faculty.id), _warnings(state, faculty.id, room.id)))

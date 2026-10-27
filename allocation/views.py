@@ -18,6 +18,7 @@ from duties.services import (
 from exams.halls import hall_rooms
 from exams.models import ExamPeriod, PeriodLockedError, PeriodStatus, RoomAllocation
 from faculty.models import Faculty
+from workload.models import WorkloadPolicy
 
 from .services import PublishBlocked, clear_draft, publish_period, roster_conflicts, run_allocation, unfilled_rooms
 
@@ -122,7 +123,12 @@ def publish_view(request, pk):
     period = get_object_or_404(ExamPeriod, pk=pk)
     if request.method == "POST":
         try:
-            publish_period(period, request.user, acknowledge_unfilled=bool(request.POST.get("acknowledge_unfilled")))
+            publish_period(
+                period,
+                request.user,
+                acknowledge_unfilled=bool(request.POST.get("acknowledge_unfilled")),
+                confirm_rules=bool(request.POST.get("confirm_rules")),
+            )
         except (PublishBlocked, PeriodLockedError) as e:
             messages.error(request, str(e))
             return redirect("publish", pk=pk)
@@ -136,6 +142,7 @@ def publish_view(request, pk):
         "missing": sum(m for _, m, _ in unfilled),
         "conflicts": roster_conflicts(period),
         "editable": period.status not in (PeriodStatus.PUBLISHED, PeriodStatus.CLOSED),
+        "rules_confirmed": WorkloadPolicy.for_period(period).confirmed_at,
     }
     return render(request, "allocation/publish.html", context)
 

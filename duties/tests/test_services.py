@@ -29,7 +29,7 @@ def test_add_blocked_for_exempt(room, make_faculty, admin_user):
     fac = make_faculty(is_exempt=True)
     with pytest.raises(AssignmentBlocked) as e:
         add_duty(fac, room, admin_user)
-    assert e.value.errors == ["Faculty is inactive or exempt"]
+    assert e.value.errors == ["Faculty is inactive or exempt in this period"]
 
 
 def test_add_needs_confirmation_for_course_teacher(room, make_faculty, admin_user):

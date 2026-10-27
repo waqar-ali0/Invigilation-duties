@@ -4,7 +4,6 @@ from django.forms.models import BaseInlineFormSet
 
 from .models import (
     Building,
-    DesignationCap,
     Room,
     ExamPeriod,
     ExamSession,
@@ -88,17 +87,12 @@ class PeriodSettingsInline(LockedInlineMixin, admin.StackedInline):
     can_delete = False
 
 
-class DesignationCapInline(LockedInlineMixin, admin.TabularInline):
-    model = DesignationCap
-    extra = 0
-
-
 @admin.register(ExamPeriod)
 class ExamPeriodAdmin(LockedAfterPublishMixin, admin.ModelAdmin):
     list_display = ("name", "start_date", "end_date", "status")
     list_filter = ("status",)
     readonly_fields = ("status", "published_at")
-    inlines = [PeriodSettingsInline, DesignationCapInline]
+    inlines = [PeriodSettingsInline]
 
     def period_of(self, obj):
         return ExamPeriod.objects.get(pk=obj.pk) if obj.pk else None

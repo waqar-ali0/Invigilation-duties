@@ -19,4 +19,5 @@ urlpatterns = [
     path("", include("ops.urls")),
     path("", include("imports.urls")),
     path("", include("faculty.urls")),
+    path("", include("workload.urls")),
 ]

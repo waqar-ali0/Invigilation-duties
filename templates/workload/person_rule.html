@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Rule for {{ rule.faculty.name }} — {{ period.name }}{% endblock %}
+{% block content %}
+<h1>Rule for {{ rule.faculty.name }}</h1>
+<p class="subtitle"><a href="{% url 'workload_rules' period.pk %}">← Workload rules · {{ period.name }}</a></p>
+<div class="card">
+  <form method="post" class="form-grid">
+    {% csrf_token %}
+    {% include "_form_fields.html" %}
+    {% if editable %}<div class="actions"><button type="submit">{% icon "check" %}Save</button></div>{% endif %}
+  </form>
+  {% if editable %}
+  <form method="post" style="margin-top:12px">{% csrf_token %}<input type="hidden" name="action" value="delete"><button class="danger sm" type="submit">{% icon "trash" %}Remove this rule</button></form>
+  {% endif %}
+</div>
+{% endblock %}

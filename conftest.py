@@ -129,7 +129,7 @@ def published_period(small_period, admin_user):
     from allocation.services import publish_period, run_allocation
 
     run_allocation(small_period, admin_user, seed=1)
-    publish_period(small_period, admin_user)
+    publish_period(small_period, admin_user, confirm_rules=True)
     small_period.refresh_from_db()
     return small_period
 

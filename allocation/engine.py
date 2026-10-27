@@ -48,7 +48,10 @@ class Room:
 class Person:
     id: int
     department_id: int
-    cap: int  # effective maximum duties for the period
+    cap: int | None  # effective maximum duties for the period; None = no maximum set
+    minimum: int = 0  # filled first, before anyone above their minimum
+    target: int | None = None  # their share: seats go to whoever is furthest below theirs
+    prior: int = 0  # duties already counted elsewhere (periods whose duties count together)
 
 
 @dataclass(frozen=True)
@@ -130,6 +133,11 @@ class AllocationState:
     def count(self, person_id: int) -> int:
         return self._counts[person_id]
 
+    def total(self, person_id: int) -> int:
+        """Duties that count toward the person's limits: this period plus any counted together with it."""
+        person = self.people.get(person_id)
+        return self._counts[person_id] + (person.prior if person else 0)
+
     def remaining(self, room_id: int) -> int:
         return max(0, self.rooms[room_id].needed - len(self._room_people[room_id]))
 
@@ -163,13 +171,15 @@ class AllocationState:
         person = self.people.get(person_id)
         cap = person.cap if person else 0
         errors = []
+        if person is None:
+            return ["Not eligible for duties in this period"]
         if person_id in self._slot_people[slot.id]:
             errors.append(MSG_SAME_SLOT)
         elif self._person_slots[person_id] & self._overlapping[slot.id]:
             errors.append(MSG_OVERLAPPING_SLOT)
         if self.is_unavailable(person_id, slot):
             errors.append(MSG_UNAVAILABLE)
-        if self._counts[person_id] >= cap:
+        if cap is not None and self.total(person_id) >= cap:
             errors.append(MSG_PERIOD_CAP.format(cap=cap))
         if self._day_counts[(person_id, slot.date)] >= self.rules.max_per_day:
             errors.append(MSG_DAILY_LIMIT.format(max_per_day=self.rules.max_per_day))
@@ -231,6 +241,13 @@ def _attendable(state: AllocationState, person: Person, slots_by_date) -> int:
     return total
 
 
+def _room_left(state: AllocationState, person: Person) -> float:
+    """Most duties `person` may have in this period under their maximum (inf when none is set)."""
+    if person.cap is None:
+        return float("inf")
+    return person.cap - person.prior
+
+
 def capacity_check(data: EngineInput) -> CapacityReport:
     """Can the remaining seats be filled at all? Checked before allocating.
 
@@ -244,9 +261,9 @@ def capacity_check(data: EngineInput) -> CapacityReport:
     for s in data.slots:
         if s.id in slots_with_rooms:
             slots_by_date[s.date].append(s)
-    capacity = sum(
-        max(0, min(p.cap, _attendable(state, p, slots_by_date)) - state.count(p.id)) for p in data.people
-    )
+    capacity = int(sum(
+        max(0, min(_attendable(state, p, slots_by_date), _room_left(state, p)) - state.count(p.id)) for p in data.people
+    ))
     needed, available = _slot_demand(state)
     shortages = [(s.id, needed[s.id], available[s.id]) for s in data.slots if needed[s.id] > available[s.id]]
     return CapacityReport(seats_needed, capacity, seats_needed <= capacity, shortages)
@@ -262,7 +279,7 @@ def _unfilled_reason(state: AllocationState, room: Room) -> str:
     for p in others:
         if state.is_unavailable(p.id, slot):
             unavailable += 1
-        elif state.count(p.id) >= p.cap:
+        elif p.cap is not None and state.total(p.id) >= p.cap:
             at_cap += 1
         else:
             at_daily += 1
@@ -276,11 +293,26 @@ def _unfilled_reason(state: AllocationState, room: Room) -> str:
     return f"No eligible faculty: {unavailable} unavailable, {at_cap} at period cap, {at_daily} at daily limit"
 
 
+def fair_share(data: EngineInput) -> float:
+    """Duties per person if every seat (filled or not) were shared equally — the share used
+    for people without a target of their own."""
+    seats = sum(r.needed for r in data.rooms) + sum(p.prior for p in data.people)
+    return seats / len(data.people) if data.people else 0.0
+
+
 def allocate(data: EngineInput, seed: int) -> AllocationResult:
-    """Fill every remaining seat, hardest time slots first, giving each seat to the
-    eligible person with the fewest duties (soft rules and department spread first,
-    then a seeded random tie-break)."""
+    """Fill every remaining seat, hardest time slots first. Each seat goes to the eligible
+    person who most needs it: anyone below their minimum first, then whoever is furthest
+    below their own target (or the fair share when they have none), fewest duties next;
+    soft rules and department spread break ties before a seeded random tie-break."""
     state = AllocationState(data)
+    default_share = fair_share(data) or 1.0
+
+    def progress(p: Person) -> float:
+        share = p.target if p.target is not None else default_share
+        if share <= 0:
+            return float("inf")
+        return state.total(p.id) / share
 
     needed, available = _slot_demand(state)
 
@@ -310,7 +342,9 @@ def allocate(data: EngineInput, seed: int) -> AllocationResult:
                         continue
                     key = (
                         len(state.soft_warnings(p.id, room.id)),
-                        state.count(p.id),
+                        0 if state.total(p.id) < p.minimum else 1,
+                        round(progress(p), 6),
+                        state.total(p.id),
                         1 if p.department_id in depts else 0,
                         tie_break[p.id],
                     )

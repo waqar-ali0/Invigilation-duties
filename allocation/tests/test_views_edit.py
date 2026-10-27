@@ -78,7 +78,7 @@ def test_publish_without_ack_when_unfilled_is_refused(admin_client, short_period
 
 def test_publish_with_ack_publishes(admin_client, short_period):
     admin_client.post(reverse("run_allocation", args=[short_period.pk]))
-    admin_client.post(reverse("publish", args=[short_period.pk]), {"acknowledge_unfilled": "on"})
+    admin_client.post(reverse("publish", args=[short_period.pk]), {"acknowledge_unfilled": "on", "confirm_rules": "on"})
     short_period.refresh_from_db()
     assert short_period.status == PeriodStatus.PUBLISHED
 

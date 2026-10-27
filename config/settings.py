@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "portal",
     "ops",
     "imports",
+    "workload",
 ]
 
 MIDDLEWARE = [

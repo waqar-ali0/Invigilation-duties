@@ -28,7 +28,8 @@ def assert_roster_invariants(period):
     for d in duties:
         f = d.faculty
         assert f.is_active and not f.is_exempt
-        assert totals[f.id] <= period.cap_for(f.category_id)
+        cap = period.cap_for(f.category_id)
+        assert cap is None or totals[f.id] <= cap
 
 
 def test_import_allocate_publish_export(admin_client):
@@ -53,7 +54,7 @@ def test_import_allocate_publish_export(admin_client):
     assert Duty.objects.filter(period=period).count() == 24
     assert_roster_invariants(period)
 
-    admin_client.post(reverse("publish", args=[period.pk]), {"acknowledge_unfilled": "on"})
+    admin_client.post(reverse("publish", args=[period.pk]), {"acknowledge_unfilled": "on", "confirm_rules": "on"})
     period.refresh_from_db()
     assert period.status == PeriodStatus.PUBLISHED
 
@@ -72,7 +73,7 @@ def test_demo_data_allocates_quickly_and_correctly(admin_user):
     assert elapsed < 10, f"allocation took {elapsed:.1f}s"
     assert len(result.assignments) > 1000
     assert_roster_invariants(period)
-    capped = period.designation_caps.values_list("category_id", flat=True)
+    capped = period.category_rules.exclude(max_duties=None).values_list("category_id", flat=True)
     totals = Counter(Duty.objects.active().filter(period=period).values_list("faculty_id", flat=True))
     counts = [totals[pk] for pk in Faculty.objects.eligible().exclude(category_id__in=capped).values_list("pk", flat=True)]
     assert max(counts) - min(counts) <= 1, f"default-cap loads range {min(counts)}..{max(counts)}"

@@ -6,7 +6,6 @@ from django.db import transaction
 
 from exams.models import (
     Building,
-    DesignationCap,
     ExamPeriod,
     ExamSession,
     Room,
@@ -15,6 +14,7 @@ from exams.models import (
     required_invigilators,
 )
 from faculty.models import Department, Designation, Faculty, FacultyCategory
+from workload.models import CategoryRule
 
 PERIOD_NAME = "Demo Finals"
 FIRST = ["Ayesha", "Bilal", "Fatima", "Hamza", "Hina", "Imran", "Kamran", "Maryam", "Nadia", "Omar",
@@ -84,7 +84,9 @@ class Command(BaseCommand):
             faculty_by_dept[dept.id] = Faculty.objects.bulk_create(people)
 
         period = ExamPeriod.objects.create(name=name, start_date=start, end_date=start + timedelta(days=9))
-        DesignationCap.objects.create(period=period, category=FacultyCategory.get(Designation.PROFESSOR), max_duties=4)
+        CategoryRule.objects.create(period=period, category=FacultyCategory.get(Designation.PROFESSOR), max_duties=4)
+        period.settings.max_duties_per_faculty = 8
+        period.settings.save(update_fields=["max_duties_per_faculty"])
         building, _ = Building.objects.get_or_create(name="Demo Block", defaults={"campus": "Main campus"})
         inventory = {}
 

@@ -1,3 +1,4 @@
+from workload.models import CategoryRule
 """Regression tests for the minor findings deferred from the Phase 1 review."""
 
 import io
@@ -11,7 +12,7 @@ from allocation.engine import FairnessStats
 from allocation.services import clear_draft, run_allocation
 from duties.models import Duty, DutySource, Unavailability
 from exams.importers.schedule import import_schedule
-from exams.models import DesignationCap, TimeSlot
+from exams.models import TimeSlot
 from exams.tests.helpers import make_csv
 from faculty.models import Designation, FacultyCategory
 from reports.excel import load_xlsx, roster_xlsx
@@ -78,7 +79,7 @@ def test_faculty_load_includes_exempt_faculty_with_duties(room, make_faculty):
 
 
 def test_dashboard_fairness_split_by_cap(admin_client, period, make_room, make_faculty):
-    DesignationCap.objects.create(period=period, category=FacultyCategory.get(Designation.PROFESSOR), max_duties=1)
+    CategoryRule.objects.create(period=period, category=FacultyCategory.get(Designation.PROFESSOR), max_duties=1)
     rooms = [make_room(day=d, course=f"C{d}") for d in range(1, 4)]
     for name in ("L1", "L2"):
         f = make_faculty(name)
@@ -88,8 +89,8 @@ def test_dashboard_fairness_split_by_cap(admin_client, period, make_room, make_f
     Duty.objects.create(faculty=prof, room_allocation=rooms[2], source=DutySource.MANUAL)
     r = admin_client.get(reverse("period_dashboard", args=[period.pk]))
     assert r.context["stats"] == FairnessStats(2, 2, 2.0)
-    assert r.context["capped_stats"] == [("Professor", 1, FairnessStats(1, 1, 1.0))]
-    assert "Professor (cap 1)" in r.content.decode()
+    assert r.context["capped_stats"] == [("Professor", "max 1", FairnessStats(1, 1, 1.0))]
+    assert "Professor (max 1)" in r.content.decode()
 
 
 # --- 7. Spreadsheet formula injection ------------------------------------------------

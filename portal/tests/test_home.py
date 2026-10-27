@@ -60,7 +60,7 @@ def test_my_duties_shows_only_own_published_duties(client, small_period, admin_u
     main = client.get(reverse("my_duties")).content.decode().split("<main>")[1]  # skip the CSRF token in the header
     assert rooms[0].room not in main  # draft: hidden
     run_allocation(small_period, admin_user, seed=1)
-    publish_period(small_period, admin_user, acknowledge_unfilled=True)
+    publish_period(small_period, admin_user, acknowledge_unfilled=True, confirm_rules=True)
     page = client.get(reverse("my_duties")).content.decode()
     assert rooms[0].session.course_code in page and "Fall 2026 Finals" in page
 

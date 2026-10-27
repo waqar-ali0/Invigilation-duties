@@ -34,17 +34,24 @@
   <div class="card">
     <h2>{% icon "chart" %}Fairness</h2>
     <div class="stat">Min {{ stats.min }} · Max {{ stats.max }}</div>
-    <div class="muted">Average {{ stats.avg }} per eligible faculty member{% if capped_stats %} at the default cap of {{ settings.max_duties_per_faculty }}{% endif %}{% if period.last_run %} · {{ period.last_run.soft_violations }} soft-rule exception(s) in last run{% endif %}</div>
-    {% for label, cap, s in capped_stats %}
-      <div class="muted">{{ label }} (cap {{ cap }}): min {{ s.min }} · max {{ s.max }} · average {{ s.avg }}</div>
+    <div class="muted">Average {{ stats.avg }} per eligible faculty member{% if capped_stats %} without a category rule{% endif %}{% if period.last_run %} · {{ period.last_run.soft_violations }} soft-rule exception(s) in last run{% endif %}</div>
+    {% for label, rule, s in capped_stats %}
+      <div class="muted">{{ label }} ({{ rule }}): min {{ s.min }} · max {{ s.max }} · average {{ s.avg }}</div>
     {% endfor %}
+    <div class="muted"><a href="{% url 'workload_people' period.pk %}">Workload per person</a>{% if workload.below %} · {{ workload.below }} below target{% endif %}{% if workload.over %} · <span class="text-danger">{{ workload.over }} over limit</span>{% endif %}</div>
   </div>
   <div class="card">
     <h2>{% icon "settings" %}Rules</h2>
     <div class="muted">
-      Max {{ settings.max_duties_per_faculty }} duties per person{% for c in caps %}, {{ c }}{% endfor %}<br>
+      Default maximum per person: {% if settings.max_duties_per_faculty %}{{ settings.max_duties_per_faculty }}{% else %}<strong>not set</strong>{% endif %}
+      · {{ workload.category_rules }} designation rule(s) · {{ workload.faculty_rules }} personal rule(s)<br>
+      {% if workload.no_target %}<span class="badge warn">{{ workload.no_target }} without a target</span><br>{% endif %}
       Max {{ settings.max_duties_per_day }} per day · 1 invigilator per {{ settings.students_per_invigilator }} students (min {{ settings.min_invigilators_per_room }})<br>
       Avoid back-to-back: {{ settings.avoid_back_to_back|yesno:"yes,no" }} · Avoid own course: {{ settings.exclude_course_teacher|yesno:"yes,no" }}
+    </div>
+    <div class="actions" style="margin-top:10px">
+      <a class="button secondary sm" href="{% url 'workload_rules' period.pk %}">{% icon "settings" %}Workload rules</a>
+      {% if workload.policy.confirmed_at %}<span class="badge ok">confirmed {{ workload.policy.confirmed_at|date:"d M" }}</span>{% else %}<span class="badge warn">not confirmed</span>{% endif %}
     </div>
   </div>
 </div>

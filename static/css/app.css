@@ -1,4 +1,4 @@
-﻿/* =========================================================================
+/* =========================================================================
    Invigilation Duties — design system
    Tokens first (light + dark), then layout, components, pages, phones.
    ========================================================================= */
@@ -324,7 +324,7 @@ a.badge:hover { text-decoration: none; filter: brightness(0.97); }
 /* ---- Forms ------------------------------------------------------------------ */
 label { display: block; font-weight: 600; font-size: 0.88rem; margin-bottom: 6px; color: var(--text-2); }
 input[type=text], input[type=search], input[type=email], input[type=password], input[type=date],
-input[type=datetime-local], input[type=file], select, textarea {
+input[type=datetime-local], input[type=file], input[type=number], input[type=tel], input[type=url], select, textarea {
   font: inherit; font-size: 0.94rem; color: var(--text);
   background: var(--surface);
   padding: 10px 12px;
@@ -441,3 +441,8 @@ th a:hover { text-decoration: underline; }
 @media (max-width: 640px) {
   .filters input[type=search], .filters input[type=text], .filters select { max-width: none; flex-basis: 100%; }
 }
+
+/* Number boxes and choices inside tables */
+td input.num, td input[type=number] { width: 96px; min-width: 0; }
+td select { min-width: 150px; width: auto; }
+input[type=radio] { width: 17px; height: 17px; accent-color: var(--primary); vertical-align: -3px; margin-right: 8px; }

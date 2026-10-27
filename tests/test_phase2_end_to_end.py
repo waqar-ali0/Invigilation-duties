@@ -60,7 +60,7 @@ def test_invite_request_approve_allocate_publish_remind(admin_client, period, ma
     admin_client.post(reverse("run_allocation", args=[period.pk]))
     assert not Duty.objects.filter(faculty=alice, room_allocation=day1).exists()
     assert Duty.objects.filter(room_allocation=day1).count() == 2
-    admin_client.post(reverse("publish", args=[period.pk]), {"acknowledge_unfilled": "on"})
+    admin_client.post(reverse("publish", args=[period.pk]), {"acknowledge_unfilled": "on", "confirm_rules": "on"})
     assert OutboundEmail.objects.filter(kind=EmailKind.ROSTER_PUBLISHED).count() == Duty.objects.values("faculty").distinct().count()
 
     # Alice sees her own duties and downloads them.

@@ -1,3 +1,4 @@
+from workload.models import CategoryRule
 from datetime import date
 
 import pytest
@@ -12,7 +13,7 @@ from allocation.services import (
 )
 from audit.models import AuditLog
 from duties.models import Duty, DutySource, Unavailability, UnavailabilityStatus
-from exams.models import DesignationCap, PeriodLockedError, PeriodStatus, RoomAllocation
+from exams.models import PeriodLockedError, PeriodStatus, RoomAllocation
 from faculty.models import Designation, Faculty, FacultyCategory
 
 pytestmark = pytest.mark.django_db
@@ -36,7 +37,7 @@ def test_rerun_replaces_auto_duties(small_period, admin_user):
 
 
 def test_rerun_keeps_manual_duties_and_counts_them(small_period, admin_user, make_faculty):
-    DesignationCap.objects.create(period=small_period, category=FacultyCategory.get(Designation.PROFESSOR), max_duties=1)
+    CategoryRule.objects.create(period=small_period, category=FacultyCategory.get(Designation.PROFESSOR), max_duties=1)
     prof = make_faculty("Prof", designation=Designation.PROFESSOR)
     Duty.objects.create(faculty=prof, room_allocation=RoomAllocation.objects.first(), source=DutySource.MANUAL)
     for seed in range(1, 6):
@@ -95,8 +96,8 @@ def test_capacity_report_and_unfilled_rooms(short_period, admin_user):
 def test_publish_requires_ack_when_unfilled(short_period, admin_user):
     run_allocation(short_period, admin_user, seed=1)
     with pytest.raises(PublishBlocked, match="3 seats are unfilled"):
-        publish_period(short_period, admin_user)
-    publish_period(short_period, admin_user, acknowledge_unfilled=True)
+        publish_period(short_period, admin_user, confirm_rules=True)
+    publish_period(short_period, admin_user, acknowledge_unfilled=True, confirm_rules=True)
     short_period.refresh_from_db()
     assert short_period.status == PeriodStatus.PUBLISHED and short_period.published_at is not None
     assert AuditLog.objects.filter(action="period.publish").exists()
@@ -104,11 +105,11 @@ def test_publish_requires_ack_when_unfilled(short_period, admin_user):
 
 def test_publish_twice_raises_locked(small_period, admin_user):
     run_allocation(small_period, admin_user, seed=1)
-    publish_period(small_period, admin_user)
+    publish_period(small_period, admin_user, confirm_rules=True)
     with pytest.raises(PeriodLockedError):
-        publish_period(small_period, admin_user)
+        publish_period(small_period, admin_user, confirm_rules=True)
 
 
 def test_publish_with_no_duties_blocked(small_period, admin_user):
     with pytest.raises(PublishBlocked, match="no duties"):
-        publish_period(small_period, admin_user, acknowledge_unfilled=True)
+        publish_period(small_period, admin_user, acknowledge_unfilled=True, confirm_rules=True)

@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Workload rules — {{ period.name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Workload rules</h1>
+    <p class="subtitle"><a href="{% url 'period_dashboard' period.pk %}">← {{ period.name }}</a> · Every number here belongs to this period only; other periods are never changed.</p>
+  </div>
+  <div class="actions">
+    <a class="button secondary" href="{% url 'workload_people' period.pk %}">{% icon "users" %}Workload per person</a>
+    {% if editable %}
+    <form method="post">{% csrf_token %}<input type="hidden" name="action" value="confirm"><button type="submit">{% icon "check" %}Confirm rules</button></form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <h2>{% icon "clipboard" %}Demand</h2>
+    <div class="stat">{{ seats }}</div>
+    <div class="muted">invigilator seats in this period's schedule for {{ eligible }} eligible faculty{% if eligible %} — about {% widthratio seats eligible 1 %} each if shared equally{% endif %}.</div>
+  </div>
+  <div class="card">
+    <h2>{% icon "alert" %}Targets</h2>
+    {% if no_target %}
+      <div class="stat">{{ no_target }} not set</div>
+      <div class="muted">{% for name, n in missing_by_category %}{{ name }}: {{ n }}{% if not forloop.last %} · {% endif %}{% endfor %}. Without a target the engine shares duties equally; set targets below if the university has them.</div>
+    {% else %}<div class="stat">All set</div><div class="muted">Everyone eligible has a target.</div>{% endif %}
+  </div>
+  <div class="card">
+    <h2>{% icon "shield" %}Status</h2>
+    {% if policy.confirmed_at %}
+      <div class="stat">Confirmed</div><div class="muted">{{ policy.confirmed_at|date:"d M Y H:i" }} by {{ policy.confirmed_by.email|default:"—" }}</div>
+    {% else %}
+      <div class="stat">Not confirmed</div><div class="muted">Confirm the rules before publishing. Any change needs confirming again.</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <h2>Defaults</h2>
+  <form method="post" class="form-grid">
+    {% csrf_token %}<input type="hidden" name="action" value="defaults">
+    {% with form=defaults %}{% include "_form_fields.html" %}{% endwith %}
+    {% if editable %}<div class="actions"><button class="secondary" type="submit">Save defaults</button></div>{% endif %}
+  </form>
+</div>
+
+<div class="card table-wrap">
+  <h2>By designation</h2>
+  <p class="muted">Leave a row empty if it has no special rule. <em>Exactly</em> fixes the number; <em>At least</em> and <em>At most</em> set a bound; <em>About</em> is a preferred share. For visiting faculty you can instead give duties per course they teach.</p>
+  <form method="post">
+    {% csrf_token %}<input type="hidden" name="action" value="categories">
+    <table class="stack">
+      <thead><tr><th>Designation</th><th>Target</th><th>Kind</th><th>Minimum</th><th>Maximum</th><th>Per course</th></tr></thead>
+      <tbody>
+        {% for category, form in categories %}
+        <tr>
+          <td data-label="Designation"><strong>{{ category.name }}</strong>{% for e in form.non_field_errors %}<div class="text-danger">{{ e }}</div>{% endfor %}</td>
+          <td data-label="Target">{{ form.target }}{{ form.target.errors }}</td>
+          <td data-label="Kind">{{ form.kind }}</td>
+          <td data-label="Minimum">{{ form.min_duties }}{{ form.min_duties.errors }}</td>
+          <td data-label="Maximum">{{ form.max_duties }}{{ form.max_duties.errors }}</td>
+          <td data-label="Per course">{% if form.per_course %}{{ form.per_course }}{% else %}<span class="muted">—</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if editable %}<div class="actions" style="margin-top:12px"><button class="secondary" type="submit">Save designation rules</button></div>{% endif %}
+  </form>
+</div>
+
+<div class="card table-wrap">
+  <h2>Personal rules ({{ personal|length }})</h2>
+  <p class="muted">A personal rule overrides the designation rule for one person in this period: a different target, an exemption, or an exception for someone marked inactive (with the reason recorded).</p>
+  {% if personal %}
+  <table class="stack">
+    <thead><tr><th>Faculty</th><th>Rule</th><th>Reason</th><th>Changed</th><th></th></tr></thead>
+    <tbody>
+      {% for r in personal %}
+      <tr>
+        <td data-label="Faculty"><a href="{% url 'faculty_detail' r.faculty_id %}">{{ r.faculty.name }}</a><div class="muted">{{ r.faculty.employee_id }} · {{ r.faculty.category }}</div></td>
+        <td data-label="Rule">
+          {% if r.exempt %}<span class="badge">exempt</span>{% endif %}
+          {% if r.allow_inactive %}<span class="badge warn">inactive exception</span>{% endif %}
+          {% if r.target is not None %}{{ r.get_kind_display|default:"About" }} {{ r.target }}{% endif %}
+          {% if r.min_duties is not None %} · min {{ r.min_duties }}{% endif %}{% if r.max_duties is not None %} · max {{ r.max_duties }}{% endif %}
+        </td>
+        <td data-label="Reason">{{ r.reason|default:"—" }}</td>
+        <td data-label="Changed">{{ r.updated_at|date:"d M Y" }}{% if r.updated_by %} · {{ r.updated_by.email }}{% endif %}</td>
+        <td><a class="button secondary sm" href="{% url 'workload_person_rule' period.pk r.pk %}">Edit</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+  {% if editable %}
+  <h2 style="margin-top:16px">Add a personal rule</h2>
+  <form method="post" class="form-grid">
+    {% csrf_token %}<input type="hidden" name="action" value="person">
+    {% with form=person_form %}{% include "_form_fields.html" %}{% endwith %}
+    <div class="actions"><button class="secondary" type="submit">{% icon "plus" %}Add rule</button></div>
+  </form>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>Counting</h2>
+  <form method="post">
+    {% csrf_token %}<input type="hidden" name="action" value="policy">
+    {% with form=policy_form %}{% include "_form_fields.html" %}{% endwith %}
+    {% if editable %}<div class="actions"><button class="secondary" type="submit">Save counting rules</button></div>{% endif %}
+  </form>
+  <p class="muted">An assigned duty counts toward the target from the start (it is pending until attendance is marked). Duties handed over to someone else never count for the person who gave them up.</p>
+</div>
+
+{% if editable %}
+<div class="card">
+  <h2>Copy from another period</h2>
+  <form method="post" class="filters">
+    {% csrf_token %}<input type="hidden" name="action" value="copy">
+    {{ copy_form.source }}
+    <button class="secondary" type="submit" data-confirm="Replace this period's rules with a copy of the chosen period's rules?">{% icon "repeat" %}Copy rules</button>
+  </form>
+  <p class="muted">Copies defaults, designation rules, counting rules and personal rules of active faculty. The other period is not changed.</p>
+</div>
+{% endif %}
+
+<div class="card table-wrap">
+  <h2>Versions</h2>
+  {% if versions %}
+  <table class="stack">
+    <thead><tr><th>Version</th><th>When</th><th>By</th><th>Why</th></tr></thead>
+    <tbody>
+      {% for v in versions %}
+      <tr><td data-label="Version"><a href="{% url 'workload_version' period.pk v.number %}">v{{ v.number }}</a></td><td data-label="When">{{ v.created_at|date:"d M Y H:i" }}</td><td data-label="By">{{ v.created_by.email|default:"—" }}</td><td data-label="Why">{{ v.reason }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p class="muted">No versions yet. Confirming the rules saves the first one; changes after publishing are saved automatically.</p>{% endif %}
+</div>
+<script>
+  document.querySelectorAll("[data-confirm]").forEach(function (btn) {
+    btn.addEventListener("click", function (e) { if (!window.confirm(btn.dataset.confirm)) e.preventDefault(); });
+  });
+</script>
+{% endblock %}

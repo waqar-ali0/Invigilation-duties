@@ -55,6 +55,7 @@ from audit.models import AuditLog  # noqa: E402
 from duties.models import Duty, DutyStatus, SwapRequest, SwapStatus, Unavailability, UnavailabilityStatus  # noqa: E402
 from exams.models import ExamPeriod, PeriodStatus, RoomAllocation, TimeSlot  # noqa: E402
 from faculty.models import Department, Faculty, FacultyCategory  # noqa: E402
+from workload.rules import resolve_rules  # noqa: E402
 from notifications.models import EmailStatus, OutboundEmail  # noqa: E402
 from notifications.outbox import send_queued  # noqa: E402
 
@@ -198,9 +199,6 @@ def run():
         "settings-0-max_duties_per_faculty": "6", "settings-0-max_duties_per_day": "2",
         "settings-0-students_per_invigilator": "30", "settings-0-min_invigilators_per_room": "2",
         "settings-0-avoid_back_to_back": "on", "settings-0-exclude_course_teacher": "on", "settings-0-swap_cutoff_hours": "24",
-        "designation_caps-TOTAL_FORMS": "1", "designation_caps-INITIAL_FORMS": "0",
-        "designation_caps-MIN_NUM_FORMS": "0", "designation_caps-MAX_NUM_FORMS": "1000",
-        "designation_caps-0-category": str(FacultyCategory.objects.get(code="professor").pk), "designation_caps-0-max_duties": "2",
         "_save": "Save",
     }
     r = office.post(add, form)
@@ -210,7 +208,11 @@ def run():
     if period is None:
         return
     check("period settings saved from the inline", period.settings.max_duties_per_faculty == 6, str(period.settings.max_duties_per_faculty))
-    check("designation cap saved", period.cap_for("professor") == 2)
+    prof = FacultyCategory.objects.get(code="professor")
+    office.post(reverse("workload_rules", args=[period.pk]), {"action": "categories", f"c{prof.pk}-target": "2", f"c{prof.pk}-kind": "maximum"})
+    check("designation rule saved on the workload page (professors at most 2)", resolve_rules(period)[Faculty.objects.filter(category=prof).first().pk].bounds()[1] == 2)
+    page = office.text(reverse("workload_rules", args=[period.pk]))
+    check("workload rules page shows demand and unset targets", "invigilator seats" in page and "not set" in page)
 
     # Schedule: 5 days x 2 slots x 3 courses, Excel date and time cells, teacher emails.
     sched = [["Date", "Start Time", "End Time", "Course Code", "Course Name", "Department", "Room", "Student Count", "Course Teacher Emails"]]
@@ -299,7 +301,8 @@ def run():
     totals = Counter(d.faculty_id for d in duties)
     check("nobody twice in one slot", max(per_slot.values()) == 1)
     check("daily limit respected", max(per_day.values()) <= 2)
-    caps_ok = all(totals[f.pk] <= period.cap_for(f.category_id) for f in Faculty.objects.all())
+    limits = {fid: rule.bounds()[1] for fid, rule in resolve_rules(period).items()}
+    caps_ok = all(limits[f.pk] is None or totals[f.pk] <= limits[f.pk] for f in Faculty.objects.all())
     check("caps respected (professor 2, others 6)", caps_ok)
     check("exempt faculty not assigned", exempt.pk not in totals)
     unavailable = [d for d in duties if d.faculty.employee_id in ("E003", "E000") and d.room_allocation.session.slot.date == start]
@@ -334,7 +337,7 @@ def run():
 
     # ---------------------------------------------------------------- publish
     office.get(reverse("publish", args=[period.pk]))
-    office.post(reverse("publish", args=[period.pk]), {"acknowledge_unfilled": "on"})
+    office.post(reverse("publish", args=[period.pk]), {"acknowledge_unfilled": "on", "confirm_rules": "on"})
     period.refresh_from_db()
     check("published", period.status == PeriodStatus.PUBLISHED, period.status)
     holders = Duty.objects.active().filter(period=period).values("faculty").distinct().count()

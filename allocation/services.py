@@ -21,17 +21,34 @@ class PublishBlocked(Exception):
     """Publishing is not possible (yet) for the reason in the message."""
 
 
+def engine_people(period):
+    """Engine Persons for everyone who may get duties in `period`, with their rule's bounds.
+
+    Eligible = active and not exempt (or given an exception for this period), and not exempt
+    for this period. Duties in periods counted together with this one are passed as `prior`."""
+    from workload.calc import prior_counts
+    from workload.rules import resolve_rules
+
+    candidates = Faculty.objects.filter(Q(is_active=True, is_exempt=False) | Q(workload_rules__period=period, workload_rules__allow_inactive=True)).select_related("category").distinct()
+    rules = resolve_rules(period, candidates)
+    prior = prior_counts(period)
+    people = []
+    for f in candidates:
+        rule = rules[f.id]
+        if rule.exempt or (not (f.is_active and not f.is_exempt) and not rule.allow_inactive):
+            continue
+        low, high = rule.bounds()
+        people.append(Person(f.id, f.department_id, high, minimum=low or 0, target=rule.target, prior=prior.get(f.id, 0)))
+    return people
+
+
 def build_engine_input(period, exclude_auto=False, include_pending=False, exclude_duty_ids=()):
     """Describe `period` for the engine. Existing active duties become `fixed`
     (AUTO ones are left out when `exclude_auto`; duties in `exclude_duty_ids` are left out,
     e.g. one being handed over). Approved unavailability blocks people; with
     `include_pending`, pending requests do too (for "what if all are approved")."""
     s = period.settings
-    caps = {c.category_id: c.max_duties for c in period.designation_caps.all()}
-    people = [
-        Person(f.id, f.department_id, caps.get(f.category_id, s.max_duties_per_faculty))
-        for f in Faculty.objects.eligible().only("id", "department_id", "category_id")
-    ]
+    people = engine_people(period)
 
     slots = []
     order_on_date = defaultdict(int)
@@ -156,10 +173,11 @@ def roster_conflicts(period):
         period=period, status=UnavailabilityStatus.APPROVED
     ).values_list("faculty_id", "date", "slot_id"):
         blocked.add((faculty_id, day, slot_id))
+    eligible = {p.id for p in engine_people(period)}
     conflicts = []
     for d in duties:
         slot = d.room_allocation.session.slot
-        if not d.faculty.is_active or d.faculty.is_exempt:
+        if d.faculty_id not in eligible:
             conflicts.append((d, "Faculty is now inactive or exempt"))
         elif (d.faculty_id, slot.date, None) in blocked or (d.faculty_id, slot.date, slot.id) in blocked:
             conflicts.append((d, "Approved as unavailable at this time"))
@@ -181,7 +199,11 @@ def unfilled_rooms(period):
     ]
 
 
-def publish_period(period, actor, acknowledge_unfilled=False) -> None:
+def publish_period(period, actor, acknowledge_unfilled=False, confirm_rules=False) -> None:
+    """Publish the draft. The workload rules must be confirmed first (or now, with `confirm_rules`)."""
+    from workload.models import WorkloadPolicy
+    from workload.services import confirm
+
     caller_period = period
     period.ensure_editable()
     with transaction.atomic():
@@ -191,6 +213,10 @@ def publish_period(period, actor, acknowledge_unfilled=False) -> None:
         missing = sum(m for _, m, _ in unfilled_rooms(period))
         if missing and not acknowledge_unfilled:
             raise PublishBlocked(f"{missing} seats are unfilled. Confirm to publish anyway.")
+        if WorkloadPolicy.for_period(period).confirmed_at is None:
+            if not confirm_rules:
+                raise PublishBlocked("The workload rules have not been confirmed. Review them, then confirm.")
+            confirm(period, actor)
         period.status = PeriodStatus.PUBLISHED
         period.published_at = timezone.now()
         period.save(update_fields=["status", "published_at"])

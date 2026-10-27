@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Rules v{{ version.number }} — {{ period.name }}{% endblock %}
+{% block content %}
+<h1>Workload rules, version {{ version.number }}</h1>
+<p class="subtitle"><a href="{% url 'workload_rules' period.pk %}">← Workload rules · {{ period.name }}</a> · {{ version.created_at|date:"d M Y H:i" }} by {{ version.created_by.email|default:"—" }} · {{ version.reason }}</p>
+
+<div class="card">
+  <p>Default maximum per person: {{ s.default_max|default:"not set" }} · Maximum per day: {{ s.max_per_day }}</p>
+  <p class="muted">
+    Excused absence counts: {{ s.policy.excused_absence_counts|yesno }} · Unexcused absence counts: {{ s.policy.unexcused_absence_counts|yesno }}
+    · Make-up duties count: {{ s.policy.makeup_counts|yesno }} · Stand-ins count: {{ s.policy.stand_in_counts|yesno }}
+    {% if s.policy.combined_periods %}· Counted together with: {{ s.policy.combined_periods|join:", " }}{% endif %}
+  </p>
+</div>
+<div class="card table-wrap">
+  <h2>By designation</h2>
+  <table class="stack">
+    <thead><tr><th>Designation</th><th>Target</th><th>Kind</th><th>Min</th><th>Max</th><th>Per course</th></tr></thead>
+    <tbody>{% for r in s.categories %}<tr><td data-label="Designation">{{ r.category }}</td><td data-label="Target">{{ r.target|default_if_none:"—" }}</td><td data-label="Kind">{{ r.kind|default:"—" }}</td><td data-label="Min">{{ r.min|default_if_none:"—" }}</td><td data-label="Max">{{ r.max|default_if_none:"—" }}</td><td data-label="Per course">{{ r.per_course|default_if_none:"—" }}</td></tr>{% empty %}<tr><td colspan="6" class="muted">None</td></tr>{% endfor %}</tbody>
+  </table>
+</div>
+<div class="card table-wrap">
+  <h2>Personal rules</h2>
+  <table class="stack">
+    <thead><tr><th>Faculty</th><th>Target</th><th>Min</th><th>Max</th><th>Exempt</th><th>Reason</th></tr></thead>
+    <tbody>{% for r in s.people %}<tr><td data-label="Faculty">{{ r.faculty }}</td><td data-label="Target">{{ r.kind }} {{ r.target|default_if_none:"—" }}</td><td data-label="Min">{{ r.min|default_if_none:"—" }}</td><td data-label="Max">{{ r.max|default_if_none:"—" }}</td><td data-label="Exempt">{{ r.exempt|yesno }}</td><td data-label="Reason">{{ r.reason|default:"—" }}</td></tr>{% empty %}<tr><td colspan="6" class="muted">None</td></tr>{% endfor %}</tbody>
+  </table>
+</div>
+{% endblock %}

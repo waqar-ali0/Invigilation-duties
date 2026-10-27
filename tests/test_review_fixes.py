@@ -100,7 +100,7 @@ def test_publish_and_clear_recheck_status_in_database(small_period, admin_user):
     with pytest.raises(PeriodLockedError):
         clear_draft(small_period, admin_user)
     with pytest.raises(PeriodLockedError):
-        publish_period(small_period, admin_user)
+        publish_period(small_period, admin_user, confirm_rules=True)
     assert Duty.objects.count() == 6
 
 

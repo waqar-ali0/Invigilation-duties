@@ -1,10 +1,10 @@
+from workload.models import CategoryRule
 from datetime import date, time
 
 import pytest
 from django.core.exceptions import ValidationError
 
 from exams.models import (
-    DesignationCap,
     PeriodLockedError,
     PeriodStatus,
     TimeSlot,
@@ -29,13 +29,16 @@ def test_new_period_gets_default_settings(period):
         s.min_invigilators_per_room,
         s.avoid_back_to_back,
         s.exclude_course_teacher,
-    ) == (8, 2, 30, 2, True, True)
+    ) == (None, 2, 30, 2, True, True)  # no built-in duty maximum
 
 
 def test_cap_for_uses_designation_override(period):
-    DesignationCap.objects.create(period=period, category=FacultyCategory.get(Designation.PROFESSOR), max_duties=4)
+    CategoryRule.objects.create(period=period, category=FacultyCategory.get(Designation.PROFESSOR), max_duties=4)
     assert period.cap_for(Designation.PROFESSOR) == 4
-    assert period.cap_for(Designation.LECTURER) == 8
+    assert period.cap_for(Designation.LECTURER) is None  # no maximum set
+    period.settings.max_duties_per_faculty = 6
+    period.settings.save()
+    assert period.cap_for(Designation.LECTURER) == 6
 
 
 def test_published_period_is_locked(period):

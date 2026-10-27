@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Workload per person — {{ period.name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Workload per person</h1>
+    <p class="subtitle"><a href="{% url 'period_dashboard' period.pk %}">← {{ period.name }}</a> · <a href="{% url 'workload_rules' period.pk %}">Workload rules</a> · Counted = what counts toward the target under this period's counting rules.</p>
+  </div>
+</div>
+
+<div class="grid">
+  <a class="card" href="?flag={{ Flag.BELOW }}"><h2>{% icon "chart" %}Below target</h2><div class="stat">{{ totals.below|default:0 }}</div></a>
+  <a class="card" href="?flag={{ Flag.OVER }}"><h2>{% icon "alert" %}Over limit</h2><div class="stat">{{ totals.over|default:0 }}</div><div class="muted">{{ totals.near_limit|default:0 }} near their limit</div></a>
+  <a class="card" href="?flag={{ Flag.NO_TARGET }}"><h2>{% icon "settings" %}No target set</h2><div class="stat">{{ totals.no_target|default:0 }}</div></a>
+</div>
+
+<div class="card">
+  <form method="get" class="filters">
+    <input type="search" name="q" value="{{ f.q }}" placeholder="Name or faculty ID" aria-label="Search">
+    <select name="department" aria-label="Department"><option value="">All departments</option>{% for d in departments %}<option value="{{ d.pk }}"{% if f.department == d.pk|stringformat:"s" %} selected{% endif %}>{{ d.name }}</option>{% endfor %}</select>
+    <select name="category" aria-label="Designation"><option value="">All designations</option>{% for c in categories %}<option value="{{ c.pk }}"{% if f.category == c.pk|stringformat:"s" %} selected{% endif %}>{{ c.name }}</option>{% endfor %}</select>
+    <select name="flag" aria-label="Status"><option value="">Any status</option>{% for k, label in flags %}<option value="{{ k }}"{% if f.flag == k %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+    <button type="submit">{% icon "search" %}Filter</button>
+  </form>
+</div>
+
+<div class="card table-wrap">
+  {% if loads %}
+  <table class="stack">
+    <thead><tr>
+      <th><a href="?{{ querystring }}&sort={% if sort == 'name' %}-name{% else %}name{% endif %}">Faculty</a></th>
+      <th>Rule</th>
+      <th>Assigned</th><th>Completed</th><th>Pending</th><th>Missed</th><th>Handed over</th>
+      <th><a href="?{{ querystring }}&sort={% if sort == '-counted' %}counted{% else %}-counted{% endif %}">Counted</a></th>
+      <th><a href="?{{ querystring }}&sort={% if sort == '-remaining' %}remaining{% else %}-remaining{% endif %}">Remaining</a></th>
+      <th>Status</th>
+    </tr></thead>
+    <tbody>
+      {% for x in loads %}
+      <tr>
+        <td data-label="Faculty"><a href="{% url 'faculty_detail' x.faculty.pk %}">{{ x.faculty.name }}</a><div class="muted">{{ x.faculty.employee_id }} · {{ x.faculty.category }} · {{ x.faculty.department }}</div></td>
+        <td data-label="Rule">{{ x.rule.describe }}{% if x.rule.note %}<div class="muted">{{ x.rule.note }}</div>{% endif %}</td>
+        <td data-label="Assigned">{{ x.assigned }}</td>
+        <td data-label="Completed">{{ x.completed }}</td>
+        <td data-label="Pending">{{ x.pending }}</td>
+        <td data-label="Missed">{{ x.missed }}{% if x.missed_excused %} <span class="muted">({{ x.missed_excused }} excused)</span>{% endif %}{% if x.makeup_owed %} <span class="badge warn">owes {{ x.makeup_owed }}</span>{% endif %}</td>
+        <td data-label="Handed over">{{ x.cancelled }}</td>
+        <td data-label="Counted"><strong>{{ x.counted }}</strong>{% if x.prior %} <span class="muted">(incl. {{ x.prior }} from other periods)</span>{% endif %}{% if x.percent is not None %}<div class="muted">{{ x.percent }}%</div>{% endif %}</td>
+        <td data-label="Remaining">{% if x.remaining is not None %}{{ x.remaining }}{% else %}<span class="muted">—</span>{% endif %}</td>
+        <td data-label="Status">{% for label, tone in x.flag_labels %}<span class="badge {{ tone }}">{{ label }}</span> {% endfor %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">{% icon "users" %}<strong>Nobody matches</strong>Try other filters.</div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -24,10 +24,6 @@ def period_form(**settings):
         "settings-0-avoid_back_to_back": "on",
         "settings-0-exclude_course_teacher": "on",
         "settings-0-swap_cutoff_hours": "24",
-        "designation_caps-TOTAL_FORMS": "0",
-        "designation_caps-INITIAL_FORMS": "0",
-        "designation_caps-MIN_NUM_FORMS": "0",
-        "designation_caps-MAX_NUM_FORMS": "1000",
         "_save": "Save",
     }
     data.update({f"settings-0-{k}": v for k, v in settings.items()})

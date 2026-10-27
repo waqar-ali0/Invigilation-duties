@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
 
-from faculty.models import Department, Faculty, FacultyCategory
+from faculty.models import Department, Faculty
 
 
 class PeriodStatus(models.TextChoices):
@@ -44,7 +44,10 @@ class ExamPeriod(models.Model):
         creating = self._state.adding
         super().save(*args, **kwargs)
         if creating:
+            from workload.models import WorkloadPolicy
+
             PeriodSettings.objects.get_or_create(period=self)
+            WorkloadPolicy.objects.get_or_create(period=self)
 
     def ensure_editable(self):
         if self.status == PeriodStatus.PUBLISHED:
@@ -86,12 +89,14 @@ class ExamPeriod(models.Model):
         return period
 
     def cap_for(self, category):
-        """The maximum number of duties for a faculty member in this category (object, id or code) in this period."""
+        """The maximum duties for this category (object, id or code) in this period: its rule's
+        maximum, else the period default; None when no maximum is set."""
+        rules = self.category_rules.exclude(max_duties=None)
         if isinstance(category, str) and not category.isdigit():
-            override = self.designation_caps.filter(category__code=category).first()
+            rule = rules.filter(category__code=category).first()
         else:
-            override = self.designation_caps.filter(category_id=getattr(category, "pk", category)).first()
-        return override.max_duties if override else self.settings.max_duties_per_faculty
+            rule = rules.filter(category_id=getattr(category, "pk", category)).first()
+        return rule.max_duties if rule else self.settings.max_duties_per_faculty
 
 
 def _positive(default):
@@ -100,7 +105,10 @@ def _positive(default):
 
 class PeriodSettings(models.Model):
     period = models.OneToOneField(ExamPeriod, on_delete=models.CASCADE, related_name="settings")
-    max_duties_per_faculty = _positive(8)
+    max_duties_per_faculty = models.PositiveIntegerField(
+        "default maximum per person", null=True, blank=True, validators=[MinValueValidator(1)],
+        help_text="Leave empty for no maximum. Category and personal rules (Workload rules page) take precedence.",
+    )
     max_duties_per_day = _positive(2)
     students_per_invigilator = _positive(30)
     min_invigilators_per_room = _positive(2)
@@ -117,19 +125,6 @@ class PeriodSettings(models.Model):
 
     def __str__(self):
         return f"Settings for {self.period}"
-
-
-class DesignationCap(models.Model):
-    period = models.ForeignKey(ExamPeriod, on_delete=models.CASCADE, related_name="designation_caps")
-    category = models.ForeignKey(FacultyCategory, on_delete=models.PROTECT, related_name="+")
-    max_duties = models.PositiveIntegerField()
-
-    class Meta:
-        verbose_name = "category cap"
-        constraints = [models.UniqueConstraint(fields=["period", "category"], name="unique_category_cap")]
-
-    def __str__(self):
-        return f"{self.category}: {self.max_duties}"
 
 
 class TimeSlot(models.Model):

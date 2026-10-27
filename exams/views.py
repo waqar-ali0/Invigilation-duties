@@ -56,19 +56,53 @@ def _slots_with_rooms(period):
 
 
 def _fairness(period, load):
-    """Stats for eligible faculty at the default cap, and (label, cap, stats) per capped category."""
-    caps = {c.category: c.max_duties for c in period.designation_caps.select_related("category")}
-    capped_ids = {c.pk for c in caps}
+    """Stats for eligible faculty without a category rule, and (label, rule, stats) per category
+    that has its own rule for this period."""
+    from workload.models import CategoryRule
+
+    ruled = {r.category_id: r for r in CategoryRule.objects.filter(period=period).select_related("category")}
     groups = defaultdict(list)
     for f, n in load:
         if f.is_active and not f.is_exempt:
-            groups[f.category_id if f.category_id in capped_ids else None].append(n)
+            groups[f.category_id if f.category_id in ruled else None].append(n)
     capped = [
-        (c.name, cap, fairness_stats(groups[c.pk]))
-        for c, cap in sorted(caps.items(), key=lambda item: (item[0].order, item[0].name))
-        if groups[c.pk]
+        (r.category.name, _rule_text(r), fairness_stats(groups[cid]))
+        for cid, r in sorted(ruled.items(), key=lambda item: (item[1].category.order, item[1].category.name))
+        if groups[cid]
     ]
     return fairness_stats(groups[None]), capped
+
+
+def _rule_text(rule):
+    parts = []
+    if rule.per_course:
+        parts.append(f"{rule.per_course} per course")
+    elif rule.target is not None:
+        parts.append(f"{rule.get_kind_display() or 'about'} {rule.target}".strip())
+    if rule.max_duties is not None:
+        parts.append(f"max {rule.max_duties}")
+    if rule.min_duties is not None:
+        parts.append(f"min {rule.min_duties}")
+    return ", ".join(parts) or "no numbers set"
+
+
+def _workload_summary(period):
+    from workload.calc import Flag, period_loads, summary
+    from workload.models import WorkloadPolicy
+
+    policy = WorkloadPolicy.for_period(period)
+    loads = period_loads(period)
+    counts = summary(loads)
+    return {
+        "policy": policy,
+        "category_rules": period.category_rules.count(),
+        "faculty_rules": period.faculty_rules.count(),
+        "no_target": counts[Flag.NO_TARGET],
+        "below": counts[Flag.BELOW],
+        "over": counts[Flag.OVER],
+        "at": counts[Flag.AT],
+        "eligible": sum(1 for x in loads if Flag.EXEMPT not in x.flags and Flag.NOT_ELIGIBLE not in x.flags),
+    }
 
 
 @admin_only
@@ -80,7 +114,7 @@ def period_dashboard(request, pk):
     context = {
         "period": period,
         "settings": period.settings,
-        "caps": period.designation_caps.all(),
+        "workload": _workload_summary(period),
         "capacity": capacity,
         "pending": pending_capacity(period),
         "conflicts": roster_conflicts(period),

@@ -68,10 +68,9 @@ HODs never decide their own requests; those appear on the exam office's **Reques
 
 ## How a period works
 
-1. **Admin panel → Exam periods → Add**: enter name and dates. Default rules are created
-   (max 8 duties per person, max 2 per day, 1 invigilator per 30 students with a minimum
-   of 2, avoid back-to-back slots, avoid a teacher's own course). Change them on the same
-   page; add *designation caps* (e.g. Professor = 4) if some ranks should do fewer.
+1. **Admin panel → Exam periods → Add**: enter name and dates (and, if needed, the per-day limit
+   and the student/invigilator ratio). No duty numbers are built in: set them on the period's
+   **Workload rules** page (see *Workload rules* below) and **confirm** them.
 2. **Import departments**, then **Faculty → Import from Excel** and **Rooms → Import rooms**
    (once; re-import any time to update — see *Imports* below).
 3. Open the period → **Import schedule**.
@@ -111,6 +110,30 @@ HODs never decide their own requests; those appear on the exam office's **Reques
 Every allocation run, edit, publish, swap, replacement and attendance mark is written to
 the audit log (**Audit log** page, with filters), which nobody can edit or delete. Once a period is published,
 its dates, rules, time slots, courses and rooms become read-only in the admin panel too.
+
+## Workload rules
+
+Every duty number belongs to one exam period and is set by the exam office on the period's
+**Workload rules** page (dashboard → *Rules* card). Nothing is hard-coded; a target that is
+not set is shown as *Target not set*, never as 0.
+
+- **Defaults:** the maximum per person (empty = none) and per day.
+- **By designation:** a target and how it applies — *Exactly*, *At least*, *At most*, *About*
+  (preferred) — plus optional minimum and maximum. Visiting faculty can instead get **duties
+  per course** they teach in this period.
+- **Personal rules** override the designation for one person: another target, *exempt in this
+  period*, or an *exception* allowing duties for someone marked inactive (reason required).
+- **Counting:** whether excused / unexcused absences, make-up duties and stand-ins count toward
+  the target, and which other periods' duties count together (e.g. midterms + finals).
+- **Copy from another period** to start from last semester; the other period never changes.
+- **Confirm** the rules before publishing (publishing asks for it). Every confirmation, and
+  every change after publishing, is kept as a numbered **version** you can open later.
+
+The allocation engine fills people below their minimum first, then whoever is furthest below
+their own target (or the equal share when they have none), never above a maximum. **Workload
+per person** shows target, assigned, completed, pending, missed, handed over, counted and
+remaining for everyone, with filters and highlights (below / at target, near / over limit,
+no target set).
 
 ## Faculty, rooms and imports
 

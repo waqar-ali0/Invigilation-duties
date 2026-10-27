@@ -25,7 +25,7 @@ def test_swap_replace_attend_report_audit(admin_client, admin_user, period, make
     room = make_room(day=2, room="R1", needed=2)
     alice_duty = Duty.objects.create(faculty=alice, room_allocation=room, source=DutySource.AUTO)
     dan_duty = Duty.objects.create(faculty=dan, room_allocation=room, source=DutySource.AUTO)
-    publish_period(period, admin_user)
+    publish_period(period, admin_user, confirm_rules=True)
 
     # Alice asks Bob, Bob accepts, the exam office approves.
     as_user(alice.user).post(reverse("ask_colleague", args=[alice_duty.pk]), {"colleague_id": bob.pk, "message": "Conference"})

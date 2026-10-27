@@ -25,7 +25,7 @@ def roster(period, make_room, make_member, make_faculty):
 
 def test_publish_queues_one_email_per_person_with_ics(roster, period, admin_user):
     member, no_account = roster
-    publish_period(period, admin_user, acknowledge_unfilled=True)
+    publish_period(period, admin_user, acknowledge_unfilled=True, confirm_rules=True)
     emails = OutboundEmail.objects.filter(kind=EmailKind.ROSTER_PUBLISHED)
     assert sorted(e.to for e in emails) == sorted(["noacc@uni.edu", member.user.email])
     mine = emails.get(to=member.user.email)

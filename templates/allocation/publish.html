@@ -26,6 +26,13 @@
       <label><input type="checkbox" name="acknowledge_unfilled" required> I understand {{ missing }} seat(s) are unfilled and want to publish anyway.</label>
     </div>
     {% endif %}
+    {% if rules_confirmed %}
+    <p class="muted">Workload rules confirmed {{ rules_confirmed|date:"d M Y H:i" }}.</p>
+    {% else %}
+    <div class="field">
+      <label><input type="checkbox" name="confirm_rules" required> I have reviewed the <a href="{% url 'workload_rules' period.pk %}">workload rules</a> and confirm them (a version is kept).</label>
+    </div>
+    {% endif %}
     <button type="submit">{% icon "send" %}Publish roster</button>
   </form>
 </div>

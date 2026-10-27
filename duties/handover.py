@@ -32,11 +32,11 @@ def _state_without(duty):
 
 def handover_check(duty, faculty):
     """(hard errors, soft warnings) for giving `duty`'s seat to `faculty`; the duty's own seat counts as free."""
-    if not faculty.is_active or faculty.is_exempt:
-        return [MSG_INELIGIBLE], []
     if faculty.pk == duty.faculty_id:
         return [MSG_SAME_PERSON], []
     state = _state_without(duty)
+    if faculty.id not in state.people:
+        return [MSG_INELIGIBLE], []
     room_id = duty.room_allocation_id
     return state.hard_errors(faculty.id, room_id), state.soft_warnings(faculty.id, room_id)
 
@@ -51,7 +51,7 @@ def handover_candidates(duty, require_account):
     state = _state_without(duty)
     room_id = duty.room_allocation_id
     result = []
-    for faculty in Faculty.objects.eligible().exclude(pk=duty.faculty_id).select_related("department", "user"):
+    for faculty in Faculty.objects.filter(pk__in=list(state.people)).exclude(pk=duty.faculty_id).select_related("department", "user"):
         if require_account and not _has_account(faculty):
             continue
         if state.hard_errors(faculty.id, room_id):
