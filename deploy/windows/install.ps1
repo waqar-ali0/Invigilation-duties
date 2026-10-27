@@ -189,7 +189,11 @@ elseif (-not (Test-Path $caddy)) {
     Remove-Item $zip, $unpacked -Recurse -Force
 }
 if ($WinSWExe) { Copy-Item $WinSWExe $winsw -Force }
-elseif (-not (Test-Path $winsw)) { Invoke-WebRequest $WinSWUrl -OutFile $winsw -UseBasicParsing }
+elseif (-not (Test-Path $winsw) -or (Get-Item $winsw).Length -eq 0) {
+    # Download beside the target first so an interrupted download never looks finished.
+    Invoke-WebRequest $WinSWUrl -OutFile "$winsw.part" -UseBasicParsing
+    Move-Item "$winsw.part" $winsw -Force
+}
 Write-Ok (Get-NativeOutput $caddy @("version"))
 
 # ---------------------------------------------------------------- 6. Caddyfile

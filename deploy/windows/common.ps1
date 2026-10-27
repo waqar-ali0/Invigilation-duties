@@ -1,6 +1,7 @@
 # Shared helpers for the Windows deployment scripts. Dot-source this file: . "$PSScriptRoot\common.ps1"
 
 $ErrorActionPreference = "Stop"
+$ProgressPreference = "SilentlyContinue"   # Windows PowerShell's progress bar makes downloads very slow
 
 $Root = (Resolve-Path "$PSScriptRoot\..\..").Path          # the project folder
 $Python = Join-Path $Root ".venv\Scripts\python.exe"
@@ -30,7 +31,7 @@ function Invoke-Native {
     param([string]$Exe, [string[]]$Arguments)
     $previous = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
-    try { & $Exe @Arguments } finally { $ErrorActionPreference = $previous }
+    try { & $Exe @Arguments 2>&1 | ForEach-Object { "$_" } } finally { $ErrorActionPreference = $previous }
     if ($LASTEXITCODE -ne 0) { throw "'$Exe $($Arguments -join ' ')' failed with exit code $LASTEXITCODE." }
 }
 
