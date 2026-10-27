@@ -197,3 +197,13 @@ def faculty_duty_slip(request, faculty_id, period_id):
     response = HttpResponse(duties_pdf(faculty, period), content_type="application/pdf")
     response["Content-Disposition"] = f'attachment; filename="{slugify(faculty.name)}-{slugify(period.name)}-duties.pdf"'
     return response
+
+
+def hod_access(request):
+    """Context processor: HOD permissions, for showing only the HOD pages that are switched on."""
+    user = getattr(request, "user", None)
+    if user is None or not user.is_authenticated or user.role != Role.HOD:
+        return {}
+    from accounts.models import HodAccess
+
+    return {"hod_access": HodAccess.get()}

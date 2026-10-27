@@ -25,10 +25,10 @@
 {% endif %}
 <div class="card table-wrap">
   <table class="stack">
-    <thead><tr><th>Name</th><th>Duties</th><th>Dates and rooms</th></tr></thead>
+    <thead><tr><th>Name</th><th>Duties</th><th>Dates and rooms</th>{% if show_contacts %}<th>Contact</th>{% endif %}</tr></thead>
     <tbody>
       {% for r in rows %}
-      <tr><td data-label="Name">{{ r.faculty.name }}{% if r.faculty.is_exempt %} <span class="badge">exempt</span>{% endif %}</td><td data-label="Duties">{{ r.duties|length }}</td><td data-label="Dates and rooms">{{ r.summary|default:"—" }}</td></tr>
+      <tr><td data-label="Name">{{ r.faculty.name }}{% if r.faculty.is_exempt %} <span class="badge">exempt</span>{% endif %}</td><td data-label="Duties">{{ r.duties|length }}</td><td data-label="Dates and rooms">{{ r.summary|default:"—" }}</td>{% if show_contacts %}<td data-label="Contact">{{ r.faculty.phone_e164|default:"—" }}<div class="muted">{{ r.faculty.email|default:"" }}</div></td>{% endif %}</tr>
       {% endfor %}
     </tbody>
   </table>

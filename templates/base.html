@@ -39,6 +39,7 @@
       <a href="{% url 'accounts_page' %}" class="{% if n == 'accounts_page' %}active{% endif %}">{% icon "users" %}<span>Accounts</span></a>
       <a href="{% url 'email_list' %}" class="{% if n == 'email_list' %}active{% endif %}">{% icon "mail" %}<span>Emails</span></a>
       <a href="{% url 'whatsapp_settings' %}" class="{% if n == 'whatsapp_settings' or n == 'whatsapp_log' or n == 'whatsapp_tomorrow' or n == 'whatsapp_centre' or n == 'whatsapp_template' or n == 'whatsapp_contact' %}active{% endif %}">{% icon "send" %}<span>WhatsApp</span></a>
+      <a href="{% url 'hod_access' %}" class="{% if n == 'hod_access' %}active{% endif %}">{% icon "shield" %}<span>HOD permissions</span></a>
       <a href="{% url 'audit_log' %}" class="{% if n == 'audit_log' %}active{% endif %}">{% icon "shield" %}<span>Audit log</span></a>
       <a href="{% url 'admin:index' %}">{% icon "settings" %}<span>Admin panel</span></a>
       {% elif user.role == "exam_staff" %}
@@ -55,6 +56,9 @@
       <div class="nav-section">My department</div>
       <a href="{% url 'department_requests' %}" class="{% if n == 'department_requests' %}active{% endif %}">{% icon "inbox" %}<span>Approvals</span></a>
       <a href="{% url 'department_duties' %}" class="{% if n == 'department_duties' %}active{% endif %}">{% icon "building" %}<span>Department</span></a>
+      {% if hod_access.see_workload %}<a href="{% url 'hod_workload' %}" class="{% if n == 'hod_workload' %}active{% endif %}">{% icon "chart" %}<span>Workload</span></a>{% endif %}
+      {% if hod_access.see_missed %}<a href="{% url 'hod_missed' %}" class="{% if n == 'hod_missed' %}active{% endif %}">{% icon "calendar-x" %}<span>Missed duties</span></a>{% endif %}
+      {% if hod_access.download_reports %}<a href="{% url 'hod_reports' %}" class="{% if n == 'hod_reports' %}active{% endif %}">{% icon "file" %}<span>Reports</span></a>{% endif %}
       {% endif %}
       {% endif %}
     </nav>

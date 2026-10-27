@@ -11,7 +11,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from accounts.models import Role
+from accounts.models import HodAccess, Role
 from accounts.permissions import faculty_required, hod_required, role_required
 from duties.attendance import AttendanceError, can_change_mark, mark_attendance, mark_room_present, record_stand_in
 from duties.handover import handover_candidates
@@ -114,6 +114,7 @@ def department_duties(request):
         "rows": rows,
         "summary": summary,
         "departments": request.hod_departments,
+        "show_contacts": HodAccess.get().see_contacts,
     }
     return render(request, "portal/department_duties.html", context)
 

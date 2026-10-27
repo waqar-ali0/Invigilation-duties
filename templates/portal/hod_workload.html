@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Department workload — Invigilation Duties{% endblock %}
+{% block content %}
+<h1>Department workload</h1>
+<p class="subtitle">{{ departments|join:", " }}</p>
+{% if periods %}
+<div class="card"><form method="get" class="filters">
+  <select name="period" aria-label="Exam period" onchange="this.form.submit()">{% for p in periods %}<option value="{{ p.pk }}"{% if p == period %} selected{% endif %}>{{ p.name }}</option>{% endfor %}</select>
+  <noscript><button type="submit">Show</button></noscript>
+</form></div>
+<div class="card table-wrap">
+  <table class="stack sortable">
+    <thead><tr><th>Faculty</th><th>Rule</th><th>Assigned</th><th>Completed</th><th>Pending</th><th>Missed</th><th>Counted</th><th>Remaining</th><th>Status</th>{% if access.see_contacts %}<th>Contact</th>{% endif %}</tr></thead>
+    <tbody>
+      {% for x in loads %}
+      <tr>
+        <td data-label="Faculty">{{ x.faculty.name }}<div class="muted">{{ x.faculty.employee_id }} · {{ x.faculty.category }}</div></td>
+        <td data-label="Rule">{{ x.rule.describe }}</td>
+        <td data-label="Assigned">{{ x.assigned }}</td><td data-label="Completed">{{ x.completed }}</td><td data-label="Pending">{{ x.pending }}</td>
+        <td data-label="Missed">{{ x.missed }}</td><td data-label="Counted"><strong>{{ x.counted }}</strong></td>
+        <td data-label="Remaining">{{ x.remaining|default_if_none:"—" }}</td>
+        <td data-label="Status">{% for label, tone in x.flag_labels %}<span class="badge {{ tone }}">{{ label }}</span> {% endfor %}</td>
+        {% if access.see_contacts %}<td data-label="Contact">{{ x.faculty.phone_e164|default:"—" }}<div class="muted">{{ x.faculty.email|default:"" }}</div></td>{% endif %}
+      </tr>
+      {% empty %}<tr><td colspan="9" class="muted">Nobody in your department(s) for this period.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card empty">{% icon "chart" %}<strong>Nothing to show yet</strong>Workloads appear once the exam office has allocated a period.</div>
+{% endif %}
+{% endblock %}

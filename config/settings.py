@@ -79,6 +79,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "portal.operations.unread_notifications",
                 "reports.dashboard.period_choices",
+                "portal.operations.hod_access",
             ],
         },
     },

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Missed duties — {{ departments|join:", " }}{% endblock %}
+{% block content %}
+<h1>Missed duties</h1>
+<p class="subtitle">{{ departments|join:", " }} · Duties marked absent.{% if access.decide_absences %} You can record whether an absence is excused; make-up duties are decided by the exam office.{% endif %}</p>
+<div class="card table-wrap">
+  {% if rows %}
+  <table class="stack">
+    <thead><tr><th>Faculty</th><th>When</th><th>Room</th><th>Decision</th>{% if access.decide_absences %}<th></th>{% endif %}</tr></thead>
+    <tbody>
+      {% for d in rows %}{% with s=d.room_allocation.session %}
+      <tr>
+        <td data-label="Faculty">{{ d.faculty.name }}</td>
+        <td data-label="When">{{ s.slot }}<div class="muted">{{ d.period.name }}</div></td>
+        <td data-label="Room">{{ d.room_allocation.room }}</td>
+        <td data-label="Decision">{% if d.absence_excused is None %}<span class="badge warn">not decided</span>{% elif d.absence_excused %}<span class="badge ok">excused</span>{% else %}<span class="badge danger">unexcused</span>{% endif %}{% if d.absence_reason %}<div class="muted">{{ d.absence_reason }}</div>{% endif %}</td>
+        {% if access.decide_absences %}<td>{% if d.faculty_id != request.faculty.pk %}
+          <form method="post" class="filters">{% csrf_token %}<input type="hidden" name="duty" value="{{ d.pk }}">
+            <input type="text" name="reason" value="{{ d.absence_reason }}" placeholder="Reason" aria-label="Reason" required maxlength="500">
+            <select name="excused" aria-label="Decision"><option value="no">Unexcused</option><option value="yes"{% if d.absence_excused %} selected{% endif %}>Excused</option></select>
+            <button class="secondary sm" type="submit">Save</button></form>{% endif %}</td>{% endif %}
+      </tr>
+      {% endwith %}{% endfor %}
+    </tbody>
+  </table>
+  {% else %}<div class="empty">{% icon "check-square" %}<strong>No missed duties</strong>Nobody in your department(s) has been marked absent.</div>{% endif %}
+</div>
+{% endblock %}

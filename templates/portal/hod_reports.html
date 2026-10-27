@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Department reports — Invigilation Duties{% endblock %}
+{% block content %}
+<h1>Department reports</h1>
+<p class="subtitle">{{ department.name }} only.</p>
+<div class="card"><form method="get" class="filters">
+  <select name="type" aria-label="Report">{% for k, t in reports %}<option value="{{ k }}"{% if k == key %} selected{% endif %}>{{ t }}</option>{% endfor %}</select>
+  {% if departments|length > 1 %}<select name="department" aria-label="Department">{% for d in departments %}<option value="{{ d.pk }}"{% if d == department %} selected{% endif %}>{{ d.name }}</option>{% endfor %}</select>{% endif %}
+  <select name="period" aria-label="Exam period">{% for p in periods %}<option value="{{ p.pk }}"{% if f.period and f.period.pk == p.pk %} selected{% endif %}>{{ p.name }}</option>{% endfor %}</select>
+  <button type="submit">{% icon "search" %}Show</button>
+</form></div>
+<div class="card table-wrap">
+  <div class="page-head" style="margin-bottom:8px">
+    <h2 style="margin:0">{{ report.title }} <span class="muted">· {{ report.rows|length }} row(s)</span></h2>
+    <div class="actions">
+      <a class="button secondary sm" href="?{{ querystring }}&format=csv">{% icon "download" %}CSV</a>
+      <a class="button secondary sm" href="?{{ querystring }}&format=xlsx">{% icon "download" %}Excel</a>
+      <a class="button secondary sm" href="?{{ querystring }}&format=pdf">{% icon "download" %}PDF</a>
+    </div>
+  </div>
+  {% if rows %}
+  <table class="sortable"><thead><tr>{% for c in report.columns %}<th>{{ c }}</th>{% endfor %}</tr></thead>
+  <tbody>{% for row in rows %}<tr>{% for v in row %}<td>{% if v.year %}{{ v|date:"d M Y" }}{% else %}{{ v }}{% endif %}</td>{% endfor %}</tr>{% endfor %}</tbody></table>
+  {% else %}<p class="muted">No rows.</p>{% endif %}
+</div>
+{% endblock %}

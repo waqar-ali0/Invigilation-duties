@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}HOD permissions — Invigilation Duties{% endblock %}
+{% block content %}
+<h1>HOD permissions</h1>
+<p class="subtitle">What heads of department can see and do for their own departments. HODs can always approve unavailability requests and see their department's duties.</p>
+<div class="card">
+  <form method="post">
+    {% csrf_token %}
+    {% include "_form_fields.html" %}
+    <div class="actions"><button type="submit">{% icon "check" %}Save</button></div>
+  </form>
+  <p class="muted">Make-up duties are always decided by the exam office. A HOD can never decide on their own absence.</p>
+</div>
+{% endblock %}

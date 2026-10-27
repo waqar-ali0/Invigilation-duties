@@ -3,6 +3,7 @@ from django.urls import path
 from . import views
 
 from . import backups as backup_views
+from . import hod
 from . import operations
 from . import preferences as preference_views
 
@@ -11,6 +12,10 @@ urlpatterns = [
     path("my/preferences/<int:pk>/remove/", preference_views.remove_preference, name="remove_preference"),
     path("periods/<int:pk>/preferences/", preference_views.period_preferences, name="period_preferences"),
     path("backups/", backup_views.pool, name="backup_pool"),
+    path("my/department/workload/", hod.department_workload, name="hod_workload"),
+    path("my/department/missed/", hod.department_missed, name="hod_missed"),
+    path("my/department/reports/", hod.department_reports, name="hod_reports"),
+    path("settings/hod-permissions/", hod.access_settings, name="hod_access"),
     path("my/duties/<int:period_id>/acknowledge/", operations.acknowledge_duties, name="acknowledge_duties"),
     path("missed/", operations.missed_duties, name="missed_duties"),
     path("missed/obligations/<int:pk>/", operations.obligation_view, name="obligation"),

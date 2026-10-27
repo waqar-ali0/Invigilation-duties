@@ -39,3 +39,27 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.email
+
+
+class HodAccess(models.Model):
+    """What heads of department may see and do for their own department(s). One row, set by the
+    exam office; checked on the server for every HOD page."""
+
+    see_workload = models.BooleanField("see workload per person", default=True)
+    see_missed = models.BooleanField("see missed duties", default=True)
+    decide_absences = models.BooleanField("record whether an absence is excused", default=False)
+    see_contacts = models.BooleanField("see phone numbers and emails", default=False)
+    download_reports = models.BooleanField("open and download department reports", default=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "HOD permissions"
+        verbose_name_plural = "HOD permissions"
+
+    def __str__(self):
+        return "HOD permissions"
+
+    @classmethod
+    def get(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
