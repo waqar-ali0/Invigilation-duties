@@ -45,7 +45,7 @@ def _render_room(request, period, room, pending=None):
         "hall_lead": hall[0],
         "hall_students": sum(r.student_count for r in hall),
         "duties": Duty.objects.active().filter(room_allocation=room).select_related("faculty__department"),
-        "editable": period.status not in (PeriodStatus.PUBLISHED, PeriodStatus.CLOSED),
+        "editable": period.is_draft,
         "published": period.status == PeriodStatus.PUBLISHED,
         "can_replace": period.status == PeriodStatus.PUBLISHED and timezone.now() < room.session.slot.ends_at,
         "pending": pending,  # (faculty, warnings) awaiting confirmation
@@ -146,7 +146,7 @@ def publish_view(request, pk):
         "unfilled": unfilled,
         "missing": sum(m for _, m, _ in unfilled),
         "conflicts": roster_conflicts(period),
-        "editable": period.status not in (PeriodStatus.PUBLISHED, PeriodStatus.CLOSED),
+        "editable": period.is_draft,
         "rules_confirmed": WorkloadPolicy.for_period(period).confirmed_at,
     }
     return render(request, "allocation/publish.html", context)

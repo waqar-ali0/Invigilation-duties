@@ -26,7 +26,7 @@ def _category_forms(period, data=None):
 
 
 def _editable(period):
-    return period.status != PeriodStatus.CLOSED
+    return not period.is_finished
 
 
 @admin_only

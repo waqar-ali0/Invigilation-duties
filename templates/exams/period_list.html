@@ -14,16 +14,25 @@
   </div>
 </div>
 
+<div class="card">
+  <div class="actions">
+    <a class="button {% if show == 'current' %}{% else %}secondary{% endif %} sm" href="?show=current">Current</a>
+    <a class="button {% if show == 'archived' %}{% else %}secondary{% endif %} sm" href="?show=archived">Archived ({{ counts.archived }})</a>
+    <a class="button {% if show == 'cancelled' %}{% else %}secondary{% endif %} sm" href="?show=cancelled">Cancelled ({{ counts.cancelled }})</a>
+    <a class="button {% if show == 'all' %}{% else %}secondary{% endif %} sm" href="?show=all">All</a>
+  </div>
+</div>
 <div class="card table-wrap">
   {% if periods %}
   <table class="stack">
-    <thead><tr><th>Name</th><th>Exam dates</th><th>Status</th><th></th></tr></thead>
+    <thead><tr><th>Name</th><th>Type</th><th>Exam dates</th><th>Status</th><th></th></tr></thead>
     <tbody>
       {% for p in periods %}
       <tr>
-        <td data-label="Name"><a href="{% url 'period_dashboard' p.pk %}">{{ p.name }}</a></td>
+        <td data-label="Name"><a href="{% url 'period_dashboard' p.pk %}">{{ p.name }}</a>{% if p.term %}<div class="muted">{{ p.term }}</div>{% endif %}</td>
+        <td data-label="Type">{{ p.exam_type|default:"—" }}</td>
         <td data-label="Exam dates">{{ p.start_date|date:"d M Y" }} – {{ p.end_date|date:"d M Y" }}</td>
-        <td data-label="Status"><span class="badge {{ p.status|tone }}">{{ p.get_status_display }}</span></td>
+        <td data-label="Status"><span class="badge {{ p.status|tone }}">{{ p.stage_label }}</span></td>
         <td><a class="button secondary sm" href="{% url 'period_dashboard' p.pk %}">Open{% icon "arrow-right" %}</a></td>
       </tr>
       {% endfor %}

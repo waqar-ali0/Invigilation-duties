@@ -14,7 +14,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Table, TableStyle
 from duties.models import Duty
 from exams.models import PeriodStatus
 
-VISIBLE_STATUSES = (PeriodStatus.PUBLISHED, PeriodStatus.CLOSED)
+VISIBLE_STATUSES = (PeriodStatus.PUBLISHED, PeriodStatus.CLOSED, PeriodStatus.ARCHIVED)
 
 
 def faculty_duties(faculty, period=None):

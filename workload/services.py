@@ -47,10 +47,10 @@ def save_version(period, actor, reason):
 def rules_changed(period, actor, what):
     """Call after any rule change: confirmation lapses; after publishing, a new version is kept."""
     policy = WorkloadPolicy.for_period(period)
-    if policy.confirmed_at is not None and period.status not in (PeriodStatus.PUBLISHED, PeriodStatus.CLOSED):
+    if policy.confirmed_at is not None and period.is_draft:
         policy.confirmed_at, policy.confirmed_by = None, None
         policy.save(update_fields=["confirmed_at", "confirmed_by"])
-    if period.status in (PeriodStatus.PUBLISHED, PeriodStatus.CLOSED):
+    if not period.is_draft:
         save_version(period, actor, f"Changed after publishing: {what}")
     log(actor, "workload.change", period, after={"what": what})
 

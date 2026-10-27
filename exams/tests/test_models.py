@@ -49,7 +49,7 @@ def test_published_period_is_locked(period):
 
 def test_closed_period_is_locked(period):
     period.status = PeriodStatus.CLOSED
-    with pytest.raises(PeriodLockedError, match="closed"):
+    with pytest.raises(PeriodLockedError, match="completed"):
         period.ensure_editable()
 
 

@@ -12,7 +12,7 @@ from accounts.permissions import role_required
 from audit.log import log
 from duties.backups import reserve_backups
 from duties.models import BackupMember, BackupReservation, BackupRole, ReservationStatus
-from exams.models import ExamPeriod, PeriodSettings, PeriodStatus
+from exams.models import FINISHED_STATUSES, ExamPeriod, PeriodSettings, PeriodStatus
 from faculty.models import Faculty, FacultyCategory
 
 admin_only = role_required(Role.ADMIN)
@@ -76,7 +76,7 @@ def pool(request):
         "editing": editing,
         "categories": FacultyCategory.objects.filter(is_active=True),
         "roles": BackupRole.choices,
-        "periods": ExamPeriod.objects.exclude(status=PeriodStatus.CLOSED),
+        "periods": ExamPeriod.objects.exclude(status__in=FINISHED_STATUSES),
     }
     return render(request, "portal/backup_pool.html", context)
 

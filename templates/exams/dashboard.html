@@ -5,9 +5,13 @@
 <h1>{{ period.name }}</h1>
 <p class="subtitle">
   {{ period.start_date|date:"d M Y" }} – {{ period.end_date|date:"d M Y" }}
-  · <span class="badge {{ period.status|tone }}">{{ period.get_status_display }}</span>
-  · <a href="{% url 'admin:exams_examperiod_change' period.pk %}">Edit dates and settings</a>
+  · <span class="badge {{ period.status|tone }}">{{ period.stage_label }}</span>
+  {% if period.exam_type %}· {{ period.exam_type }}{% endif %}{% if period.term %} · {{ period.term }}{% endif %}
+  {% if not period.is_finished %}· <a href="{% url 'period_details' period.pk %}">Edit details</a> · <a href="{% url 'admin:exams_examperiod_change' period.pk %}">Rules for rooms and days</a>{% endif %}
 </p>
+{% if period.departments.exists %}<p class="muted">Departments: {{ period.departments.all|join:", " }}</p>{% endif %}
+{% if period.remarks %}<p class="muted">{{ period.remarks|linebreaksbr }}</p>{% endif %}
+{% if period.status == "cancelled" %}<div class="alert warning"><span>Cancelled {{ period.status_changed_at|date:"d M Y" }}: {{ period.cancel_reason }}</span></div>{% endif %}
 
 {% if not capacity.ok %}
   <div class="alert warning">Need {{ capacity.seats_needed }} duties, only {{ capacity.capacity }} possible. Raise the cap or add faculty.</div>
@@ -83,7 +87,7 @@
     <a class="button secondary" href="{% url 'workload_rules' period.pk %}">{% icon "settings" %}Workload rules</a>
     <a class="button secondary" href="{% url 'period_preferences' period.pk %}">{% icon "calendar" %}Preferences</a>
     <a class="button secondary" href="{% url 'period_backups' period.pk %}">{% icon "users" %}Backups</a>
-    {% if period.status == "published" or period.status == "closed" %}<a class="button secondary" href="{% url 'roster_versions' period.pk %}">{% icon "file" %}Roster versions</a>{% endif %}
+    {% if not period.is_draft %}<a class="button secondary" href="{% url 'roster_versions' period.pk %}">{% icon "file" %}Roster versions</a>{% endif %}
   </div>
   <div class="actions" style="margin-top:10px">
     {% if editable %}
@@ -97,6 +101,21 @@
   </div>
 </div>
 
+{% if lifecycle %}
+<div class="card">
+  <h2>Period status</h2>
+  <div class="actions">
+    {% for action, label, needs_reason, confirm_text in lifecycle %}
+    <form method="post" action="{% url 'period_status' period.pk %}" class="filters">
+      {% csrf_token %}<input type="hidden" name="action" value="{{ action }}">
+      {% if needs_reason %}<input type="text" name="reason" placeholder="Reason" aria-label="Reason for {{ label|lower }}" maxlength="300" required>{% endif %}
+      <button class="{% if action == 'cancel' %}danger{% else %}secondary{% endif %}" type="submit"{% if confirm_text %} onclick="return confirm('{{ confirm_text|escapejs }}');"{% endif %}>{{ label }}</button>
+    </form>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
 {% if duty_count %}
 <div class="card">
   <h2>Downloads</h2>
@@ -104,7 +123,7 @@
     <a class="button secondary" href="{% url 'roster_pdf' period.pk %}">{% icon "download" %}Roster (PDF)</a>
     <a class="button secondary" href="{% url 'roster_xlsx' period.pk %}">{% icon "download" %}Roster (Excel)</a>
     <a class="button secondary" href="{% url 'load_xlsx' period.pk %}">{% icon "download" %}Faculty load (Excel)</a>
-    {% if period.status == "published" or period.status == "closed" %}
+    {% if not period.is_draft %}
     <a class="button secondary" href="{% url 'operations_report' period.pk %}">{% icon "chart" %}Attendance &amp; swaps report</a>
     <a class="button secondary" href="{% url 'attendance' %}">{% icon "check-square" %}Mark attendance</a>
     {% endif %}

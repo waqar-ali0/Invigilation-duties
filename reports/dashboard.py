@@ -13,7 +13,7 @@ from accounts.models import Role
 from accounts.permissions import role_required
 from audit.models import AuditLog
 from duties.models import BackupMember, BackupReservation, Duty, DutyStatus, Obligation, ReservationStatus
-from exams.models import Building, ExamPeriod, PeriodStatus, RoomAllocation, TimeSlot
+from exams.models import FINISHED_STATUSES, Building, ExamPeriod, PeriodStatus, RoomAllocation, TimeSlot
 from faculty.models import Department, Faculty, FacultyCategory
 from imports.models import BatchStatus, ImportBatch
 from workload.calc import Flag, period_loads, summary
@@ -33,7 +33,7 @@ def chosen_period(request):
     if period is None:
         period = (
             ExamPeriod.objects.filter(status=PeriodStatus.PUBLISHED).order_by("-start_date").first()
-            or ExamPeriod.objects.exclude(status=PeriodStatus.CLOSED).order_by("-start_date").first()
+            or ExamPeriod.objects.exclude(status__in=FINISHED_STATUSES).order_by("-start_date").first()
             or ExamPeriod.objects.order_by("-start_date").first()
         )
     if period is not None:

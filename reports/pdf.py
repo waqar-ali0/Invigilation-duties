@@ -21,7 +21,7 @@ def roster_pdf(period):
     cell.leading = 11
 
     title = f"Invigilation Roster — {period.name}"
-    if period.status not in (PeriodStatus.PUBLISHED, PeriodStatus.CLOSED):
+    if period.status not in (PeriodStatus.PUBLISHED, PeriodStatus.CLOSED, PeriodStatus.ARCHIVED):
         title += " (DRAFT)"
 
     story = [Paragraph(escape(title), styles["Title"])]

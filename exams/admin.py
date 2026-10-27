@@ -4,6 +4,7 @@ from django.forms.models import BaseInlineFormSet
 
 from .models import (
     Building,
+    ExamType,
     Room,
     ExamPeriod,
     ExamSession,
@@ -13,7 +14,7 @@ from .models import (
     TimeSlot,
 )
 
-LOCKED = (PeriodStatus.PUBLISHED, PeriodStatus.CLOSED)
+LOCKED = (PeriodStatus.PUBLISHED, PeriodStatus.CLOSED, PeriodStatus.ARCHIVED, PeriodStatus.CANCELLED)
 
 
 class LockedAfterPublishMixin:
@@ -92,6 +93,7 @@ class ExamPeriodAdmin(LockedAfterPublishMixin, admin.ModelAdmin):
     list_display = ("name", "start_date", "end_date", "status")
     list_filter = ("status",)
     readonly_fields = ("status", "published_at")
+    filter_horizontal = ("departments",)
     inlines = [PeriodSettingsInline]
 
     def period_of(self, obj):
@@ -122,6 +124,15 @@ class ExamSessionAdmin(LockedAfterPublishMixin, admin.ModelAdmin):
 
     def period_of(self, obj):
         return obj.slot.period if obj.slot_id else None
+
+
+@admin.register(ExamType)
+class ExamTypeAdmin(admin.ModelAdmin):
+    list_display = ("name", "is_active", "order")
+    list_editable = ("is_active", "order")
+
+    def has_delete_permission(self, request, obj=None):
+        return False  # take out of use instead, so past periods keep their type
 
 
 @admin.register(Building)

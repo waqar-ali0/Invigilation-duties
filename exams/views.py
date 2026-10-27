@@ -1,6 +1,7 @@
 from collections import defaultdict
 from datetime import datetime
 
+from django import forms
 from django.contrib import messages
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
@@ -9,6 +10,7 @@ from django.views.decorators.http import require_POST
 
 from accounts.models import Role
 from accounts.permissions import role_required
+from audit.log import log
 from allocation.engine import fairness_stats
 from allocation.services import capacity_report, pending_capacity, roster_conflicts, unfilled_rooms
 from duties.models import Duty, SwapRequest, SwapStatus
@@ -16,14 +18,85 @@ from duties.models import Duty, SwapRequest, SwapStatus
 from .availability import AvailabilityError, close_availability, open_availability
 from .importers.departments import import_departments
 from .halls import hall_key, halls_by_key
-from .models import ExamPeriod, ExamSession, PeriodLockedError, RoomAllocation
+from .lifecycle import actions as lifecycle_actions
+from .models import ExamPeriod, ExamSession, ExamType, PeriodLockedError, PeriodStatus, RoomAllocation
 
 admin_only = role_required(Role.ADMIN)
 
 
 @admin_only
 def period_list(request):
-    return render(request, "exams/period_list.html", {"periods": ExamPeriod.objects.all()})
+    show = request.GET.get("show", "current")
+    periods = ExamPeriod.objects.select_related("exam_type")
+    if show == "archived":
+        periods = periods.filter(status=PeriodStatus.ARCHIVED)
+    elif show == "cancelled":
+        periods = periods.filter(status=PeriodStatus.CANCELLED)
+    elif show != "all":
+        periods = periods.exclude(status__in=[PeriodStatus.ARCHIVED, PeriodStatus.CANCELLED])
+    counts = {s: ExamPeriod.objects.filter(status=s).count() for s in (PeriodStatus.ARCHIVED, PeriodStatus.CANCELLED)}
+    return render(request, "exams/period_list.html", {"periods": periods, "show": show, "counts": counts})
+
+
+class PeriodDetailsForm(forms.ModelForm):
+    class Meta:
+        model = ExamPeriod
+        fields = ["name", "term", "exam_type", "start_date", "end_date", "departments", "remarks"]
+        widgets = {
+            "start_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+            "end_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+            "departments": forms.CheckboxSelectMultiple,
+            "remarks": forms.Textarea(attrs={"rows": 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["exam_type"].queryset = ExamType.objects.filter(is_active=True) | ExamType.objects.filter(pk=self.instance.exam_type_id or 0)
+        if not self.instance.is_draft:
+            # Dates shape the schedule; once published they stay as they are.
+            for name in ("start_date", "end_date"):
+                self.fields[name].disabled = True
+
+
+@admin_only
+def period_details(request, pk):
+    period = get_object_or_404(ExamPeriod, pk=pk)
+    if period.is_finished:
+        messages.error(request, f"This period is {period.get_status_display().lower()}; its details can no longer change.")
+        return redirect("period_dashboard", pk=pk)
+    form = PeriodDetailsForm(request.POST or None, instance=period)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        log(request.user, "period.details", period, after={"changed": form.changed_data})
+        messages.success(request, "Details saved.")
+        return redirect("period_dashboard", pk=pk)
+    return render(request, "exams/period_details.html", {"period": period, "form": form})
+
+
+@admin_only
+@require_POST
+def period_status(request, pk):
+    from .lifecycle import LifecycleError, archive, cancel, complete, unarchive
+
+    period = get_object_or_404(ExamPeriod, pk=pk)
+    action = request.POST.get("action")
+    try:
+        if action == "complete":
+            complete(period, request.user)
+        elif action == "archive":
+            archive(period, request.user)
+        elif action == "unarchive":
+            unarchive(period, request.user)
+        elif action == "cancel":
+            cancel(period, request.user, request.POST.get("reason", ""))
+        else:
+            raise LifecycleError("Unknown action.")
+    except LifecycleError as e:
+        messages.error(request, str(e))
+    else:
+        period.refresh_from_db()
+        messages.success(request, f"{period.name} is now {period.get_status_display().lower()}.")
+    return redirect("period_dashboard", pk=pk)
 
 
 def _slots_with_rooms(period):
@@ -128,7 +201,8 @@ def period_dashboard(request, pk):
         "unfilled": unfilled_rooms(period),
         "slots": _slots_with_rooms(period),
         "duty_count": Duty.objects.active().filter(period=period).count(),
-        "editable": period.status not in ("published", "closed"),
+        "editable": period.is_draft,
+        "lifecycle": lifecycle_actions(period),
     }
     return render(request, "exams/dashboard.html", context)
 

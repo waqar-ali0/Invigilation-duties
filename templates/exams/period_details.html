@@ -1,0 +1,15 @@
+﻿{% extends "base.html" %}
+{% load ui %}
+{% block title %}Details — {{ period.name }}{% endblock %}
+{% block content %}
+<h1>Details of {{ period.name }}</h1>
+<p class="subtitle"><a href="{% url 'period_dashboard' period.pk %}">← {{ period.name }}</a>{% if not period.is_draft %} · The dates are fixed once the roster is published.{% endif %}</p>
+<div class="card">
+  <form method="post" class="form-grid">
+    {% csrf_token %}
+    {% include "_form_fields.html" %}
+    <div class="actions"><button type="submit">{% icon "check" %}Save</button></div>
+  </form>
+  <p class="muted">Exam types (Midterm, Final, Supplementary, Special…) are managed in the admin panel under <em>Exam types</em>.</p>
+</div>
+{% endblock %}

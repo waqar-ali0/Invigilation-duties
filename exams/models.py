@@ -13,7 +13,29 @@ class PeriodStatus(models.TextChoices):
     AVAILABILITY_OPEN = "availability_open", "Availability open"
     ALLOCATING = "allocating", "Allocating"
     PUBLISHED = "published", "Published"
-    CLOSED = "closed", "Closed"
+    CLOSED = "closed", "Completed"
+    ARCHIVED = "archived", "Archived"
+    CANCELLED = "cancelled", "Cancelled"
+
+
+# Periods whose roster is still a draft (can be allocated and edited freely).
+DRAFT_STATUSES = (PeriodStatus.DRAFT, PeriodStatus.AVAILABILITY_OPEN, PeriodStatus.ALLOCATING)
+# Periods that are over: kept for history, never changed again.
+FINISHED_STATUSES = (PeriodStatus.CLOSED, PeriodStatus.ARCHIVED, PeriodStatus.CANCELLED)
+
+
+class ExamType(models.Model):
+    """Midterm, Final, Supplementary, Special… — the exam office adds its own."""
+
+    name = models.CharField(max_length=60, unique=True)
+    is_active = models.BooleanField(default=True)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["order", "name"]
+
+    def __str__(self):
+        return self.name
 
 
 class PeriodLockedError(Exception):
@@ -22,9 +44,18 @@ class PeriodLockedError(Exception):
 
 class ExamPeriod(models.Model):
     name = models.CharField(max_length=150, unique=True)
+    term = models.CharField("academic term", max_length=60, blank=True, help_text="e.g. Fall 2026")
+    exam_type = models.ForeignKey(ExamType, null=True, blank=True, on_delete=models.PROTECT, related_name="periods")
     start_date = models.DateField()
     end_date = models.DateField()
+    departments = models.ManyToManyField(
+        Department, blank=True, related_name="exam_periods", verbose_name="participating departments",
+        help_text="Leave empty if every department takes part.",
+    )
+    remarks = models.TextField(blank=True)
     status = models.CharField(max_length=20, choices=PeriodStatus.choices, default=PeriodStatus.DRAFT)
+    status_changed_at = models.DateTimeField(null=True, blank=True, editable=False)
+    cancel_reason = models.CharField(max_length=300, blank=True, editable=False)
     availability_deadline = models.DateTimeField(null=True, blank=True)
     allocation_seed = models.IntegerField(null=True, blank=True, editable=False)
     last_run = models.JSONField(null=True, blank=True, editable=False)
@@ -52,8 +83,28 @@ class ExamPeriod(models.Model):
     def ensure_editable(self):
         if self.status == PeriodStatus.PUBLISHED:
             raise PeriodLockedError("This exam period is published; changes go through swaps and replacements.")
-        if self.status == PeriodStatus.CLOSED:
-            raise PeriodLockedError("This exam period is closed.")
+        if self.status in FINISHED_STATUSES:
+            raise PeriodLockedError(f"This exam period is {self.get_status_display().lower()}.")
+
+    @property
+    def is_draft(self):
+        return self.status in DRAFT_STATUSES
+
+    @property
+    def is_finished(self):
+        return self.status in FINISHED_STATUSES
+
+    @property
+    def in_progress(self):
+        """Published and its exam dates have started but not ended."""
+        from django.utils import timezone
+
+        today = timezone.localdate()
+        return self.status == PeriodStatus.PUBLISHED and self.start_date <= today <= self.end_date
+
+    @property
+    def stage_label(self):
+        return "In progress" if self.in_progress else self.get_status_display()
 
     @property
     def availability_is_open(self):
