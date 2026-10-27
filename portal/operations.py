@@ -254,3 +254,10 @@ def slot_board(request, pk, slot_id):
         "previous": slots[index - 1] if index else None, "next": slots[index + 1] if index + 1 < len(slots) else None,
     }
     return render(request, "portal/slot_board.html", context)
+
+
+def demo_site(request):
+    """Context processor: tells pages to show the demo banner on a public demo."""
+    from django.conf import settings
+
+    return {"demo_site": settings.DEMO_SITE}

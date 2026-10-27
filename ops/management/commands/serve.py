@@ -12,8 +12,12 @@ class Command(BaseCommand):
         parser.add_argument("--host", default=os.environ.get("WEB_HOST", "127.0.0.1"))
         parser.add_argument("--port", type=int, default=int(os.environ.get("WEB_PORT", "8000")))
         parser.add_argument("--threads", type=int, default=int(os.environ.get("WEB_THREADS", "8")))
+        parser.add_argument(
+            "--trusted-proxy", default=os.environ.get("WEB_TRUSTED_PROXY", "127.0.0.1"),
+            help="Address of the proxy in front (Caddy: 127.0.0.1). On a hosting platform: *.",
+        )
 
-    def handle(self, host, port, threads, **options):
+    def handle(self, host, port, threads, trusted_proxy, **options):
         import waitress
 
         self.stdout.write(f"Serving on http://{host}:{port} with {threads} threads")
@@ -23,7 +27,8 @@ class Command(BaseCommand):
             port=port,
             threads=threads,
             # Caddy runs on the same machine and tells us the visitor used https.
-            trusted_proxy="127.0.0.1",
+            trusted_proxy=trusted_proxy,
+            trusted_proxy_count=1,
             trusted_proxy_headers="x-forwarded-proto x-forwarded-for x-forwarded-host",
             clear_untrusted_proxy_headers=True,
             ident="invigilation",

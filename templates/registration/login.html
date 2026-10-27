@@ -25,6 +25,10 @@
     <button type="submit">Log in</button>
   </form>
   <p class="foot"><a href="{% url 'password_reset' %}">Forgot your password?</a></p>
+  {% if demo_site %}
+  <div class="alert info" style="margin-top:14px"><span><strong>Demo logins</strong> (password given to you with this link):<br>
+    Exam office: demo.admin@uni.edu<br>Head of department: demo.hod@uni.edu<br>Faculty: demo.faculty@uni.edu<br>Exam staff: demo.staff@uni.edu</span></div>
+  {% endif %}
 </div>
 </div>
 {% endblock %}

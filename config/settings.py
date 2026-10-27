@@ -31,6 +31,12 @@ if not SECRET_KEY:
         raise RuntimeError("SECRET_KEY must be set when DEBUG is off.")
 
 ALLOWED_HOSTS = [h.strip() for h in os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h.strip()]
+# Hosted on Render: its public address is given in RENDER_EXTERNAL_HOSTNAME.
+RENDER_HOST = os.environ.get("RENDER_EXTERNAL_HOSTNAME", "")
+if RENDER_HOST:
+    ALLOWED_HOSTS.append(RENDER_HOST)
+# A public demo with sample data shows a banner on every page.
+DEMO_SITE = env_bool("DEMO_SITE", False)
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -80,6 +86,7 @@ TEMPLATES = [
                 "portal.operations.unread_notifications",
                 "reports.dashboard.period_choices",
                 "portal.operations.hod_access",
+                "portal.operations.demo_site",
             ],
         },
     },
@@ -147,6 +154,8 @@ if HTTPS:
     # Local monitoring checks the app directly over http.
     SECURE_REDIRECT_EXEMPT = [r"^healthz/$"]
     CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()]
+    if RENDER_HOST:
+        CSRF_TRUSTED_ORIGINS.append(f"https://{RENDER_HOST}")
 SESSION_COOKIE_HTTPONLY = True
 X_FRAME_OPTIONS = "DENY"
 
@@ -160,7 +169,7 @@ EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "invigilation@localhost")
 # Base address used in links inside emails, e.g. https://duties.university.edu
-SITE_URL = os.environ.get("SITE_URL", "http://127.0.0.1:8000")
+SITE_URL = os.environ.get("SITE_URL", f"https://{RENDER_HOST}" if RENDER_HOST else "http://127.0.0.1:8000")
 # Activation and password-reset links stay valid for 7 days.
 PASSWORD_RESET_TIMEOUT = 7 * 24 * 60 * 60
 

@@ -100,6 +100,7 @@
     </header>
   {% endif %}
     <main>
+      {% if demo_site %}<div class="alert info demo-banner" role="note">{% icon "eye" %}<span><strong>Demo site</strong> — all names, numbers and duties here are sample data for demonstration.</span></div>{% endif %}
       {% for message in messages %}
         <div class="alert {{ message.tags }}" role="status">{% if message.tags == "success" %}{% icon "check" %}{% elif message.tags == "error" or message.tags == "warning" %}{% icon "alert" %}{% endif %}<span>{{ message }}</span></div>
       {% endfor %}

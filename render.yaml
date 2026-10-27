@@ -1,0 +1,29 @@
+# One-click demo deployment on Render (render.com → New → Blueprint → this repository).
+# The demo uses SQLite on the free plan: the sample data is rebuilt on every start, so nothing
+# entered on the demo is kept. The university's real installation is the Windows one in
+# deploy/windows (see DEPLOY.md).
+services:
+  - type: web
+    name: invigilation-duties
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
+    startCommand: python manage.py migrate --noinput && python manage.py setup_demo_site && python manage.py serve --host 0.0.0.0 --port $PORT
+    healthCheckPath: /healthz/
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.13.0"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEMO_PASSWORD
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: HTTPS
+        value: "True"
+      - key: DEMO_SITE
+        value: "True"
+      - key: WEB_TRUSTED_PROXY
+        value: "*"
+      - key: EMAIL_BACKEND
+        value: django.core.mail.backends.locmem.EmailBackend
