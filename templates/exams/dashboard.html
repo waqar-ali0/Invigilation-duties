@@ -152,6 +152,7 @@
 <div class="card table-wrap" id="slot-{{ s.slot.pk }}">
   <div class="page-head" style="margin-bottom:8px">
     <h2 style="margin:0">{{ s.slot }}</h2>
+    <a class="button secondary sm" href="{% url 'slot_board' period.pk s.slot.pk %}">{% icon "users" %}Board</a>
     {% if editable and duty_count %}<form method="post" action="{% url 'run_allocation' period.pk %}">{% csrf_token %}<input type="hidden" name="slot" value="{{ s.slot.pk }}"><button class="secondary sm" type="submit" title="Re-generate this time slot only; locked and manual duties stay">{% icon "repeat" %}Re-run this slot</button></form>{% endif %}
   </div>
   {% if s.rows %}

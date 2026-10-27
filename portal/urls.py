@@ -20,6 +20,7 @@ urlpatterns = [
     path("missed/", operations.missed_duties, name="missed_duties"),
     path("missed/obligations/<int:pk>/", operations.obligation_view, name="obligation"),
     path("periods/<int:pk>/duties/<int:duty_id>/move/", operations.move_duty_view, name="move_duty"),
+    path("periods/<int:pk>/slots/<int:slot_id>/board/", operations.slot_board, name="slot_board"),
     path("periods/<int:pk>/versions/", operations.roster_versions, name="roster_versions"),
     path("notifications/", operations.notifications, name="notifications"),
     path("faculty/<int:faculty_id>/periods/<int:period_id>/duties.pdf", operations.faculty_duty_slip, name="faculty_duty_slip"),

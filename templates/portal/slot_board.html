@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Board — {{ slot }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ slot }}</h1>
+    <p class="subtitle"><a href="{% url 'period_dashboard' period.pk %}#slot-{{ slot.pk }}">← {{ period.name }}</a> ·
+      {% if movable %}Drag a name to another room to move that duty{% if published %} (you'll be asked for a reason; the person is notified){% endif %}. Every rule is checked; a move that breaks one is refused.{% elif started %}This exam has started; duties can no longer be moved.{% else %}This period can no longer be edited.{% endif %}</p>
+  </div>
+  <div class="actions">
+    {% if previous %}<a class="button secondary sm" href="{% url 'slot_board' period.pk previous.pk %}">{% icon "arrow-left" %}Previous slot</a>{% endif %}
+    {% if next %}<a class="button secondary sm" href="{% url 'slot_board' period.pk next.pk %}">Next slot{% icon "arrow-right" %}</a>{% endif %}
+  </div>
+</div>
+<div class="alert error" id="board-error" role="alert" hidden></div>
+
+<div class="board" data-move-url="{% url 'move_duty' period.pk 0 %}" data-published="{{ published|yesno:'1,0' }}">
+  {% for c in columns %}
+  <section class="board-col{% if c.duties|length < c.needed %} short{% endif %}" data-room="{{ c.room.pk }}" aria-label="Room {{ c.room.room }}">
+    <header>
+      <a href="{% url 'room_detail' period.pk c.room.pk %}"><strong>{{ c.room.room }}</strong></a>
+      {% if c.room.room_ref %}<span class="muted">{{ c.room.room_ref.building.name }}</span>{% endif %}
+      <div class="muted">{{ c.courses|join:", " }} · {{ c.students }} students</div>
+      <span class="badge {% if c.duties|length < c.needed %}danger{% else %}ok{% endif %}">{{ c.duties|length }}/{{ c.needed }}</span>
+    </header>
+    <ul>
+      {% for d in c.duties %}
+      <li class="chip" {% if movable and d.status == "assigned" %}draggable="true"{% endif %} data-duty="{{ d.pk }}">
+        <span>{{ d.faculty.name }}{% if d.locked %} <span class="badge info">locked</span>{% endif %}</span>
+        <span class="muted">{{ d.faculty.department }}</span>
+        {% if movable and d.status == "assigned" %}
+        <details><summary class="muted">Move…</summary>
+        <form method="post" action="{% url 'move_duty' period.pk d.pk %}" class="chip-move">
+          {% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}">
+          <select name="room" aria-label="Move {{ d.faculty.name }} to">
+            <option value="">Move to…</option>
+            {% for o in columns %}{% if o.room.pk != c.room.pk %}<option value="{{ o.room.pk }}">{{ o.room.room }}</option>{% endif %}{% endfor %}
+          </select>
+          {% if published %}<input type="text" name="reason" placeholder="Reason" aria-label="Reason" maxlength="300">{% endif %}
+          <button class="secondary sm" type="submit">Move</button>
+        </form>
+        </details>
+        {% endif %}
+      </li>
+      {% empty %}<li class="muted empty-col">Nobody yet</li>{% endfor %}
+    </ul>
+  </section>
+  {% endfor %}
+</div>
+<script>
+(function () {
+  var board = document.querySelector(".board");
+  if (!board) return;
+  var error = document.getElementById("board-error");
+  var csrf = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || (document.querySelector("[name=csrfmiddlewaretoken]") || {}).value;
+  var dragged = null;
+  board.querySelectorAll(".chip[draggable=true]").forEach(function (chip) {
+    chip.addEventListener("dragstart", function (e) { dragged = chip; chip.classList.add("dragging"); e.dataTransfer.setData("text/plain", chip.dataset.duty); });
+    chip.addEventListener("dragend", function () { chip.classList.remove("dragging"); board.querySelectorAll(".over").forEach(function (c) { c.classList.remove("over"); }); });
+  });
+  board.querySelectorAll(".board-col").forEach(function (col) {
+    col.addEventListener("dragover", function (e) { if (dragged && dragged.closest(".board-col") !== col) { e.preventDefault(); col.classList.add("over"); } });
+    col.addEventListener("dragleave", function () { col.classList.remove("over"); });
+    col.addEventListener("drop", function (e) {
+      e.preventDefault();
+      col.classList.remove("over");
+      if (!dragged || dragged.closest(".board-col") === col) return;
+      var reason = "";
+      if (board.dataset.published === "1") {
+        reason = window.prompt("Reason for moving this duty (the person is notified):") || "";
+        if (!reason.trim()) return;
+      }
+      var body = new URLSearchParams({ room: col.dataset.room, reason: reason });
+      var url = board.dataset.moveUrl.replace(/\/0\/move\/$/, "/" + dragged.dataset.duty + "/move/");
+      fetch(url, { method: "POST", headers: { "X-CSRFToken": csrf, "Accept": "application/json" }, body: body, credentials: "same-origin" })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data.ok) { window.location.reload(); }
+          else { error.textContent = data.message; error.hidden = false; window.scrollTo(0, 0); }
+        })
+        .catch(function () { error.textContent = "The move could not be saved. Try the Move to… menu instead."; error.hidden = false; });
+    });
+  });
+})();
+</script>
+{% endblock %}

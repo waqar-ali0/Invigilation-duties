@@ -135,6 +135,24 @@ per person** shows target, assigned, completed, pending, missed, handed over, co
 remaining for everyone, with filters and highlights (below / at target, near / over limit,
 no target set).
 
+## Period details, lifecycle, HOD permissions and the board
+
+- **Period details** (dashboard → *Edit details*): term, exam type (Midterm, Final,
+  Supplementary, Special — more under *Admin panel → Exam types*), participating departments
+  and remarks.
+- **Lifecycle:** draft → availability open → allocating → published (*In progress* while the
+  exams run) → **completed** (after the last exam day) → **archived** (kept read-only under
+  *Exam periods → Archived*). A period can be **cancelled** with a reason; once published, its
+  open duties are cancelled (kept on record) and everyone affected is emailed / messaged.
+- **HOD permissions** (sidebar → *HOD permissions*): switch on or off what heads of department
+  may do for their own departments — workload per person, missed duties, recording whether an
+  absence is excused (never their own), seeing phone numbers and emails, department reports.
+  Checked on the server; HODs only see the pages that are on.
+- **Board** (dashboard → a time slot's *Board*): every room of that slot as a column with its
+  invigilators. Drag a name to another room to move the duty — every rule is checked and a move
+  that breaks one is refused with the reason. Once published a reason is asked for and the
+  person is notified. Each name also has a *Move…* menu for keyboards and phones.
+
 ## WhatsApp reminders
 
 Through the **official WhatsApp Business Platform (Cloud API)** only — no WhatsApp Web

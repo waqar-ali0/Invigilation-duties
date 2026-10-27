@@ -4,8 +4,9 @@ roster versions, notifications and duty slips."""
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
 from django.views.decorators.http import require_POST
@@ -131,14 +132,24 @@ def obligation_view(request, pk):
 def move_duty_view(request, pk, duty_id):
     duty = get_object_or_404(Duty.objects.select_related("faculty", "period", "room_allocation__session__slot"), pk=duty_id, period_id=pk)
     if request.method == "POST":
-        room = get_object_or_404(RoomAllocation, pk=request.POST.get("room") or 0)
+        wants_json = "application/json" in request.headers.get("Accept", "")
+        back = request.POST.get("next", "")
+        room = RoomAllocation.objects.filter(pk=request.POST.get("room") or 0).first()
         try:
+            if room is None:
+                raise MoveBlocked(["Choose a room."])
             new = move_duty(duty, room, request.user, request.POST.get("reason", ""))
         except (MoveBlocked, PeriodLockedError) as e:
-            messages.error(request, "; ".join(e.errors) if isinstance(e, MoveBlocked) else str(e))
-            return redirect("move_duty", pk=pk, duty_id=duty_id)
-        messages.success(request, f"{duty.faculty.name} moved to {new.room_allocation.room}.")
-        return redirect("room_detail", pk=pk, room_id=new.room_allocation_id)
+            text = "; ".join(e.errors) if isinstance(e, MoveBlocked) else str(e)
+            if wants_json:
+                return JsonResponse({"ok": False, "message": text}, status=409)
+            messages.error(request, text)
+            return redirect(back if back.startswith("/") else reverse("move_duty", args=[pk, duty_id]))
+        text = f"{duty.faculty.name} moved to {new.room_allocation.room}."
+        messages.success(request, text)
+        if wants_json:
+            return JsonResponse({"ok": True, "message": text})
+        return redirect(back if back.startswith("/") else reverse("room_detail", args=[pk, new.room_allocation_id]))
     try:
         targets = move_targets(duty)
     except PeriodLockedError:
@@ -207,3 +218,39 @@ def hod_access(request):
     from accounts.models import HodAccess
 
     return {"hod_access": HodAccess.get()}
+
+
+# --- drag-and-drop board for one time slot ---------------------------------------------------
+
+
+@admin_only
+def slot_board(request, pk, slot_id):
+    from exams.halls import halls_by_key
+    from exams.models import TimeSlot
+
+    period = get_object_or_404(ExamPeriod, pk=pk)
+    slot = get_object_or_404(TimeSlot, pk=slot_id, period=period)
+    rooms = list(RoomAllocation.objects.filter(session__slot=slot).select_related("session", "room_ref__building"))
+    duties = Duty.objects.active().filter(room_allocation__session__slot=slot).select_related("faculty__department")
+    by_room = {}
+    for d in duties:
+        by_room.setdefault(d.room_allocation_id, []).append(d)
+    started = slot.starts_at <= timezone.now()
+    movable = period.is_draft or (period.status == "published" and not started)
+    columns = []
+    for lead, *others in halls_by_key(rooms).values():
+        people = sorted(by_room.get(lead.pk, []), key=lambda d: d.faculty.name)
+        columns.append({
+            "room": lead, "courses": [lead.session.course_code] + [r.session.course_code for r in others],
+            "students": lead.student_count + sum(r.student_count for r in others),
+            "needed": lead.invigilators_required, "duties": people,
+        })
+    columns.sort(key=lambda c: c["room"].room.lower())
+    slots = list(period.slots.order_by("date", "start_time"))
+    index = next(i for i, s in enumerate(slots) if s.pk == slot.pk)
+    context = {
+        "period": period, "slot": slot, "columns": columns, "movable": movable,
+        "published": period.status == "published", "started": started,
+        "previous": slots[index - 1] if index else None, "next": slots[index + 1] if index + 1 < len(slots) else None,
+    }
+    return render(request, "portal/slot_board.html", context)
