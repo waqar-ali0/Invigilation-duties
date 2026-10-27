@@ -15,6 +15,7 @@ from duties.services import (
     eligible_candidates,
     remove_duty,
 )
+from exams.halls import hall_rooms
 from exams.models import ExamPeriod, PeriodLockedError, PeriodStatus, RoomAllocation
 from faculty.models import Faculty
 
@@ -34,16 +35,20 @@ def _room_in_period(pk, room_id):
 
 
 def _render_room(request, period, room, pending=None):
+    hall = hall_rooms(room)
     context = {
         "period": period,
         "room": room,
+        "hall": hall if len(hall) > 1 else None,  # every course sitting in this room at this time
+        "hall_lead": hall[0],
+        "hall_students": sum(r.student_count for r in hall),
         "duties": Duty.objects.active().filter(room_allocation=room).select_related("faculty__department"),
         "editable": period.status not in (PeriodStatus.PUBLISHED, PeriodStatus.CLOSED),
         "published": period.status == PeriodStatus.PUBLISHED,
         "can_replace": period.status == PeriodStatus.PUBLISHED and timezone.now() < room.session.slot.ends_at,
         "pending": pending,  # (faculty, warnings) awaiting confirmation
     }
-    if context["editable"]:
+    if context["editable"] and room == hall[0]:
         context["candidates"] = eligible_candidates(room)
     return render(request, "allocation/room_detail.html", context)
 

@@ -5,6 +5,7 @@ from django.db import transaction
 from allocation.engine import AllocationState
 from allocation.services import build_engine_input
 from audit.log import log
+from exams.halls import hall_lead
 from exams.models import ExamPeriod
 from faculty.models import Faculty
 
@@ -50,6 +51,7 @@ def add_duty(faculty, room, actor, allow_warnings=False):
         # Locking the period serialises every change to this draft, so two people
         # editing at once cannot double-book anyone.
         ExamPeriod.lock_for_edit(room.session.slot.period_id)
+        room = hall_lead(room)  # a shared hall's invigilators all sit on its first row
         faculty = Faculty.objects.get(pk=faculty.pk)
         errors, warnings = check_assignment(faculty, room)
         if errors:

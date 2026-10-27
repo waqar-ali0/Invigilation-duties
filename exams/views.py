@@ -22,6 +22,7 @@ from .importers.faculty import COLUMNS as FACULTY_COLUMNS
 from .importers.faculty import import_faculty
 from .importers.schedule import COLUMNS as SCHEDULE_COLUMNS
 from .importers.schedule import import_schedule
+from .halls import hall_key, halls_by_key
 from .models import ExamPeriod, ExamSession, PeriodLockedError, RoomAllocation
 
 admin_only = role_required(Role.ADMIN)
@@ -33,18 +34,29 @@ def period_list(request):
 
 
 def _slots_with_rooms(period):
-    """Slots of the period, each with its rooms and the names assigned to them."""
-    duties = Duty.objects.active().select_related("faculty").order_by("faculty__name")
+    """Slots of the period, each with its rooms and the names assigned to them. Courses in a
+    shared hall each show the hall's whole team and the other courses sitting with them."""
+    duties = Duty.objects.active().select_related("faculty")
     rooms = RoomAllocation.objects.order_by("room").prefetch_related(Prefetch("duties", queryset=duties))
     sessions = ExamSession.objects.order_by("course_code").prefetch_related(Prefetch("rooms", queryset=rooms))
     slots = period.slots.prefetch_related(Prefetch("sessions", queryset=sessions))
     result = []
     for slot in slots:
+        entries = [(session, room) for session in slot.sessions.all() for room in session.rooms.all()]
+        halls = halls_by_key(room for _, room in entries)
         rows = []
-        for session in slot.sessions.all():
-            for room in session.rooms.all():
-                names = [d.faculty.name for d in room.duties.all()]
-                rows.append({"session": session, "room": room, "names": names, "short": len(names) < room.invigilators_required})
+        for session, room in entries:
+            hall = halls[hall_key(room)]
+            names = sorted(d.faculty.name for r in hall for d in r.duties.all())
+            needed = sum(r.invigilators_required for r in hall)
+            rows.append({
+                "session": session,
+                "room": room,
+                "names": names,
+                "needed": needed,
+                "short": len(names) < needed,
+                "shared_with": [r.session.course_code for r in hall if r is not room],
+            })
         result.append({"slot": slot, "rows": rows})
     return result
 

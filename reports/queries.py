@@ -4,6 +4,7 @@ from datetime import date, time
 from django.db.models import Count, Prefetch, Q
 
 from duties.models import Duty, DutyStatus
+from exams.halls import hall_key, halls_by_key
 from exams.models import RoomAllocation
 from faculty.models import Faculty
 
@@ -22,14 +23,16 @@ class RosterRow:
 
 
 def roster_rows(period):
-    """One row per room of `period`, by date, start time, course and room."""
+    """One row per room of `period`, by date, start time, course and room. Every course in a
+    shared hall lists the hall's whole team."""
     duties = Duty.objects.active().select_related("faculty")
-    rooms = (
+    rooms = list(
         RoomAllocation.objects.filter(session__slot__period=period)
         .select_related("session__slot", "session__department")
         .prefetch_related(Prefetch("duties", queryset=duties))
         .order_by("session__slot__date", "session__slot__start_time", "session__course_code", "room")
     )
+    team = {key: sorted(d.faculty.name for r in rows for d in r.duties.all()) for key, rows in halls_by_key(rooms).items()}
     return [
         RosterRow(
             date=r.session.slot.date,
@@ -40,7 +43,7 @@ def roster_rows(period):
             department=r.session.department.name,
             room=r.room,
             student_count=r.student_count,
-            invigilators=sorted(d.faculty.name for d in r.duties.all()),
+            invigilators=team[hall_key(r)],
         )
         for r in rooms
     ]

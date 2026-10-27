@@ -122,11 +122,14 @@
       {% for r in s.rows %}
       <tr>
         <td>{{ r.session.course_code }} — {{ r.session.course_name }}</td>
-        <td>{% include "exams/_room_link.html" with room=r.room %}</td>
+        <td>
+          {% include "exams/_room_link.html" with room=r.room %}
+          {% if r.shared_with %}<div class="muted">Shared hall with {{ r.shared_with|join:", " }}</div>{% endif %}
+        </td>
         <td>{{ r.room.student_count }}</td>
         <td>
           {{ r.names|join:", "|default:"—" }}
-          {% if r.short %}<span class="badge danger">{{ r.names|length }}/{{ r.room.invigilators_required }}</span>{% endif %}
+          {% if r.short %}<span class="badge danger">{{ r.names|length }}/{{ r.needed }}</span>{% endif %}
         </td>
       </tr>
       {% endfor %}

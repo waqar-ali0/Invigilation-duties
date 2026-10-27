@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from audit.log import log
 from duties.models import Duty, DutySource, DutyStatus, Unavailability, UnavailabilityStatus
+from exams.halls import staff_shared_halls
 from exams.models import ExamPeriod, ExamSession, PeriodStatus, RoomAllocation
 from faculty.models import Faculty
 from notifications.triggers import queue_roster_published
@@ -82,6 +83,7 @@ def run_allocation(period, actor, seed=None) -> AllocationResult:
     period.ensure_editable()
     with transaction.atomic():
         period = ExamPeriod.lock_for_edit(period.pk)
+        staff_shared_halls(period)  # also catches rooms edited in the admin panel since the import
         Duty.objects.active().filter(period=period, source=DutySource.AUTO).delete()
         if seed is None:
             seed = random.randrange(1, 2**31)

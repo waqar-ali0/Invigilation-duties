@@ -6,8 +6,16 @@
 <p class="subtitle">
   <a href="{% url 'period_dashboard' period.pk %}">← {{ period.name }}</a>
   · {{ room.session.slot }} · {{ room.session.course_name }} ({{ room.session.department }})
-  · {{ room.student_count }} students · needs {{ room.invigilators_required }} invigilator(s)
+  · {% if hall %}{{ room.student_count }} of the hall's {{ hall_students }} students{% else %}{{ room.student_count }} students · needs {{ room.invigilators_required }} invigilator(s){% endif %}
 </p>
+
+{% if hall %}
+<div class="alert info">
+  <strong>Shared hall.</strong> {% for r in hall %}{{ r.session.course_code }} ({{ r.student_count }}){% if not forloop.last %}, {% endif %}{% endfor %}
+  sit in {{ room.room }} at the same time: {{ hall_students }} students, one team of {{ hall_lead.invigilators_required }} invigilator(s) for all of them.
+  {% if room != hall_lead %}The team is listed under <a href="{% url 'room_detail' period.pk hall_lead.pk %}">{{ hall_lead.session.course_code }}</a>.{% endif %}
+</div>
+{% endif %}
 
 {% if pending %}
 <div class="alert warning">
@@ -25,6 +33,7 @@
 </div>
 {% endif %}
 
+{% if room == hall_lead %}
 <div class="card table-wrap">
   <h2>Assigned invigilators ({{ duties|length }}/{{ room.invigilators_required }})</h2>
   {% if duties %}
@@ -73,5 +82,6 @@
   <p class="muted">No faculty member can take this seat without breaking a hard rule (already busy in this slot, unavailable, or at a cap).</p>
   {% endif %}
 </div>
+{% endif %}
 {% endif %}
 {% endblock %}

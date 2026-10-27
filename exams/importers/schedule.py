@@ -5,6 +5,7 @@ from django.db import transaction
 from duties.models import Duty
 from faculty.models import Department, Faculty
 
+from ..halls import staff_shared_halls
 from ..models import ExamPeriod, ExamSession, RoomAllocation, TimeSlot, required_invigilators
 from .reader import read_rows
 from .result import ImportResult, is_blank, length_errors, missing_columns
@@ -165,4 +166,5 @@ def import_schedule(period, file):
                 student_count=count,
                 invigilators_required=required_invigilators(count, period.settings),
             )
+        staff_shared_halls(period)
     return ImportResult(created=len(records))

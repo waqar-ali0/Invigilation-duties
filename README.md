@@ -132,6 +132,13 @@ corrected file. It is only allowed while the period has no duties (use *Clear dr
 Exams on the same day whose times overlap (e.g. 09:00–12:00 and 10:00–13:00) count as a
 clash: nobody is given both.
 
+**Shared halls** are handled automatically: when several courses sit in the same room in the
+same time slot (room names compared ignoring case and spaces), the hall gets **one** team of
+invigilators sized from all its students together (e.g. 40 + 35 students → 3 invigilators,
+not 2 + 2). The team is listed under the hall's first course; the other courses' room pages
+point to it, and the roster shows the same team on every course in the hall. This is applied
+on import and again at every allocation run.
+
 ## Email and scheduled jobs
 
 The system never sends email while a page loads: emails are queued, then sent by a job.
