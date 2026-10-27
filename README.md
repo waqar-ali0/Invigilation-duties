@@ -135,6 +135,26 @@ per person** shows target, assigned, completed, pending, missed, handed over, co
 remaining for everyone, with filters and highlights (below / at target, near / over limit,
 no target set).
 
+## Missed duties, make-ups, moves and roster versions
+
+- **Missed duties** (sidebar): every duty marked absent. Record the reason, *excused* or
+  *unexcused*, and whether a **make-up duty** is owed. The absence is never erased; whoever
+  covered keeps their own stand-in duty. A make-up is scheduled later into any upcoming exam
+  (the system lists the rooms where the person is free; their maximum does not block a make-up)
+  and is tracked: owed → scheduled → done (or missed again, or waived). Workload counting
+  follows the period's rules (e.g. excused absences count, unexcused don't).
+- **Move** a duty to another room or slot from its room page. In a draft the duty itself moves;
+  once published the original stays (handed over) and a new one is created, a reason is
+  required, and the person is emailed with a new calendar file.
+- **Roster versions** (dashboard, after publishing): the roster at publishing and after every
+  swap, replacement, stand-in, make-up or move. Compare any two versions (or a version with now)
+  to see which people, rooms and time slots changed.
+- **Confirm receipt:** faculty see *new* on unconfirmed duties and press *I have seen these duties*.
+- **Notifications:** every email to someone with an account also appears under the bell in the
+  top bar (account and password links stay email-only). Faculty without an email get no email
+  — add one on their faculty page.
+- **Duty slips:** a PDF of anyone's duties from their faculty page.
+
 ## Preferences, locking, backups and checks
 
 - **Preferences** (faculty: sidebar → *Preferences*, while availability is open; exam office:

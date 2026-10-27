@@ -69,7 +69,8 @@ def my_duties(request):
             )
         upcoming = [d for d in duties if d.room_allocation.session.slot.date >= today]
         past = [d for d in duties if d.room_allocation.session.slot.date < today]
-        periods.append({"period": period, "upcoming": upcoming, "past": past})
+        unconfirmed = sum(1 for d in upcoming if d.status == DutyStatus.ASSIGNED and d.acknowledged_at is None)
+        periods.append({"period": period, "upcoming": upcoming, "past": past, "unconfirmed": unconfirmed})
     periods.sort(key=lambda p: p["period"].start_date, reverse=True)
     return render(request, "portal/my_duties.html", {"periods": periods})
 

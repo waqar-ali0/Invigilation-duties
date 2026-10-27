@@ -457,3 +457,8 @@ input[type=radio] { width: 17px; height: 17px; accent-color: var(--primary); ver
 .card.check.error h2 .icon { color: var(--danger); }
 .card.check.warn h2 .icon { color: var(--warn); }
 .card.check.ok h2 .icon { color: var(--ok); }
+
+/* Notification bell */
+.icon-button.bell { position: relative; margin-left: 8px; }
+.bell-count { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--danger); color: #fff; font-size: 0.7rem; font-weight: 700; line-height: 18px; text-align: center; }
+.card.unread { border-left: 4px solid var(--info); }

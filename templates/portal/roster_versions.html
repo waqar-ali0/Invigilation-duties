@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Roster versions — {{ period.name }}{% endblock %}
+{% block content %}
+<h1>Roster versions</h1>
+<p class="subtitle"><a href="{% url 'period_dashboard' period.pk %}">← {{ period.name }}</a> · The roster as published, and after every later change. Nothing is overwritten.</p>
+
+{% if versions %}
+<div class="card">
+  <form method="get" class="filters">
+    <label for="a" style="margin:0">Compare</label>
+    <select id="a" name="a">{% for v in versions %}<option value="{{ v.number }}"{% if a and v.number == a.number %} selected{% endif %}>v{{ v.number }} — {{ v.reason|truncatechars:40 }}</option>{% endfor %}</select>
+    <label for="b" style="margin:0">with</label>
+    <select id="b" name="b"><option value="now">the roster now</option>{% for v in versions %}<option value="{{ v.number }}"{% if b and v.number == b.number %} selected{% endif %}>v{{ v.number }} — {{ v.reason|truncatechars:40 }}</option>{% endfor %}</select>
+    <button type="submit">Compare</button>
+  </form>
+</div>
+
+{% if diff %}
+<div class="grid">
+  <div class="card"><h2>{% icon "users" %}People affected</h2><div class="stat">{{ diff.people|length }}</div><div class="muted">{{ diff.people|join:", "|default:"—" }}</div></div>
+  <div class="card"><h2>{% icon "building" %}Rooms</h2><div class="stat">{{ diff.rooms|length }}</div><div class="muted">{{ diff.rooms|join:", "|default:"—" }}</div></div>
+  <div class="card"><h2>{% icon "clock" %}Time slots</h2><div class="stat">{{ diff.slots|length }}</div><div class="muted">{{ diff.slots|join:" · "|default:"—" }}</div></div>
+</div>
+<div class="card table-wrap">
+  <h2>Changes from v{{ a.number }} to {% if b %}v{{ b.number }}{% else %}now{% endif %}</h2>
+  {% if diff.added or diff.removed %}
+  <table class="stack">
+    <thead><tr><th>Change</th><th>Faculty</th><th>When</th><th>Course</th><th>Room</th></tr></thead>
+    <tbody>
+      {% for r in diff.removed %}<tr><td data-label="Change"><span class="badge danger">removed</span></td><td data-label="Faculty">{{ r.faculty }} <span class="muted">{{ r.employee_id }}</span></td><td data-label="When">{{ r.slot }}</td><td data-label="Course">{{ r.course }}</td><td data-label="Room">{{ r.room }}</td></tr>{% endfor %}
+      {% for r in diff.added %}<tr><td data-label="Change"><span class="badge ok">added</span></td><td data-label="Faculty">{{ r.faculty }} <span class="muted">{{ r.employee_id }}</span></td><td data-label="When">{{ r.slot }}</td><td data-label="Course">{{ r.course }}</td><td data-label="Room">{{ r.room }}</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p class="muted">No differences.</p>{% endif %}
+</div>
+{% endif %}
+
+<div class="card table-wrap">
+  <h2>All versions</h2>
+  <table class="stack">
+    <thead><tr><th>Version</th><th>When</th><th>By</th><th>What changed</th><th>Duties</th></tr></thead>
+    <tbody>{% for v in versions %}<tr><td data-label="Version">v{{ v.number }}</td><td data-label="When">{{ v.created_at|date:"d M Y H:i" }}</td><td data-label="By">{{ v.created_by.email|default:"—" }}</td><td data-label="What changed">{{ v.reason }}</td><td data-label="Duties">{{ v.snapshot|length }}</td></tr>{% endfor %}</tbody>
+  </table>
+</div>
+{% else %}
+<div class="card empty">{% icon "file" %}<strong>No versions yet</strong>The first version is kept when the roster is published.</div>
+{% endif %}
+{% endblock %}

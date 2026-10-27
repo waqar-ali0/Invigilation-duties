@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Make-up duty — {{ o.owed_by.name }}{% endblock %}
+{% block content %}
+<h1>Make-up duty for {{ o.owed_by.name }}</h1>
+<p class="subtitle"><a href="{% url 'missed_duties' %}">← Missed duties</a> · Missed {{ o.original.room_allocation.session.slot }} · {{ o.original.room_allocation.room }} ({{ o.original.period.name }}) · <span class="badge info">{{ o.status_label }}</span></p>
+
+{% if o.makeup %}
+<div class="card">
+  <h2>Scheduled</h2>
+  <p>{{ o.makeup.faculty.name }} · {{ o.makeup.room_allocation.session.slot }} · {{ o.makeup.room_allocation.session.course_code }} · {{ o.makeup.room_allocation.room }} — <span class="badge {{ o.makeup.status|tone }}">{% if o.makeup.status == "completed" %}done{% else %}{{ o.makeup.get_status_display }}{% endif %}</span></p>
+  {% if o.status == "missed" %}<p class="muted">The make-up was missed too. Schedule another one below.</p>{% endif %}
+</div>
+{% endif %}
+
+{% if o.is_outstanding and o.status != "assigned" %}
+<div class="card">
+  <h2>Schedule the make-up</h2>
+  <form method="get" class="filters" style="margin-bottom:12px">
+    <label for="who" style="margin:0">Who does it</label>
+    <select id="who" name="faculty" onchange="this.form.submit()">
+      {% for f in people %}<option value="{{ f.pk }}"{% if f.pk == person.pk %} selected{% endif %}>{{ f.name }}{% if f.pk == o.owed_by_id %} (owes it){% endif %}</option>{% endfor %}
+    </select>
+  </form>
+  {% if rooms %}
+  <form method="post">
+    {% csrf_token %}<input type="hidden" name="faculty" value="{{ person.pk }}">
+    <div class="field">
+      <label for="room">Upcoming exams where {{ person.name }} is free (rules checked; their maximum does not block a make-up)</label>
+      <select id="room" name="room" required>
+        {% for r in rooms %}<option value="{{ r.pk }}">{{ r.session.slot }} · {{ r.session.course_code }} · {{ r.room }} ({{ r.session.slot.period.name }})</option>{% endfor %}
+      </select>
+    </div>
+    <div class="actions"><button type="submit">{% icon "calendar" %}Schedule make-up</button></div>
+  </form>
+  {% else %}
+  <p class="muted">No upcoming exam fits {{ person.name }} right now (busy, unavailable or no future exams). Choose someone else, or schedule it once the next exams are imported.</p>
+  {% endif %}
+</div>
+<div class="card">
+  <h2>Waive</h2>
+  <form method="post" class="filters">
+    {% csrf_token %}<input type="hidden" name="action" value="waive">
+    <input type="text" name="note" placeholder="Why no make-up is needed" aria-label="Reason" maxlength="300" required>
+    <button class="secondary" type="submit">Waive the make-up</button>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

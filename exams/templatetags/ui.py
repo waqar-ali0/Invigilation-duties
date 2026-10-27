@@ -27,6 +27,7 @@ ICONS = {
     "calendar", "inbox", "repeat", "check-square", "users", "mail", "shield", "settings", "clipboard",
     "calendar-x", "building", "search", "logout", "download", "upload", "play", "trash", "send", "plus",
     "check", "x", "menu", "file", "chart", "clock", "alert", "arrow-left", "arrow-right", "user-plus", "eye",
+    "bell",
 }
 
 

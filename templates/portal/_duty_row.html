@@ -3,7 +3,9 @@
   <td data-label="Date">{{ s.slot.date|date:"D d M Y" }}</td>
   <td data-label="Time">{{ s.slot.start_time|time:"H:i" }}–{{ s.slot.end_time|time:"H:i" }}</td>
   <td data-label="Course">{{ s.course_code }} — {{ s.course_name }}</td>
-  <td data-label="Room">{{ d.room_allocation.room }}</td>
+  <td data-label="Room">{{ d.room_allocation.room }}{% if d.room_allocation.room_ref %} <span class="muted">{{ d.room_allocation.room_ref.building.name }}</span>{% endif %}
+    {% if d.source == "makeup" %}<span class="badge info">make-up</span>{% elif d.source == "moved" %}<span class="badge info">moved</span>{% endif %}
+    {% if d.status == "assigned" and not d.acknowledged_at %}<span class="badge warn">new</span>{% endif %}</td>
   {% if swap_col %}
   <td>{% if d.open_swap %}<a class="badge warn" href="{% url 'swap_requests' %}">Swap: {{ d.open_swap.get_status_display|lower }}</a>{% elif d.can_swap %}<a class="button secondary" href="{% url 'ask_colleague' d.pk %}">{% icon "repeat" %}Ask a colleague</a>{% endif %}</td>
   {% endif %}

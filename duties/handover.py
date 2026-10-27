@@ -15,6 +15,7 @@ from notifications.render import absolute_url, render_email
 from notifications.triggers import address_of, duty_ics_attachment, queue_swap_email
 
 from .backups import record_call
+from .versions import record_roster_version
 from .models import OPEN_SWAP_STATUSES, Duty, DutySource, DutyStatus, SwapRequest, SwapStatus
 
 MSG_INELIGIBLE = "Faculty is inactive or exempt"
@@ -99,6 +100,7 @@ def replace_duty(duty, faculty, actor, reason):
         new_duty = transfer_duty(duty, faculty, DutySource.REPLACEMENT)
         record_call(duty, new_duty)
         log(actor, "duty.replace", duty, before={"faculty": duty.faculty_id}, after={"faculty": faculty.pk, "reason": reason, "duty": new_duty.pk})
+        record_roster_version(duty.period, actor, f"Replacement: {duty.faculty.name} → {faculty.name}")
         link = absolute_url(reverse("my_duties"))
         for kind, person, attachment in (
             (EmailKind.REPLACED_OUT, duty.faculty, None),

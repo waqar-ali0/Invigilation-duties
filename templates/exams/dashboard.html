@@ -83,6 +83,7 @@
     <a class="button secondary" href="{% url 'workload_rules' period.pk %}">{% icon "settings" %}Workload rules</a>
     <a class="button secondary" href="{% url 'period_preferences' period.pk %}">{% icon "calendar" %}Preferences</a>
     <a class="button secondary" href="{% url 'period_backups' period.pk %}">{% icon "users" %}Backups</a>
+    {% if period.status == "published" or period.status == "closed" %}<a class="button secondary" href="{% url 'roster_versions' period.pk %}">{% icon "file" %}Roster versions</a>{% endif %}
   </div>
   <div class="actions" style="margin-top:10px">
     {% if editable %}

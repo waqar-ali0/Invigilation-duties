@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Notifications — Invigilation Duties{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Notifications</h1>
+    <p class="subtitle">Everything the system emailed you, kept here too.</p>
+  </div>
+  {% if unread_notifications %}
+  <form method="post">{% csrf_token %}<button class="secondary" type="submit">{% icon "check" %}Mark all as read</button></form>
+  {% endif %}
+</div>
+{% for n in page.object_list %}
+<div class="card{% if not n.read_at %} unread{% endif %}">
+  <h2 style="margin-bottom:4px">{% if not n.read_at %}<span class="badge info">new</span> {% endif %}{{ n.title }}</h2>
+  <p class="muted" style="margin:0 0 6px">{{ n.created_at|date:"D d M Y, H:i" }}</p>
+  <div class="muted">{{ n.body|linebreaksbr|truncatechars_html:600 }}</div>
+  {% if n.link %}<p><a href="{{ n.link }}">Open{% icon "arrow-right" %}</a></p>{% endif %}
+</div>
+{% empty %}
+<div class="card empty">{% icon "inbox" %}<strong>No notifications</strong>Messages about your duties will appear here.</div>
+{% endfor %}
+{% include "_pager.html" %}
+{% endblock %}

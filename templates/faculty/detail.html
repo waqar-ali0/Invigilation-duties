@@ -12,7 +12,7 @@
 
 <div class="grid">
   <div class="card">
-    <h2>{% icon "user" %}Profile</h2>
+    <h2>{% icon "users" %}Profile</h2>
     <div class="muted">
       Status: {% if not faculty.is_active %}<strong>inactive</strong>{% elif faculty.is_exempt %}<strong>exempt</strong>{% else %}active{% endif %} · {{ faculty.get_employment_status_display }}<br>
       Email: {{ faculty.email|default:"—" }}<br>
@@ -33,7 +33,10 @@
 <h2>Duty history</h2>
 {% for period, items, counts in summary %}
 <div class="card table-wrap">
-  <h2>{{ period.name }} <span class="muted">· {{ counts.assigned }} assigned · {{ counts.completed }} completed · {{ counts.absent }} absent · {{ counts.cancelled }} handed over</span></h2>
+  <div class="page-head" style="margin-bottom:8px">
+    <h2 style="margin:0">{{ period.name }} <span class="muted">· {{ counts.assigned }} assigned · {{ counts.completed }} completed · {{ counts.absent }} absent · {{ counts.cancelled }} handed over</span></h2>
+    {% if period.status == "published" or period.status == "closed" %}<a class="button secondary sm" href="{% url 'faculty_duty_slip' faculty.pk period.pk %}">{% icon "download" %}Duty slip (PDF)</a>{% endif %}
+  </div>
   <table class="stack">
     <thead><tr><th>When</th><th>Course</th><th>Room</th><th>How</th><th>Status</th></tr></thead>
     <tbody>

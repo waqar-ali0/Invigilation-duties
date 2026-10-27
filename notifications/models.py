@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -24,6 +25,9 @@ class EmailKind(models.TextChoices):
     SWAP_WITHDRAWN = "swap_withdrawn", "Swap withdrawn by requester"
     REPLACED_OUT = "replaced_out", "Replaced (duty removed)"
     REPLACED_IN = "replaced_in", "Replaced (duty given)"
+    DUTY_MOVED = "duty_moved", "Duty moved"
+    MAKEUP_ASSIGNED = "makeup_assigned", "Make-up duty assigned"
+    ANNOUNCEMENT = "announcement", "Announcement"
 
 
 class OutboundEmail(models.Model):
@@ -48,3 +52,22 @@ class OutboundEmail(models.Model):
 
     def __str__(self):
         return f"{self.get_kind_display()} to {self.to} ({self.status})"
+
+
+class Notification(models.Model):
+    """An in-app notice shown under the bell in the top bar."""
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications")
+    kind = models.CharField(max_length=30, choices=EmailKind.choices)
+    title = models.CharField(max_length=255)
+    body = models.TextField(blank=True)
+    link = models.CharField(max_length=300, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["user", "read_at"])]
+
+    def __str__(self):
+        return f"{self.title} → {self.user}"

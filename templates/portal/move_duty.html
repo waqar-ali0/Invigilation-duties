@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Move duty — {{ duty.faculty.name }}{% endblock %}
+{% block content %}
+<h1>Move {{ duty.faculty.name }}'s duty</h1>
+<p class="subtitle"><a href="{% url 'room_detail' period.pk duty.room_allocation_id %}">← {{ duty.room_allocation.room }}</a> · now {{ duty.room_allocation.session.slot }} · {{ duty.room_allocation.session.course_code }} · {{ duty.room_allocation.room }}</p>
+<div class="card">
+  {% if targets %}
+  <form method="post">
+    {% csrf_token %}
+    <div class="field">
+      <label for="room">Move to (only rooms where every hard rule is still met)</label>
+      <select id="room" name="room" required>
+        {% for room, free in targets %}<option value="{{ room.pk }}">{{ room.session.slot }} · {{ room.session.course_code }} · {{ room.room }}{% if not free %} (already full){% endif %}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="reason">Reason{% if period.status == "published" %} (required; {{ duty.faculty.name }} is emailed){% endif %}</label>
+      <input id="reason" type="text" name="reason" maxlength="300"{% if period.status == "published" %} required{% endif %}>
+    </div>
+    <div class="actions"><button type="submit">{% icon "repeat" %}Move</button></div>
+  </form>
+  {% else %}
+  <p class="muted">There is no other room where {{ duty.faculty.name }} can sit without breaking a rule.</p>
+  {% endif %}
+</div>
+{% endblock %}

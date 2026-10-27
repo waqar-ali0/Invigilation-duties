@@ -57,6 +57,8 @@ class DutySource(models.TextChoices):
     SWAP = "swap", "Swap"
     REPLACEMENT = "replacement", "Replacement"
     STAND_IN = "stand_in", "Stand-in"  # covered for someone marked absent
+    MAKEUP = "makeup", "Make-up"  # owed for a missed duty
+    MOVED = "moved", "Moved"  # same person, another room or time
 
 
 class DutyQuerySet(models.QuerySet):
@@ -81,6 +83,15 @@ class Duty(models.Model):
     attendance_marked_at = models.DateTimeField(null=True, blank=True)
     # Locked duties are kept as they are when the allocation is run again.
     locked = models.BooleanField(default=False)
+    # Set by the holder on My duties: "I have seen this duty".
+    acknowledged_at = models.DateTimeField(null=True, blank=True)
+    # For a duty marked absent: what happened and whether it is excused (None = not decided yet).
+    absence_reason = models.TextField(blank=True)
+    absence_excused = models.BooleanField(null=True, blank=True)
+    absence_decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    absence_decided_at = models.DateTimeField(null=True, blank=True)
 
     objects = DutyQuerySet.as_manager()
 
@@ -229,3 +240,70 @@ class BackupReservation(models.Model):
 
     def __str__(self):
         return f"{self.faculty.name} — backup for {self.slot}"
+
+
+class ObligationStatus(models.TextChoices):
+    OPEN = "open", "Owed — not scheduled yet"
+    ASSIGNED = "assigned", "Make-up scheduled"
+    COMPLETED = "completed", "Make-up done"
+    MISSED = "missed", "Make-up missed"
+    WAIVED = "waived", "Waived"
+
+
+class Obligation(models.Model):
+    """A make-up duty owed because `original` was missed. The absentee and whoever covered on the
+    day stay separate: the cover is a stand-in duty; this is the absentee's own make-up."""
+
+    original = models.OneToOneField(Duty, on_delete=models.CASCADE, related_name="obligation")
+    owed_by = models.ForeignKey(Faculty, on_delete=models.CASCADE, related_name="obligations")
+    makeup = models.ForeignKey(Duty, null=True, blank=True, on_delete=models.SET_NULL, related_name="makeup_for")
+    waived = models.BooleanField(default=False)
+    note = models.CharField(max_length=300, blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    @property
+    def status(self):
+        if self.waived:
+            return ObligationStatus.WAIVED
+        duty = self.makeup
+        if duty is None or duty.status == DutyStatus.CANCELLED:
+            return ObligationStatus.OPEN
+        return {
+            DutyStatus.ASSIGNED: ObligationStatus.ASSIGNED,
+            DutyStatus.COMPLETED: ObligationStatus.COMPLETED,
+            DutyStatus.ABSENT: ObligationStatus.MISSED,
+        }[duty.status]
+
+    @property
+    def status_label(self):
+        return ObligationStatus(self.status).label
+
+    @property
+    def is_outstanding(self):
+        return self.status in (ObligationStatus.OPEN, ObligationStatus.ASSIGNED, ObligationStatus.MISSED)
+
+    def __str__(self):
+        return f"{self.owed_by.name} owes a make-up for {self.original}"
+
+
+class RosterVersion(models.Model):
+    """The published roster as it stood at publishing and after each later change."""
+
+    period = models.ForeignKey(ExamPeriod, on_delete=models.CASCADE, related_name="roster_versions")
+    number = models.PositiveIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+")
+    reason = models.CharField(max_length=200)
+    snapshot = models.JSONField()  # [{faculty_id, faculty, employee_id, room_id, room, slot_id, slot, course}]
+
+    class Meta:
+        ordering = ["-number"]
+        constraints = [models.UniqueConstraint(fields=["period", "number"], name="unique_roster_version")]
+
+    def __str__(self):
+        return f"{self.period} roster v{self.number}"

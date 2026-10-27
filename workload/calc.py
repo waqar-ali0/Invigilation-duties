@@ -154,11 +154,11 @@ def _makeups(period):
     except ImportError:
         return {}, {}
     owed, done = Counter(), Counter()
-    for faculty_id, status in Obligation.objects.filter(original__period=period).values_list("owed_by_id", "status"):
-        if status == "completed":
-            done[faculty_id] += 1
-        elif status in ("open", "assigned"):
-            owed[faculty_id] += 1
+    for o in Obligation.objects.filter(original__period=period).select_related("makeup"):
+        if o.status == "completed":
+            done[o.owed_by_id] += 1
+        elif o.is_outstanding:
+            owed[o.owed_by_id] += 1
     return owed, done
 
 

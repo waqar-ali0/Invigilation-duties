@@ -56,14 +56,14 @@ def queue_roster_published(period):
             "roster_published", {"faculty": faculty, "period": period, "duties": group, "link": link}
         )
         ics = duties_ics(faculty, group).encode("utf-8")
-        queue_email(
+        if queue_email(
             _address(faculty),
             subject,
             body,
             EmailKind.ROSTER_PUBLISHED,
             attachment=(f"{slugify(period.name)}-duties.ics", ics, "text/calendar"),
-        )
-        count += 1
+        ):
+            count += 1
     return count
 
 
@@ -89,7 +89,7 @@ def queue_reminders(day):
         for faculty, group in groupby(duties, key=lambda d: d.faculty):
             group = list(group)
             subject, body = render_email("reminder", {"faculty": faculty, "day": day, "duties": group, "link": link})
-            queue_email(_address(faculty), subject, body, EmailKind.REMINDER)
-            count += 1
+            if queue_email(_address(faculty), subject, body, EmailKind.REMINDER):
+                count += 1
         Duty.objects.filter(pk__in=[d.pk for d in duties]).update(reminder_sent_at=timezone.now())
     return count

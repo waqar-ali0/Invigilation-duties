@@ -11,6 +11,9 @@
   <div class="actions" style="margin-bottom:12px">
     <a class="button secondary" href="{% url 'my_duties_pdf' p.period.pk %}">{% icon "download" %}Download PDF</a>
     <a class="button secondary" href="{% url 'my_duties_ics' p.period.pk %}">{% icon "calendar" %}Add to calendar (.ics)</a>
+    {% if p.unconfirmed %}
+    <form method="post" action="{% url 'acknowledge_duties' p.period.pk %}">{% csrf_token %}<button type="submit">{% icon "check" %}I have seen these duties ({{ p.unconfirmed }} new)</button></form>
+    {% endif %}
   </div>
   {% if p.upcoming %}
   <table class="stack">

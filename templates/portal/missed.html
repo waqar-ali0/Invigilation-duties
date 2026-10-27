@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Missed duties — Invigilation Duties{% endblock %}
+{% block content %}
+<h1>Missed duties</h1>
+<p class="subtitle">Duties marked absent. Record why, whether it is excused, and whether a make-up duty is owed. The absence always stays on record; whoever covered on the day keeps their own stand-in duty.</p>
+
+{% if outstanding %}
+<div class="card table-wrap">
+  <h2>Make-up duties owed ({{ outstanding|length }})</h2>
+  <table class="stack">
+    <thead><tr><th>Faculty</th><th>Missed</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      {% for o in outstanding %}
+      <tr>
+        <td data-label="Faculty"><a href="{% url 'faculty_detail' o.owed_by_id %}">{{ o.owed_by.name }}</a></td>
+        <td data-label="Missed">{{ o.original.room_allocation.session.slot }} · {{ o.original.room_allocation.room }}</td>
+        <td data-label="Status"><span class="badge {% if o.status == 'missed' %}danger{% elif o.status == 'assigned' %}info{% else %}warn{% endif %}">{{ o.status_label }}</span>{% if o.makeup %}<div class="muted">{{ o.makeup.room_allocation.session.slot }} · {{ o.makeup.room_allocation.room }}</div>{% endif %}</td>
+        <td><a class="button secondary sm" href="{% url 'obligation' o.pk %}">{% if o.status == "open" or o.status == "missed" %}Schedule make-up{% else %}Open{% endif %}{% icon "arrow-right" %}</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<div class="card">
+  <form method="get" class="filters">
+    <select name="period" aria-label="Exam period"><option value="">All periods</option>{% for p in periods %}<option value="{{ p.pk }}"{% if period == p.pk|stringformat:"s" %} selected{% endif %}>{{ p.name }}</option>{% endfor %}</select>
+    <select name="show" aria-label="Decision"><option value="">Any decision</option>{% for k, label in filters %}<option value="{{ k }}"{% if show == k %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+    <button type="submit">{% icon "search" %}Filter</button>
+  </form>
+</div>
+
+{% for d in page.object_list %}
+{% with s=d.room_allocation.session %}
+<div class="card">
+  <div class="page-head" style="margin-bottom:8px">
+    <div>
+      <h2 style="margin:0"><a href="{% url 'faculty_detail' d.faculty_id %}">{{ d.faculty.name }}</a> — {{ s.slot }} · {{ s.course_code }} · {{ d.room_allocation.room }}</h2>
+      <p class="muted" style="margin:4px 0 0">{{ d.period.name }}{% for r in d.replaced_by.all %} · covered by {{ r.faculty.name }} ({{ r.get_source_display|lower }}){% endfor %}</p>
+    </div>
+    <div>
+      {% if d.absence_excused is None %}<span class="badge warn">not decided</span>{% elif d.absence_excused %}<span class="badge ok">excused</span>{% else %}<span class="badge danger">unexcused</span>{% endif %}
+      {% if d.obligation %}<span class="badge info">{{ d.obligation.status_label }}</span>{% endif %}
+    </div>
+  </div>
+  {% if d.absence_decided_at %}<p class="muted">Decided {{ d.absence_decided_at|date:"d M Y H:i" }} by {{ d.absence_decided_by.email|default:"—" }}: {{ d.absence_reason }}</p>{% endif %}
+  <form method="post" class="form-grid">
+    {% csrf_token %}<input type="hidden" name="duty" value="{{ d.pk }}">
+    <div class="field"><label for="r{{ d.pk }}">Reason</label><input id="r{{ d.pk }}" type="text" name="reason" value="{{ d.absence_reason }}" maxlength="500" required></div>
+    <div class="field"><label for="e{{ d.pk }}">Decision</label>
+      <select id="e{{ d.pk }}" name="excused"><option value="no"{% if d.absence_excused == False %} selected{% endif %}>Unexcused</option><option value="yes"{% if d.absence_excused %} selected{% endif %}>Excused</option></select></div>
+    <div class="field"><label><input type="checkbox" name="makeup"{% if d.obligation and not d.obligation.waived %} checked{% endif %}> A make-up duty is owed</label></div>
+    <div class="field"><label for="n{{ d.pk }}">Note (optional)</label><input id="n{{ d.pk }}" type="text" name="note" maxlength="300"></div>
+    <div class="actions"><button class="secondary" type="submit">{% icon "check" %}Save decision</button></div>
+  </form>
+</div>
+{% endwith %}
+{% empty %}
+<div class="card empty">{% icon "check-square" %}<strong>No missed duties</strong>Duties marked absent on the Attendance page appear here.</div>
+{% endfor %}
+{% include "_pager.html" %}
+{% endblock %}

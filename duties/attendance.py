@@ -8,6 +8,7 @@ from audit.log import log
 from exams.models import ExamPeriod
 
 from .backups import record_call
+from .versions import record_roster_version
 from .models import Duty, DutySource, DutyStatus
 
 
@@ -86,6 +87,7 @@ def record_stand_in(duty, faculty, actor, reason):
             attendance_marked_at=timezone.now(),
         )
         record_call(duty, new_duty)
+        record_roster_version(duty.period, actor, f"Stand-in: {faculty.name} covered for {duty.faculty.name}")
         log(actor, "duty.stand_in", duty, after={"faculty": faculty.pk, "reason": reason, "duty": new_duty.pk})
     return new_duty
 

@@ -14,6 +14,7 @@ from audit.log import log
 from exams.models import ExamPeriod, PeriodLockedError
 
 from .handover import handover_check
+from .versions import record_roster_version
 from .models import OPEN_SWAP_STATUSES, Duty, DutyStatus, SwapRequest, SwapStatus
 
 MSG_TOO_LATE = "It is too late to swap this duty. Contact the exam office."
@@ -179,6 +180,7 @@ def approve_swap(swap, actor):
         swap.new_duty = new_duty
         swap.save(update_fields=["status", "decided_by", "decided_at", "new_duty"])
         log(actor, "swap.approve", swap, before={"faculty": duty.faculty_id}, after={"faculty": new_duty.faculty_id, "duty": new_duty.pk})
+        record_roster_version(duty.period, actor, f"Swap: {duty.faculty.name} → {new_duty.faculty.name}")
         _emails(swap, "swap_approved", [_addr(swap.requested_by)])
         _emails(swap, "swap_approved", [_addr(swap.requested_with)], attachment=duty_ics_attachment(new_duty))
     return new_duty

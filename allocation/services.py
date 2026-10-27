@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from audit.log import log
 from duties.backups import reserve_backups
+from duties.versions import record_roster_version
 from duties.models import (
     BackupMember,
     BackupRole,
@@ -275,5 +276,6 @@ def publish_period(period, actor, acknowledge_unfilled=False, confirm_rules=Fals
         period.published_at = timezone.now()
         period.save(update_fields=["status", "published_at"])
         emails = queue_roster_published(period)
+        record_roster_version(period, actor, "Published")
         log(actor, "period.publish", period, after={"unfilled_seats": missing, "emails": emails})
     _copy_fields(period, caller_period, ["status", "published_at"])

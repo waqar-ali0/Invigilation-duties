@@ -1,0 +1,9 @@
+Dear {{ person.name }},
+
+One of your invigilation duties has been moved. It is now:
+{% include "emails/_duty_line.txt" %}
+{% if old %}It was: {{ old.room_allocation.session.slot }} · {{ old.room_allocation.room }}
+{% endif %}
+A calendar file is attached. All your duties: {{ link }}
+
+— Exam Office

@@ -50,11 +50,15 @@
         <td>
           {% if editable %}
           <div class="actions">
+          <a class="button secondary sm" href="{% url 'move_duty' period.pk d.pk %}">{% icon "repeat" %}Move</a>
           <form method="post" action="{% url 'lock_duty' period.pk d.pk %}">{% csrf_token %}<input type="hidden" name="locked" value="{% if d.locked %}0{% else %}1{% endif %}"><button class="secondary sm" type="submit" title="Locked duties are kept when the allocation is run again">{% if d.locked %}Unlock{% else %}Lock{% endif %}</button></form>
           <form method="post" action="{% url 'remove_duty' period.pk d.pk %}">{% csrf_token %}<button class="danger sm" type="submit">{% icon "trash" %}Remove</button></form>
           </div>
           {% elif can_replace and d.status == "assigned" %}
-          <a class="button secondary" href="{% url 'replace_duty' period.pk d.pk %}">{% icon "repeat" %}Replace</a>
+          <div class="actions">
+          <a class="button secondary sm" href="{% url 'replace_duty' period.pk d.pk %}">{% icon "repeat" %}Replace</a>
+          <a class="button secondary sm" href="{% url 'move_duty' period.pk d.pk %}">Move</a>
+          </div>
           {% endif %}
         </td>
       </tr>

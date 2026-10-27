@@ -19,10 +19,18 @@ STALE_AFTER = timedelta(minutes=30)
 LINK = re.compile(r"https?://\S+")
 
 
+PRIVATE_KINDS = (EmailKind.ACTIVATION, EmailKind.PASSWORD_RESET)  # carry account links: email only
+
+
 def queue_email(to, subject, body, kind, attachment=None):
-    """Queue an email. `attachment` is (filename, content bytes, mimetype) or None."""
+    """Queue an email. `attachment` is (filename, content bytes, mimetype) or None.
+
+    Returns None (nothing queued) when there is no address, e.g. faculty without an email. The
+    recipient's account, if any, also gets an in-app notification (except account links)."""
+    if not to:
+        return None
     name, content, mimetype = attachment or ("", None, "")
-    return OutboundEmail.objects.create(
+    email = OutboundEmail.objects.create(
         to=to,
         subject=subject[:255],
         body=body,
@@ -31,6 +39,27 @@ def queue_email(to, subject, body, kind, attachment=None):
         attachment_content=content,
         attachment_mimetype=mimetype,
     )
+    if kind not in PRIVATE_KINDS:
+        notify_address(to, kind, subject, body)
+    return email
+
+
+def notify_address(address, kind, title, body):
+    from accounts.models import User
+
+    from .models import Notification
+
+    user = User.objects.filter(email__iexact=address, is_active=True).first()
+    if user is None:
+        return None
+    from urllib.parse import urlsplit
+
+    match = LINK.search(body)
+    link = ""
+    if match:  # keep only the path: the notice opens inside this site, whatever its address
+        parts = urlsplit(match.group(0))
+        link = (parts.path or "/") + (f"?{parts.query}" if parts.query else "")
+    return Notification.objects.create(user=user, kind=kind, title=title[:255], body=LINK.sub("", body).strip()[:2000], link=link[:300])
 
 
 def _message(email, connection):

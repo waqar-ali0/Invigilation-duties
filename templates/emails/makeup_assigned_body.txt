@@ -1,0 +1,8 @@
+Dear {{ person.name }},
+
+The exam office has scheduled a make-up invigilation duty for the duty missed on {{ original.room_allocation.session.slot.date|date:"D d M Y" }}:
+{% include "emails/_duty_line.txt" %}
+
+A calendar file is attached. All your duties: {{ link }}
+
+— Exam Office

@@ -1,0 +1,1 @@
+Invigilation duty moved: {{ duty.room_allocation.session.slot.date|date:"D d M" }} {{ duty.room_allocation.session.slot.start_time|time:"H:i" }}
