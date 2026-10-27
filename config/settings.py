@@ -117,6 +117,9 @@ PHONE_COUNTRY_CODE = os.environ.get("PHONE_COUNTRY_CODE", "92")
 WHATSAPP_TOKEN = os.environ.get("WHATSAPP_TOKEN", "")
 WHATSAPP_APP_SECRET = os.environ.get("WHATSAPP_APP_SECRET", "")
 WHATSAPP_VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN", "")
+
+# Optional Google Sheets imports: path to a service account's JSON key (read-only access).
+GOOGLE_SERVICE_ACCOUNT_FILE = os.environ.get("GOOGLE_SERVICE_ACCOUNT_FILE", "")
 USE_I18N = True
 USE_TZ = True
 

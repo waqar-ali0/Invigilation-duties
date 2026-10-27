@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Google Sheets — Invigilation Duties{% endblock %}
+{% block content %}
+<h1>Google Sheets</h1>
+<p class="subtitle"><a href="{% url 'import_home' %}">← Imports</a> · Optional: import faculty, rooms or courses straight from a Google Sheet. Every sync still shows the check page, and nothing is saved until you confirm. Excel uploads work without this.</p>
+
+{% if not configured %}
+<div class="alert warning">{% icon "alert" %}<span><strong>Not set up.</strong> Create a Google Cloud <em>service account</em>, download its JSON key to the server, and add <code>GOOGLE_SERVICE_ACCOUNT_FILE=C:\path\to\key.json</code> to <code>.env</code>; restart the web service. Then share each sheet with the service account's email as <em>Viewer</em>. Access is read-only.</span></div>
+{% endif %}
+
+<div class="card table-wrap">
+  {% if sources %}
+  <table class="stack">
+    <thead><tr><th>Sheet</th><th>Holds</th><th>Checks</th><th>Last check</th><th></th></tr></thead>
+    <tbody>
+      {% for s in sources %}
+      <tr>
+        <td data-label="Sheet"><strong>{{ s.name }}</strong>{% if not s.active %} <span class="badge">off</span>{% endif %}<div class="muted">{{ s.worksheet|default:"first tab" }}</div></td>
+        <td data-label="Holds">{{ s.get_kind_display }}</td>
+        <td data-label="Checks">{% if s.sync_hours %}every {{ s.sync_hours }} h{% else %}manual{% endif %}</td>
+        <td data-label="Last check">{{ s.last_checked_at|date:"d M Y H:i"|default:"never" }}{% if s.last_error %}<div class="text-danger">{{ s.last_error }}</div>{% endif %}</td>
+        <td><div class="actions">
+          <form method="post">{% csrf_token %}<input type="hidden" name="action" value="sync"><input type="hidden" name="id" value="{{ s.pk }}"><button class="secondary sm" type="submit"{% if not configured %} disabled{% endif %}>{% icon "repeat" %}Sync now</button></form>
+          <a class="button secondary sm" href="?edit={{ s.pk }}">Edit</a>
+        </div></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">{% icon "file" %}<strong>No sheets yet</strong>Add one below.</div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>{% if editing %}Edit “{{ editing.name }}”{% else %}Add a sheet{% endif %}</h2>
+  <form method="post" class="form-grid">
+    {% csrf_token %}<input type="hidden" name="action" value="save">
+    {% include "_form_fields.html" %}
+    <div class="actions"><button type="submit">{% icon "check" %}Save</button>{% if editing %}<a class="button secondary" href="{% url 'import_sheets' %}">Cancel</a>{% endif %}</div>
+  </form>
+  <p class="muted">With automatic checks, a changed sheet is prepared for review and the exam office is notified under the bell. The column choices of the last confirmed sync are reused when the headings haven't changed.</p>
+</div>
+
+{% if history %}
+<div class="card table-wrap">
+  <h2>Sync history</h2>
+  <table class="stack">
+    <thead><tr><th>When</th><th>Sheet</th><th>Status</th><th></th></tr></thead>
+    <tbody>{% for b in history %}<tr><td data-label="When">{{ b.created_at|date:"d M Y H:i" }}</td><td data-label="Sheet">{{ b.source.name }}</td><td data-label="Status">{{ b.get_status_display }}{% if b.result %} · {{ b.result.created }} new, {{ b.result.updated }} updated{% endif %}</td><td><a class="button secondary sm" href="{% url 'import_batch' b.pk %}">Open{% icon "arrow-right" %}</a></td></tr>{% endfor %}</tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

@@ -299,6 +299,8 @@ Register-Job "Duty reminders" "send_reminders" (New-ScheduledTaskTrigger -Daily 
 Register-Job "Nightly backup" "backup_db" (New-ScheduledTaskTrigger -Daily -At "02:00")
 $every5b = New-ScheduledTaskTrigger -Once -At (Get-Date).Date -RepetitionInterval (New-TimeSpan -Minutes 5)
 Register-Job "WhatsApp" "whatsapp_tick" $every5b
+$hourly = New-ScheduledTaskTrigger -Once -At (Get-Date).Date -RepetitionInterval (New-TimeSpan -Hours 1)
+Register-Job "Google Sheets" "sync_sheets" $hourly
 
 # ---------------------------------------------------------------- 9. Firewall
 if (-not $Local) {

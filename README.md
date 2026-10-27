@@ -254,6 +254,13 @@ with only the same name is shown for you to decide (skip, add as new, or update 
 Blank cells never erase saved values, and duty history is never touched. Every import is
 kept in the import history (file, who, when, result). Templates can be downloaded.
 
+**Google Sheets** (optional, *Imports → Google Sheet*): link a sheet holding faculty, rooms or
+courses and press *Sync now*, or let it be checked every few hours (the `sync_sheets` job).
+A sync never saves anything by itself: it opens the same check page as an Excel upload (reusing
+the last column choices), and automatic checks notify the exam office under the bell when a
+sheet changed. Set-up: a Google service account with read-only access — put the path of its JSON
+key in `.env` as `GOOGLE_SERVICE_ACCOUNT_FILE` and share the sheet with its email as Viewer.
+
 **Departments:** `name` (simple upload on *Exam periods → Import departments*).
 
 **Exam schedule** — through the same wizard from the period's *Import schedule*; every row

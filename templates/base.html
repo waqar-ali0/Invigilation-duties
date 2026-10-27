@@ -28,7 +28,7 @@
       <div class="nav-section">Data</div>
       <a href="{% url 'faculty_list' %}" class="{% if n == 'faculty_list' or n == 'faculty_detail' or n == 'faculty_edit' or n == 'faculty_create' or n == 'faculty_categories' %}active{% endif %}">{% icon "users" %}<span>Faculty</span></a>
       <a href="{% url 'room_list' %}" class="{% if n == 'room_list' or n == 'room_create' or n == 'room_edit' %}active{% endif %}">{% icon "building" %}<span>Rooms</span></a>
-      <a href="{% url 'import_home' %}" class="{% if n == 'import_home' or n == 'import_start' or n == 'import_start_period' or n == 'import_columns' or n == 'import_batch' %}active{% endif %}">{% icon "upload" %}<span>Imports</span></a>
+      <a href="{% url 'import_home' %}" class="{% if n == 'import_home' or n == 'import_sheets' or n == 'import_start' or n == 'import_start_period' or n == 'import_columns' or n == 'import_batch' %}active{% endif %}">{% icon "upload" %}<span>Imports</span></a>
       <div class="nav-section">Operations</div>
       <a href="{% url 'admin_requests' %}" class="{% if n == 'admin_requests' %}active{% endif %}">{% icon "inbox" %}<span>Requests</span></a>
       <a href="{% url 'admin_swaps' %}" class="{% if n == 'admin_swaps' %}active{% endif %}">{% icon "repeat" %}<span>Swaps</span></a>

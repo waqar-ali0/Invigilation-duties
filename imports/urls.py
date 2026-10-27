@@ -4,6 +4,7 @@ from . import views
 
 urlpatterns = [
     path("imports/", views.import_home, name="import_home"),
+    path("imports/google-sheets/", views.sheets, name="import_sheets"),
     path("imports/new/<str:kind>/", views.start, name="import_start"),
     path("imports/new/<str:kind>/period/<int:period_pk>/", views.start, name="import_start_period"),
     path("imports/template/<str:kind>.xlsx", views.template_download, name="import_template"),

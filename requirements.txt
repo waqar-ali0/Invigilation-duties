@@ -7,3 +7,5 @@ psycopg[binary]~=3.2
 waitress~=3.0
 whitenoise~=6.8
 xlrd~=2.0
+google-auth~=2.35
+requests~=2.32

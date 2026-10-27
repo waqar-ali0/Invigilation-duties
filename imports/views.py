@@ -1,3 +1,4 @@
+from django import forms
 from django.contrib import messages
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -7,12 +8,13 @@ from django.views.decorators.http import require_POST
 
 from accounts.models import Role
 from accounts.permissions import role_required
+from audit.log import log
 from exams.models import ExamPeriod, PeriodLockedError
 
 from .base import Status, error_report, template_workbook
 from .courses import CourseImport
 from .faculty import FacultyImport
-from .models import BatchStatus, ImportBatch
+from .models import BatchStatus, ImportBatch, SheetSource
 from .reader import read_table
 from .rooms import RoomImport
 from .schedule import ScheduleImport
@@ -211,3 +213,43 @@ def batch_cancel(request, pk):
         messages.info(request, "Import cancelled. Nothing was saved.")
     back = reverse("period_dashboard", args=[batch.period_id]) if batch.period_id else reverse("import_home")
     return redirect(back)
+
+
+class SheetForm(forms.ModelForm):
+    class Meta:
+        model = SheetSource
+        fields = ["name", "kind", "spreadsheet_id", "worksheet", "sync_hours", "active"]
+        labels = {"spreadsheet_id": "Google Sheet link or ID", "kind": "What it holds"}
+
+
+@admin_only
+def sheets(request):
+    from .sheets import SheetError, configured, sync
+
+    editing = None
+    if request.GET.get("edit", "").isdigit():
+        editing = get_object_or_404(SheetSource, pk=request.GET["edit"])
+    action = request.POST.get("action") if request.method == "POST" else None
+    form = SheetForm(request.POST if action == "save" else None, instance=editing)
+    if action == "save" and form.is_valid():
+        source = form.save()
+        log(request.user, "sheets.save", source, after={"name": source.name, "kind": source.kind, "sync_hours": source.sync_hours})
+        messages.success(request, f"Google Sheet “{source.name}” saved.")
+        return redirect("import_sheets")
+    if action == "sync":
+        source = get_object_or_404(SheetSource, pk=request.POST.get("id") or 0)
+        try:
+            batch = sync(source, request.user)
+        except SheetError as e:
+            messages.error(request, str(e))
+            return redirect("import_sheets")
+        messages.success(request, f"Fetched {len(batch.rows)} rows from “{source.name}”. Check them before anything is saved.")
+        return redirect("import_batch", pk=batch.pk)
+    context = {
+        "sources": SheetSource.objects.all(),
+        "form": form,
+        "editing": editing,
+        "configured": configured(),
+        "history": ImportBatch.objects.filter(source__isnull=False).select_related("source")[:20],
+    }
+    return render(request, "imports/sheets.html", context)
