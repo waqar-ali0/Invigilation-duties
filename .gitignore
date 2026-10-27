@@ -7,3 +7,8 @@ media/
 staticfiles/
 .superpowers/
 sent_emails/
+logs/
+backups/
+deploy/windows/bin/
+deploy/windows/services/
+deploy/windows/caddy-data/

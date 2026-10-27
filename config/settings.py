@@ -48,10 +48,12 @@ INSTALLED_APPS = [
     "reports",
     "notifications",
     "portal",
+    "ops",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -109,6 +111,11 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
+# WhiteNoise serves the collected static files (gzip/brotli) so no separate web server config is needed.
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+}
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -120,7 +127,9 @@ if HTTPS:
     CSRF_COOKIE_SECURE = True
     SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", str(60 * 60 * 24 * 365)))
     SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", False)
-    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")  # behind Nginx
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")  # behind Caddy (or IIS)
+    # Local monitoring checks the app directly over http.
+    SECURE_REDIRECT_EXEMPT = [r"^healthz/$"]
     CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()]
 SESSION_COOKIE_HTTPONLY = True
 X_FRAME_OPTIONS = "DENY"
@@ -138,3 +147,26 @@ DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "invigilation@localhos
 SITE_URL = os.environ.get("SITE_URL", "http://127.0.0.1:8000")
 # Activation and password-reset links stay valid for 7 days.
 PASSWORD_RESET_TIMEOUT = 7 * 24 * 60 * 60
+
+# Logging. Errors and warnings always go to the console; set LOG_DIR in production to also keep
+# a rotating log file (10 files of 5 MB) that IT can read when something goes wrong.
+LOG_DIR = os.environ.get("LOG_DIR", "")
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {"plain": {"format": "{asctime} {levelname} {name}: {message}", "style": "{"}},
+    "handlers": {"console": {"class": "logging.StreamHandler", "formatter": "plain"}},
+    "root": {"handlers": ["console"], "level": "WARNING"},
+    "loggers": {"waitress": {"level": "INFO"}},
+}
+if LOG_DIR:
+    Path(LOG_DIR).mkdir(parents=True, exist_ok=True)
+    LOGGING["handlers"]["file"] = {
+        "class": "logging.handlers.RotatingFileHandler",
+        "filename": str(Path(LOG_DIR) / "app.log"),
+        "maxBytes": 5 * 1024 * 1024,
+        "backupCount": 10,
+        "encoding": "utf-8",
+        "formatter": "plain",
+    }
+    LOGGING["root"]["handlers"].append("file")

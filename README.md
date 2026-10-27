@@ -149,26 +149,25 @@ Two commands must run on a schedule on the server:
 | `manage.py send_emails` | every 5 minutes | sends queued emails |
 | `manage.py send_reminders` | daily at 18:00 | queues reminders for tomorrow's duties (never twice) |
 
-Linux (cron, `crontab -e`):
+On the server, `deploy\windows\install.ps1` schedules both (plus the nightly backup) in
+Task Scheduler. To test reminders for a particular day: `manage.py send_reminders --date 2026-12-01`.
 
-```
-*/5 * * * * cd /srv/invigilation && .venv/bin/python manage.py send_emails
-0 18 * * *  cd /srv/invigilation && .venv/bin/python manage.py send_reminders
-```
+## Deployment (Windows server)
 
-Windows (Task Scheduler, from an administrator command prompt in the project folder):
+The full guide for IT is **[deploy/windows/DEPLOY.md](deploy/windows/DEPLOY.md)**. In short, from
+PowerShell opened as administrator in the project folder:
 
-```bat
-schtasks /create /tn "Invigilation send emails" /sc minute /mo 5 /tr "\"%CD%\.venv\Scripts\python.exe\" \"%CD%\manage.py\" send_emails"
-schtasks /create /tn "Invigilation reminders" /sc daily /st 18:00 /tr "\"%CD%\.venv\Scripts\python.exe\" \"%CD%\manage.py\" send_reminders"
+```powershell
+.\deploy\windows\install.ps1 -Domain duties.university.edu -AdminEmail it@university.edu
 ```
 
-To test reminders for a particular day: `manage.py send_reminders --date 2026-12-01`.
+That installs two Windows services — the app on Waitress (`manage.py serve`) and Caddy for
+automatic HTTPS — schedules email, reminders and a nightly backup (kept 30 days), and turns on
+production security (`HTTPS=True`: secure cookies, http→https redirect, HSTS).
+`status.ps1`, `update.ps1`, `restore.ps1` and `uninstall.ps1` in the same folder cover daily operation.
 
-## Production security
-
-On the real server, after HTTPS is working, set `HTTPS=True` and `CSRF_TRUSTED_ORIGINS` in `.env`.
-That turns on secure cookies, redirects http to https, and enables HSTS. Leave it off for local testing.
+Backups by hand: `manage.py backup_db` and `manage.py restore_db <file> --yes`.
+Monitoring can poll `/healthz/` (answers `ok` when the app and database are up).
 
 ## Tests
 
@@ -198,7 +197,3 @@ Both print what they checked and exit with an error status if anything failed.
 Set in `.env` (see `.env.example`): `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`,
 `DATABASE_URL` (SQLite by default; PostgreSQL in production, e.g.
 `postgres://user:pass@host:5432/invigilation`), `TIME_ZONE` (default `Asia/Karachi`).
-
-## Coming next
-
-- **Phase 4:** Docker deployment (PostgreSQL, Nginx, HTTPS), nightly backups, pilot run.
