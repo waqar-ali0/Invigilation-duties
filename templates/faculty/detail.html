@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}{{ faculty.name }} — Invigilation Duties{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ faculty.name }}</h1>
+    <p class="subtitle"><a href="{% url 'faculty_list' %}">← Faculty</a> · <code>{{ faculty.employee_id }}</code> · {{ faculty.category }} · {{ faculty.department }}</p>
+  </div>
+  <div class="actions"><a class="button" href="{% url 'faculty_edit' faculty.pk %}">{% icon "settings" %}Edit</a></div>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <h2>{% icon "user" %}Profile</h2>
+    <div class="muted">
+      Status: {% if not faculty.is_active %}<strong>inactive</strong>{% elif faculty.is_exempt %}<strong>exempt</strong>{% else %}active{% endif %} · {{ faculty.get_employment_status_display }}<br>
+      Email: {{ faculty.email|default:"—" }}<br>
+      Phone: {% if faculty.phone_invalid %}<span class="badge danger">invalid</span> {{ faculty.phone }}{% else %}{{ faculty.phone_e164|default:"—" }}{% endif %}<br>
+      Account: {% if faculty.user %}{{ faculty.user.email }}{% if not faculty.user.has_usable_password %} (not activated){% endif %}{% else %}none{% endif %}
+    </div>
+  </div>
+  <div class="card">
+    <h2>{% icon "file" %}Courses taught</h2>
+    <div class="muted">{% for c in faculty.courses.all %}{{ c.code }}{% if not forloop.last %}, {% endif %}{% empty %}None recorded{% endfor %}</div>
+  </div>
+  <div class="card">
+    <h2>{% icon "clipboard" %}Remarks</h2>
+    <div class="muted">{{ faculty.remarks|default:"—"|linebreaksbr }}</div>
+  </div>
+</div>
+
+<h2>Duty history</h2>
+{% for period, items, counts in summary %}
+<div class="card table-wrap">
+  <h2>{{ period.name }} <span class="muted">· {{ counts.assigned }} assigned · {{ counts.completed }} completed · {{ counts.absent }} absent · {{ counts.cancelled }} handed over</span></h2>
+  <table class="stack">
+    <thead><tr><th>When</th><th>Course</th><th>Room</th><th>How</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for d in items %}
+      {% with s=d.room_allocation.session %}
+      <tr>
+        <td data-label="When">{{ s.slot.date|date:"D d M Y" }} {{ s.slot.start_time|time:"H:i" }}–{{ s.slot.end_time|time:"H:i" }}</td>
+        <td data-label="Course">{{ s.course_code }}</td>
+        <td data-label="Room">{{ d.room_allocation.room }}{% if d.room_allocation.room_ref %} <span class="muted">{{ d.room_allocation.room_ref.building.name }}</span>{% endif %}</td>
+        <td data-label="How">{{ d.get_source_display }}{% if d.replaces %} <span class="muted">(for {{ d.replaces.faculty.name }})</span>{% endif %}</td>
+        <td data-label="Status"><span class="badge {{ d.status|tone }}">{{ d.get_status_display }}</span></td>
+      </tr>
+      {% endwith %}
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% empty %}
+<div class="card empty">{% icon "clipboard" %}<strong>No duties yet</strong>Duties appear here once a roster is allocated.</div>
+{% endfor %}
+{% endblock %}

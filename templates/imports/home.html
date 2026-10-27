@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Imports — Invigilation Duties{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Imports</h1>
+    <p class="subtitle">Bring in your existing spreadsheets. You choose which column holds what and see every change before anything is saved.</p>
+  </div>
+</div>
+
+<div class="grid">
+  {% for k in kinds %}
+  <div class="card">
+    <h2>{% icon "upload" %}{{ k.title }}</h2>
+    <p class="muted">{{ k.description }}</p>
+    <div class="actions">
+      <a class="button" href="{% url 'import_start' k.key %}">{% icon "upload" %}Import {{ k.title|lower }}</a>
+      <a class="button secondary sm" href="{% url 'import_template' k.key %}">{% icon "download" %}Template</a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+<p class="muted">The exam schedule is imported from each exam period's page (<em>Import schedule</em>).</p>
+
+<div class="card table-wrap">
+  <h2>Import history</h2>
+  {% if history %}
+  <table class="stack">
+    <thead><tr><th>When</th><th>What</th><th>File</th><th>By</th><th>Result</th><th></th></tr></thead>
+    <tbody>
+      {% for b in history %}
+      <tr>
+        <td data-label="When">{{ b.created_at|date:"d M Y H:i" }}</td>
+        <td data-label="What">{% for key, title in titles.items %}{% if key == b.kind %}{{ title }}{% endif %}{% endfor %}{% if b.period %} · {{ b.period.name }}{% endif %}</td>
+        <td data-label="File">{{ b.filename }}</td>
+        <td data-label="By">{{ b.uploaded_by.email|default:"—" }}</td>
+        <td data-label="Result">
+          {% if b.status == "done" %}<span class="badge ok">Imported</span> {{ b.result.created }} new · {{ b.result.updated }} updated{% if b.result.invalid %} · {{ b.result.invalid }} not imported{% endif %}
+          {% else %}<span class="badge {% if b.status == 'cancelled' %}{% else %}warn{% endif %}">{{ b.get_status_display }}</span>{% endif %}
+        </td>
+        <td><a class="button secondary sm" href="{% url 'import_batch' b.pk %}">Open{% icon "arrow-right" %}</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">{% icon "upload" %}<strong>No imports yet</strong>Start with your faculty spreadsheet.</div>
+  {% endif %}
+</div>
+{% endblock %}

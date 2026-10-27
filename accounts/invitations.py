@@ -33,6 +33,8 @@ def invite(faculty, actor):
     """Create (or reuse) the faculty member's account and queue an activation email."""
     if not faculty.is_active:
         raise InvitationError(f"{faculty.name} is inactive.")
+    if not faculty.email:
+        raise InvitationError(f"{faculty.name} has no email address. Add one on their faculty page first.")
     with transaction.atomic():
         user = faculty.user
         if user is not None and user.has_usable_password():
@@ -61,9 +63,9 @@ def invite(faculty, actor):
 
 
 def invite_all(actor):
-    """Invite every active faculty member who has no account and was never invited."""
+    """Invite every active faculty member with an email who has no account and was never invited."""
     count = 0
-    for faculty in Faculty.objects.filter(is_active=True, user__isnull=True, invited_at__isnull=True):
+    for faculty in Faculty.objects.filter(is_active=True, user__isnull=True, invited_at__isnull=True, email__isnull=False):
         invite(faculty, actor)
         count += 1
     return count

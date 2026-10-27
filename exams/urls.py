@@ -1,8 +1,11 @@
 from django.urls import path
 
-from . import views
+from . import inventory, views
 
 urlpatterns = [
+    path("rooms/", inventory.room_list, name="room_list"),
+    path("rooms/new/", inventory.room_create, name="room_create"),
+    path("rooms/<int:pk>/edit/", inventory.room_edit, name="room_edit"),
     path("periods/", views.period_list, name="period_list"),
     path("periods/<int:pk>/", views.period_dashboard, name="period_dashboard"),
     path("periods/<int:pk>/import/", views.schedule_import, name="schedule_import"),

@@ -54,7 +54,7 @@ from accounts.models import Role, User  # noqa: E402
 from audit.models import AuditLog  # noqa: E402
 from duties.models import Duty, DutyStatus, SwapRequest, SwapStatus, Unavailability, UnavailabilityStatus  # noqa: E402
 from exams.models import ExamPeriod, PeriodStatus, RoomAllocation, TimeSlot  # noqa: E402
-from faculty.models import Department, Faculty  # noqa: E402
+from faculty.models import Department, Faculty, FacultyCategory  # noqa: E402
 from notifications.models import EmailStatus, OutboundEmail  # noqa: E402
 from notifications.outbox import send_queued  # noqa: E402
 
@@ -111,6 +111,33 @@ def xlsx(rows, name):
     return SimpleUploadedFile(name, buf.getvalue())
 
 
+def wizard(browser, kind, rows, name, period=None, options=None, mode=None):
+    """Upload through the import wizard, keep the guessed columns, confirm every row. Returns the batch."""
+    from imports.models import ImportBatch
+
+    url = reverse("import_start_period", args=[kind, period.pk]) if period else reverse("import_start", args=[kind])
+    before = ImportBatch.objects.count()
+    r = browser.post(url, files={"file": xlsx(rows, name)})
+    if ImportBatch.objects.count() == before:
+        return None, r
+    batch = ImportBatch.objects.latest("pk")
+    data = {f"map_{k}": v for k, v in batch.mapping.items()}
+    for key, value in batch.options.items():
+        if value is True:
+            data[f"opt_{key}"] = "on"
+        elif value:
+            data[f"opt_{key}"] = value
+    data.update(options or {})
+    browser.post(reverse("import_columns", args=[batch.pk]), data)
+    preview = browser.get(reverse("import_batch", args=[batch.pk]))
+    confirm = {"row": [str(n) for n, _ in batch.rows]}
+    if mode:
+        confirm["mode"] = mode
+    browser.post(reverse("import_batch", args=[batch.pk]), confirm)
+    batch.refresh_from_db()
+    return batch, preview
+
+
 def run():
     # ---------------------------------------------------------------- setup
     admin = User.objects.create_user("office@uni.edu", PASSWORD, role=Role.ADMIN)
@@ -123,15 +150,28 @@ def run():
     r = office.post(reverse("department_import"), files={"file": xlsx([["Name"], ["Computer Science"], ["Physics"], ["Mathematics"]], "d.xlsx")})
     check("department import", Department.objects.count() == 3, r.content.decode()[:300])
 
-    people = [["Employee ID", "Name", "Email", "Department", "Designation"]]
+    people = [["Employee ID", "Name", "Email", "Department", "Designation", "Mobile"]]
     depts = ["Computer Science", "Physics", "Mathematics"]
     designations = ["Professor", "Associate Professor", "Assistant Professor", "Lecturer", "Lecturer"]
     for i in range(15):
-        people.append([f"E{i:03d}", f"Person {i:02d} O'Neil & Co", f"Person{i:02d}@Uni.edu", depts[i % 3], designations[i % 5]])
-    r = office.post(reverse("faculty_import"), files={"file": xlsx(people, "f.xlsx")})
-    check("faculty import (15, mixed-case emails, special characters)", Faculty.objects.count() == 15, r.content.decode()[:300])
-    bad = office.post(reverse("faculty_import"), files={"file": xlsx([people[0], ["X1", "Bad", "bad", "Nowhere", "Dean"]], "bad.xlsx")})
-    check("faculty import reports row errors and saves nothing", "Row 2:" in bad.content.decode() and Faculty.objects.count() == 15)
+        people.append([f"E{i:03d}", f"Person {i:02d} O'Neil & Co", f"Person{i:02d}@Uni.edu", depts[i % 3], designations[i % 5], f"0300-11100{i:02d}"])
+    batch, preview = wizard(office, "faculty", people, "f.xlsx")
+    check("faculty import wizard (15, mixed-case emails, special characters)", Faculty.objects.count() == 15 and batch.result["created"] == 15, str(batch and batch.result))
+    check("phone numbers normalised", Faculty.objects.filter(phone_e164="+923001110003").exists())
+    batch, preview = wizard(office, "faculty", [people[0], ["X1", "Bad", "bad", "Nowhere", "Dean", "x"]], "bad.xlsx")
+    check("faculty import explains bad rows and imports nothing", "Unknown designation" in preview.content.decode() and batch.result["invalid"] == 1 and Faculty.objects.count() == 15)
+    again, _ = wizard(office, "faculty", people, "f-again.xlsx")
+    check("re-importing the same file creates no duplicates", Faculty.objects.count() == 15 and again.result["unchanged"] == 15, str(again.result))
+    own = [["S.No", "Teacher Name", "Rank", "Contact No"], [1, "Zara Visiting", "Visiting Lecturer", "0333-4445566"], [2, "Person 01 O'Neil & Co", "Lecturer", "0321-0000000"]]
+    batch, preview = wizard(office, "faculty", own, "own.xlsx", options={"opt_default_department": str(Department.objects.get(name="Physics").pk)})
+    zara = Faculty.objects.filter(name="Zara Visiting").first()
+    check("own spreadsheet without IDs: columns guessed, FAC ID generated", zara is not None and zara.employee_id.startswith("FAC-") and zara.category.code == "visiting", str(batch.result))
+    check("same name with a different phone is not merged", Faculty.objects.filter(name__startswith="Person 01").count() == 1 and batch.result["skipped"] == 1, str(batch.result))
+    Faculty.objects.filter(name="Zara Visiting").delete()  # keep the rest of the audit on the 15 imported people
+    rooms_file = [["Block", "Room No", "Seats", "Invigilators"], ["Main", "R1", 60, ""], ["Main", "R2", 40, ""], ["Main", "R3", 120, ""], ["Main", "R9", 200, 4]]
+    batch, _ = wizard(office, "rooms", rooms_file, "rooms.xlsx")
+    from exams.models import Room
+    check("room inventory import", Room.objects.count() == 4 and Room.objects.get(name="R9").invigilators_needed == 4, str(batch and batch.result))
 
     cs, phys, maths = (Department.objects.get(name=n) for n in depts)
     hod_cs = Faculty.objects.get(employee_id="E000")
@@ -160,7 +200,7 @@ def run():
         "settings-0-avoid_back_to_back": "on", "settings-0-exclude_course_teacher": "on", "settings-0-swap_cutoff_hours": "24",
         "designation_caps-TOTAL_FORMS": "1", "designation_caps-INITIAL_FORMS": "0",
         "designation_caps-MIN_NUM_FORMS": "0", "designation_caps-MAX_NUM_FORMS": "1000",
-        "designation_caps-0-designation": "professor", "designation_caps-0-max_duties": "2",
+        "designation_caps-0-category": str(FacultyCategory.objects.get(code="professor").pk), "designation_caps-0-max_duties": "2",
         "_save": "Save",
     }
     r = office.post(add, form)
@@ -180,8 +220,9 @@ def run():
             for c, dept in enumerate(depts):
                 sched.append([day, datetime(2000, 1, 1, h1).time(), datetime(2000, 1, 1, h2).time(), f"{dept[:2].upper()}{d}{h1}{c}",
                               f"{dept} & Data <101>", dept, f"R{c + 1}", 25, f"person{c:02d}@uni.edu"])
-    r = office.post(reverse("schedule_import", args=[period.pk]), files={"file": xlsx(sched, "s.xlsx")})
-    check("schedule import (30 rooms)", RoomAllocation.objects.filter(session__slot__period=period).count() == 30, r.content.decode()[:300])
+    batch, preview = wizard(office, "schedule", sched, "s.xlsx", period=period)
+    check("schedule import (30 rooms)", RoomAllocation.objects.filter(session__slot__period=period).count() == 30, str(batch and batch.result))
+    check("schedule rooms linked to the room list", not RoomAllocation.objects.filter(session__slot__period=period, room_ref__isnull=True).exists())
     seats = sum(RoomAllocation.objects.filter(session__slot__period=period).values_list("invigilators_required", flat=True))
     check("invigilators required computed (2 per room)", seats == 60, str(seats))
 
@@ -258,7 +299,7 @@ def run():
     totals = Counter(d.faculty_id for d in duties)
     check("nobody twice in one slot", max(per_slot.values()) == 1)
     check("daily limit respected", max(per_day.values()) <= 2)
-    caps_ok = all(totals[f.pk] <= period.cap_for(f.designation) for f in Faculty.objects.all())
+    caps_ok = all(totals[f.pk] <= period.cap_for(f.category_id) for f in Faculty.objects.all())
     check("caps respected (professor 2, others 6)", caps_ok)
     check("exempt faculty not assigned", exempt.pk not in totals)
     unavailable = [d for d in duties if d.faculty.employee_id in ("E003", "E000") and d.room_allocation.session.slot.date == start]
@@ -286,7 +327,7 @@ def run():
     wb = load_workbook(io.BytesIO(office.get(reverse("roster_xlsx", args=[period.pk])).content))
     check("roster Excel has one row per room", wb.active.max_row == 31, str(wb.active.max_row))
     wb = load_workbook(io.BytesIO(office.get(reverse("load_xlsx", args=[period.pk])).content))
-    check("faculty load Excel", wb.active["A1"].value == "Employee ID")
+    check("faculty load Excel", wb.active["A1"].value == "Faculty ID")
 
     # Draft is hidden from faculty.
     check("draft roster hidden from faculty", "Audit Finals" not in f1.text(reverse("my_duties")).split("<main>")[1])

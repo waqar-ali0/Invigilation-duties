@@ -72,7 +72,8 @@ HODs never decide their own requests; those appear on the exam office's **Reques
    (max 8 duties per person, max 2 per day, 1 invigilator per 30 students with a minimum
    of 2, avoid back-to-back slots, avoid a teacher's own course). Change them on the same
    page; add *designation caps* (e.g. Professor = 4) if some ranks should do fewer.
-2. **Import departments**, then **Import faculty** (once; re-import to update).
+2. **Import departments**, then **Faculty → Import from Excel** and **Rooms → Import rooms**
+   (once; re-import any time to update — see *Imports* below).
 3. Open the period → **Import schedule**.
 4. **Open availability** on the dashboard with a deadline. Faculty are emailed and
    request their unavailable dates; HODs approve or reject them. The dashboard warns
@@ -111,21 +112,46 @@ Every allocation run, edit, publish, swap, replacement and attendance mark is wr
 the audit log (**Audit log** page, with filters), which nobody can edit or delete. Once a period is published,
 its dates, rules, time slots, courses and rooms become read-only in the admin panel too.
 
-## Spreadsheet formats
+## Faculty, rooms and imports
 
-Upload `.xlsx` (first sheet) or `.csv`. The first row holds the column headings
-(case and spacing don't matter). A file with any error saves nothing and lists every
-problem by row number.
+**Faculty** (sidebar → *Faculty*) lists everyone with filters (department, designation, status,
+missing or invalid phone numbers), a profile page with the full duty history across periods,
+and add/edit forms. Every faculty member has a **Faculty ID**: given by you, or generated as
+`FAC-0001`, `FAC-0002`… It never changes afterwards. Email is optional (needed only for an
+account); phone numbers are stored as typed and in international form (`+923001234567`,
+default country code 92, set `PHONE_COUNTRY_CODE` in `.env` to change it).
 
-**Departments:** `name`
+**Designations** (*Faculty → Designations*) are editable: add, rename, or take out of use.
+Lecturer, Assistant/Associate Professor, Professor, Lab Engineer, Visiting Faculty and Backup
+Faculty exist from the start. No designation carries a fixed number of duties.
 
-**Faculty:** `employee_id`, `name`, `email`, `department`, `designation`
-— designation is one of Professor, Associate Professor, Assistant Professor, Lecturer, Visiting.
-Existing faculty are matched by `employee_id` and updated.
+**Rooms** (sidebar → *Rooms*) is the permanent room list: building, campus, capacity, and
+optionally a fixed number of invigilators (otherwise worked out from the student numbers).
+Rooms are never deleted — take them out of use instead. Schedules link to it by room name.
 
-**Exam schedule** (one row per room):
+**Imports** (sidebar → *Imports*) bring in faculty, rooms and courses from **your own
+spreadsheet** (`.xlsx`, `.xls` or `.csv`, first sheet, headings in the first row):
+
+1. Upload. 2. Choose which column holds what — guesses are made from headings such as
+"Teacher Name", "Rank", "Cell No." — plus options (department for rows without one, add
+designations/departments that are new). 3. Check every row before anything is saved:
+*new*, *update* (with each change shown old → new), *no change*, *needs your decision*,
+*needs correction* (with the reason). Untick rows to leave them out; download the check as
+Excel; choose *update existing and add new* or *only add new*. Then confirm.
+
+Faculty are matched by **faculty ID, phone number or email — never by name alone**: someone
+with only the same name is shown for you to decide (skip, add as new, or update that person).
+Blank cells never erase saved values, and duty history is never touched. Every import is
+kept in the import history (file, who, when, result). Templates can be downloaded.
+
+**Departments:** `name` (simple upload on *Exam periods → Import departments*).
+
+**Exam schedule** — through the same wizard from the period's *Import schedule*; every row
+must be correct before it can replace the schedule. Columns:
 `date`, `start_time`, `end_time`, `course_code`, `course_name`, `department`, `room`,
-`student_count`, and optionally `course_teacher_emails` (separate several with `;`).
+`student_count`, and optionally `building` and course teachers (emails or faculty IDs,
+separate several with `;`). Rooms are matched to the room list (missing rooms can be added
+automatically); a room's fixed invigilator number, if set, is used for its exams.
 Dates as `YYYY-MM-DD` or `DD/MM/YYYY` (or Excel date cells); times as `HH:MM`.
 Re-importing **replaces** the period's whole schedule, so always upload the complete,
 corrected file. It is only allowed while the period has no duties (use *Clear draft* first).

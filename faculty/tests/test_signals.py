@@ -1,8 +1,6 @@
 import pytest
 
 from accounts.models import Role
-from exams.importers.faculty import import_faculty
-from exams.tests.helpers import FACULTY_HEADER, make_xlsx
 from faculty.models import Department
 
 pytestmark = pytest.mark.django_db
@@ -50,10 +48,19 @@ def test_faculty_email_change_updates_user(make_member):
     assert f.user.email == "new@uni.edu"
 
 
-def test_import_update_syncs_user_email(dept, make_member):
+def test_import_update_syncs_user_email(dept, make_member, admin_user):
+    from imports.faculty import FacultyImport
+    from imports.models import ImportBatch
+
     f = make_member(employee_id="E1", email="old@uni.edu")
-    res = import_faculty(make_xlsx([FACULTY_HEADER, ["E1", f.name, "fresh@uni.edu", dept.name, "Lecturer"]]))
-    assert res.ok
+    kind = FacultyImport()
+    headers = ["Faculty ID", "Name", "Email", "Department", "Designation"]
+    batch = ImportBatch.objects.create(
+        kind="faculty", filename="x.xlsx", headers=headers,
+        rows=[[2, ["E1", f.name, "fresh@uni.edu", dept.name, "Lecturer"]]], mapping=kind.guess_mapping(headers),
+    )
+    result = kind.commit(batch, {2}, {}, "update", admin_user)
+    assert result["updated"] == 1
     f.user.refresh_from_db()
     assert f.user.email == "fresh@uni.edu"
 

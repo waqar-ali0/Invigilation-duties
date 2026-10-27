@@ -425,3 +425,19 @@ body.auth main { max-width: none; padding: 0; min-height: 100vh; display: grid; 
   .page-head .actions { width: 100%; }
 }
 
+
+.text-danger { color: var(--danger); }
+
+/* Filter bars, pagers and two-column forms */
+.filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 0; }
+.filters input[type=search], .filters input[type=text] { flex: 1 1 220px; max-width: 320px; }
+.filters select { flex: 0 1 200px; width: auto; }
+.pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0 20px; }
+.form-grid .actions, .form-grid .alert { grid-column: 1 / -1; }
+.form-grid textarea { min-height: 80px; }
+th a { color: inherit; text-decoration: none; }
+th a:hover { text-decoration: underline; }
+@media (max-width: 640px) {
+  .filters input[type=search], .filters input[type=text], .filters select { max-width: none; flex-basis: 100%; }
+}

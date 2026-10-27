@@ -8,11 +8,11 @@ from collections import defaultdict
 
 from duties.models import Duty
 
-from .models import RoomAllocation, required_invigilators
+from .models import RoomAllocation, required_invigilators, room_key
 
 
 def hall_key(room):
-    return (room.session.slot_id, " ".join(room.room.split()).lower())
+    return (room.session.slot_id, room_key(room.room))
 
 
 def hall_rooms(room):
@@ -39,17 +39,19 @@ def staff_shared_halls(period):
     """Size every shared hall of a draft `period` from its total students, put the whole team on the
     hall's first row and move any duties from the other rows onto it. Rooms used by one course
     keep their own number (unless an earlier sharing left it at 0). Returns the number of shared halls."""
-    rooms = RoomAllocation.objects.filter(session__slot__period=period).select_related("session")
+    rooms = RoomAllocation.objects.filter(session__slot__period=period).select_related("session", "room_ref")
     settings = period.settings
     changed, shared = [], 0
     for lead, *others in halls_by_key(rooms).values():
+        inventory = next((r.room_ref for r in [lead, *others] if r.room_ref_id), None)
         if others:
             shared += 1
-            targets = [(lead, required_invigilators(sum(r.student_count for r in [lead, *others]), settings))]
+            total = sum(r.student_count for r in [lead, *others])
+            targets = [(lead, required_invigilators(total, settings, inventory))]
             targets += [(r, 0) for r in others]
             Duty.objects.filter(room_allocation__in=others).update(room_allocation=lead)
         elif lead.invigilators_required == 0:
-            targets = [(lead, required_invigilators(lead.student_count, settings))]
+            targets = [(lead, required_invigilators(lead.student_count, settings, inventory))]
         else:
             targets = []
         for room, needed in targets:

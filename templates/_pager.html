@@ -1,0 +1,7 @@
+{% load ui %}{% if page.paginator.num_pages > 1 %}
+<nav class="pager" aria-label="Pages">
+  {% if page.has_previous %}<a class="button secondary sm" href="?{{ querystring }}{% if querystring %}&{% endif %}page={{ page.previous_page_number }}">{% icon "arrow-left" %}Previous</a>{% endif %}
+  <span class="muted">Page {{ page.number }} of {{ page.paginator.num_pages }} · {{ page.paginator.count }} in total</span>
+  {% if page.has_next %}<a class="button secondary sm" href="?{{ querystring }}{% if querystring %}&{% endif %}page={{ page.next_page_number }}">Next{% icon "arrow-right" %}</a>{% endif %}
+</nav>
+{% endif %}

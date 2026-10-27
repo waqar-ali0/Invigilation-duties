@@ -13,7 +13,7 @@ from allocation.services import (
 from audit.models import AuditLog
 from duties.models import Duty, DutySource, Unavailability, UnavailabilityStatus
 from exams.models import DesignationCap, PeriodLockedError, PeriodStatus, RoomAllocation
-from faculty.models import Designation, Faculty
+from faculty.models import Designation, Faculty, FacultyCategory
 
 pytestmark = pytest.mark.django_db
 
@@ -36,7 +36,7 @@ def test_rerun_replaces_auto_duties(small_period, admin_user):
 
 
 def test_rerun_keeps_manual_duties_and_counts_them(small_period, admin_user, make_faculty):
-    DesignationCap.objects.create(period=small_period, designation=Designation.PROFESSOR, max_duties=1)
+    DesignationCap.objects.create(period=small_period, category=FacultyCategory.get(Designation.PROFESSOR), max_duties=1)
     prof = make_faculty("Prof", designation=Designation.PROFESSOR)
     Duty.objects.create(faculty=prof, room_allocation=RoomAllocation.objects.first(), source=DutySource.MANUAL)
     for seed in range(1, 6):

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Import result — Invigilation Duties{% endblock %}
+{% block content %}
+<h1>{{ kind.title }} import</h1>
+<p class="subtitle">
+  {% if batch.period %}<a href="{% url 'period_dashboard' batch.period.pk %}">← {{ batch.period.name }}</a>{% else %}<a href="{% url 'import_home' %}">← Imports</a>{% endif %}
+  · {{ batch.filename }} · uploaded {{ batch.created_at|date:"d M Y H:i" }} by {{ batch.uploaded_by.email|default:"—" }}
+</p>
+
+{% if batch.status == "cancelled" %}
+<div class="alert info">This import was cancelled{% if batch.finished_at %} on {{ batch.finished_at|date:"d M Y H:i" }}{% endif %}. Nothing was saved.</div>
+{% else %}
+<div class="grid">
+  <div class="card"><h2>{% icon "plus" %}Added</h2><div class="stat">{{ batch.result.created }}</div></div>
+  <div class="card"><h2>{% icon "repeat" %}Updated</h2><div class="stat">{{ batch.result.updated }}</div><div class="muted">{{ batch.result.unchanged }} already up to date</div></div>
+  <div class="card"><h2>{% icon "alert" %}Not imported</h2><div class="stat">{{ batch.result.invalid }} · {{ batch.result.skipped }}</div><div class="muted">needing correction · skipped by you</div></div>
+</div>
+<div class="card">
+  <p>Finished {{ batch.finished_at|date:"d M Y H:i" }}{% if batch.mode == "new_only" %} — new records only; existing ones were left unchanged{% endif %}.</p>
+  {% if batch.result.created_ids %}<p class="muted">Faculty IDs given: {{ batch.result.created_ids|join:", " }}</p>{% endif %}
+  <div class="actions">
+    <a class="button secondary" href="{% url 'import_report' batch.pk %}">{% icon "download" %}Row-by-row report</a>
+    {% if batch.period %}<a class="button" href="{% url 'period_dashboard' batch.period.pk %}">Back to {{ batch.period.name }}</a>{% else %}<a class="button" href="{% url 'import_home' %}">Back to imports</a>{% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

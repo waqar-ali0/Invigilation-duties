@@ -27,10 +27,10 @@ def build_engine_input(period, exclude_auto=False, include_pending=False, exclud
     e.g. one being handed over). Approved unavailability blocks people; with
     `include_pending`, pending requests do too (for "what if all are approved")."""
     s = period.settings
-    caps = {c.designation: c.max_duties for c in period.designation_caps.all()}
+    caps = {c.category_id: c.max_duties for c in period.designation_caps.all()}
     people = [
-        Person(f.id, f.department_id, caps.get(f.designation, s.max_duties_per_faculty))
-        for f in Faculty.objects.eligible().only("id", "department_id", "designation")
+        Person(f.id, f.department_id, caps.get(f.category_id, s.max_duties_per_faculty))
+        for f in Faculty.objects.eligible().only("id", "department_id", "category_id")
     ]
 
     slots = []

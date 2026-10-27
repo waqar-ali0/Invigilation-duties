@@ -5,11 +5,11 @@
     {% for f in rows %}
     <tr>
       <td>{{ f.name }}{% if f.is_exempt %} <span class="badge">exempt</span>{% endif %}</td>
-      <td>{{ f.email }}</td>
+      <td>{% if f.email %}{{ f.email }}{% else %}<span class="badge warn">no email</span> <a href="{% url 'faculty_edit' f.pk %}">add one</a>{% endif %}</td>
       <td>{{ f.department }}</td>
       {% if show_invited %}<td>{{ f.invited_at|date:"d M Y H:i" }}</td>{% endif %}
       {% if action %}
-      <td><form method="post" action="{% url 'invite_one' f.pk %}">{% csrf_token %}<button class="secondary sm" type="submit">{% icon "mail" %}{{ action }}</button></form></td>
+      <td>{% if f.email %}<form method="post" action="{% url 'invite_one' f.pk %}">{% csrf_token %}<button class="secondary sm" type="submit">{% icon "mail" %}{{ action }}</button></form>{% endif %}</td>
       {% endif %}
     </tr>
     {% endfor %}

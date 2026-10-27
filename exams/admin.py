@@ -3,7 +3,9 @@ from django.core.exceptions import PermissionDenied
 from django.forms.models import BaseInlineFormSet
 
 from .models import (
+    Building,
     DesignationCap,
+    Room,
     ExamPeriod,
     ExamSession,
     PeriodSettings,
@@ -126,6 +128,25 @@ class ExamSessionAdmin(LockedAfterPublishMixin, admin.ModelAdmin):
 
     def period_of(self, obj):
         return obj.slot.period if obj.slot_id else None
+
+
+@admin.register(Building)
+class BuildingAdmin(admin.ModelAdmin):
+    list_display = ("name", "campus", "is_active")
+    search_fields = ("name", "campus")
+
+    def has_delete_permission(self, request, obj=None):
+        return False  # deactivate instead, so past exams keep their building
+
+
+@admin.register(Room)
+class RoomAdmin(admin.ModelAdmin):
+    list_display = ("name", "building", "capacity", "invigilators_needed", "is_active")
+    list_filter = ("building", "is_active")
+    search_fields = ("name", "building__name")
+
+    def has_delete_permission(self, request, obj=None):
+        return False  # deactivate instead, so past exams keep their room
 
 
 @admin.register(RoomAllocation)

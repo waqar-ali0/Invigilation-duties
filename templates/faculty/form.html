@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}{{ title }} — Invigilation Duties{% endblock %}
+{% block content %}
+<h1>{{ title }}</h1>
+<p class="subtitle">{% if faculty %}<a href="{% url 'faculty_detail' faculty.pk %}">← {{ faculty.name }}</a>{% else %}<a href="{% url 'faculty_list' %}">← Faculty</a> · Leave the faculty ID empty to get the next FAC number.{% endif %}</p>
+<div class="card">
+  <form method="post" class="form-grid">
+    {% csrf_token %}
+    {% include "_form_fields.html" %}
+    <div class="actions"><button type="submit">{% icon "check" %}Save</button></div>
+  </form>
+</div>
+{% endblock %}

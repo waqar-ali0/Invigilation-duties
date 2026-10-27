@@ -13,6 +13,7 @@ from duties.models import Duty
 from exams.models import ExamPeriod, PeriodStatus
 from exams.tests.helpers import FACULTY_HEADER, SCHEDULE_HEADER, make_xlsx
 from faculty.models import Faculty
+from imports.tests.helpers import run_import
 
 pytestmark = pytest.mark.django_db
 
@@ -27,7 +28,7 @@ def assert_roster_invariants(period):
     for d in duties:
         f = d.faculty
         assert f.is_active and not f.is_exempt
-        assert totals[f.id] <= period.cap_for(f.designation)
+        assert totals[f.id] <= period.cap_for(f.category_id)
 
 
 def test_import_allocate_publish_export(admin_client):
@@ -37,7 +38,7 @@ def test_import_allocate_publish_export(admin_client):
         dept = "Physics" if i % 2 else "Maths"
         designation = "Professor" if i < 2 else "Lecturer"
         faculty_rows.append([f"E{i}", f"Teacher {i:02d}", f"t{i}@uni.edu", dept, designation])
-    admin_client.post(reverse("faculty_import"), {"file": make_xlsx(faculty_rows)})
+    assert run_import(admin_client, "faculty", faculty_rows).result["created"] == 12
     Faculty.objects.filter(employee_id="E11").update(is_exempt=True)
 
     period = ExamPeriod.objects.create(name="Winter Finals", start_date=date(2026, 12, 1), end_date=date(2026, 12, 5))
@@ -46,8 +47,7 @@ def test_import_allocate_publish_export(admin_client):
         for start, end in (("09:00", "12:00"), ("14:00", "17:00")):
             schedule.append([f"2026-12-0{day}", start, end, f"PH{day}{start[:2]}", "Physics", "Physics", "R1", 45, "t1@uni.edu"])
             schedule.append([f"2026-12-0{day}", start, end, f"MA{day}{start[:2]}", "Maths", "Maths", "R2", 30, ""])
-    r = admin_client.post(reverse("schedule_import", args=[period.pk]), {"file": make_xlsx(schedule)})
-    assert "Imported 12 new" in r.content.decode()
+    assert run_import(admin_client, "schedule", schedule, period=period).result["created"] == 12
 
     admin_client.post(reverse("run_allocation", args=[period.pk]))
     assert Duty.objects.filter(period=period).count() == 24
@@ -72,9 +72,9 @@ def test_demo_data_allocates_quickly_and_correctly(admin_user):
     assert elapsed < 10, f"allocation took {elapsed:.1f}s"
     assert len(result.assignments) > 1000
     assert_roster_invariants(period)
-    capped = period.designation_caps.values_list("designation", flat=True)
+    capped = period.designation_caps.values_list("category_id", flat=True)
     totals = Counter(Duty.objects.active().filter(period=period).values_list("faculty_id", flat=True))
-    counts = [totals[pk] for pk in Faculty.objects.eligible().exclude(designation__in=capped).values_list("pk", flat=True)]
+    counts = [totals[pk] for pk in Faculty.objects.eligible().exclude(category_id__in=capped).values_list("pk", flat=True)]
     assert max(counts) - min(counts) <= 1, f"default-cap loads range {min(counts)}..{max(counts)}"
     with pytest.raises(CommandError, match="Demo Finals already exists."):
         call_command("load_demo")

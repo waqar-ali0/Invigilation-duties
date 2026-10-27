@@ -7,8 +7,8 @@
 
 <div class="card">
   <div class="actions">
-    <form method="post" action="{% url 'invite_all' %}">{% csrf_token %}<button type="submit">{% icon "mail" %}Send activation emails ({{ groups.none|length }})</button></form>
-    <span class="muted">Sends to everyone in “No account”. Emails go out within a few minutes.</span>
+    <form method="post" action="{% url 'invite_all' %}">{% csrf_token %}<button type="submit">{% icon "mail" %}Send activation emails ({{ can_invite }})</button></form>
+    <span class="muted">Sends to everyone in “No account” who has an email address. Emails go out within a few minutes.</span>
   </div>
 </div>
 

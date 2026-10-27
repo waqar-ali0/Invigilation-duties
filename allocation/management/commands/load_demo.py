@@ -4,14 +4,23 @@ from datetime import date, time, timedelta
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
-from exams.models import DesignationCap, ExamPeriod, ExamSession, RoomAllocation, TimeSlot, required_invigilators
-from faculty.models import Department, Designation, Faculty
+from exams.models import (
+    Building,
+    DesignationCap,
+    ExamPeriod,
+    ExamSession,
+    Room,
+    RoomAllocation,
+    TimeSlot,
+    required_invigilators,
+)
+from faculty.models import Department, Designation, Faculty, FacultyCategory
 
 PERIOD_NAME = "Demo Finals"
 FIRST = ["Ayesha", "Bilal", "Fatima", "Hamza", "Hina", "Imran", "Kamran", "Maryam", "Nadia", "Omar",
          "Rabia", "Saad", "Sana", "Tariq", "Usman", "Zainab", "Ali", "Farah", "Junaid", "Mehwish"]
 LAST = ["Ahmed", "Khan", "Malik", "Hussain", "Qureshi", "Shah", "Butt", "Siddiqui", "Raza", "Iqbal"]
-# Designation mix for each department's ten faculty members.
+# Category mix for each department's ten faculty members.
 MIX = [Designation.PROFESSOR] + [Designation.ASSOCIATE_PROFESSOR] * 2 + [Designation.ASSISTANT_PROFESSOR] * 3 + [
     Designation.LECTURER
 ] * 3 + [Designation.VISITING]
@@ -65,7 +74,9 @@ class Command(BaseCommand):
                         name=f"{rng.choice(FIRST)} {rng.choice(LAST)} {n:03d}",
                         email=f"demo{n:03d}@uni.edu",
                         department=dept,
-                        designation=designation,
+                        category=FacultyCategory.get(designation),
+                        phone=f"0300{n:07d}",
+                        phone_e164=f"+92300{n:07d}",
                         is_exempt=n in exempt,
                     )
                 )
@@ -73,7 +84,9 @@ class Command(BaseCommand):
             faculty_by_dept[dept.id] = Faculty.objects.bulk_create(people)
 
         period = ExamPeriod.objects.create(name=name, start_date=start, end_date=start + timedelta(days=9))
-        DesignationCap.objects.create(period=period, designation=Designation.PROFESSOR, max_duties=4)
+        DesignationCap.objects.create(period=period, category=FacultyCategory.get(Designation.PROFESSOR), max_duties=4)
+        building, _ = Building.objects.get_or_create(name="Demo Block", defaults={"campus": "Main campus"})
+        inventory = {}
 
         rooms = []
         for day in range(10):
@@ -90,10 +103,16 @@ class Command(BaseCommand):
                     session.course_teachers.add(rng.choice(faculty_by_dept[dept.id]))
                     for r in range(2):
                         students = rng.randint(20, 90)
+                        label = f"R{c * 2 + r + 1:02d}"
+                        if label not in inventory:
+                            inventory[label], _ = Room.objects.get_or_create(
+                                building=building, name=label, defaults={"capacity": 90}
+                            )
                         rooms.append(
                             RoomAllocation(
                                 session=session,
-                                room=f"R{c * 2 + r + 1:02d}",
+                                room=label,
+                                room_ref=inventory[label],
                                 student_count=students,
                                 invigilators_required=required_invigilators(students, period.settings),
                             )

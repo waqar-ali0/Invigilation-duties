@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     "notifications",
     "portal",
     "ops",
+    "imports",
 ]
 
 MIDDLEWARE = [
@@ -105,6 +106,8 @@ if RUNNING_TESTS:
 
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = os.environ.get("TIME_ZONE", "Asia/Karachi")
+# Country calling code added to national phone numbers (0300-1234567 -> +923001234567).
+PHONE_COUNTRY_CODE = os.environ.get("PHONE_COUNTRY_CODE", "92")
 USE_I18N = True
 USE_TZ = True
 

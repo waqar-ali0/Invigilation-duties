@@ -15,7 +15,6 @@ from exams.importers.reader import read_rows
 from exams.importers.schedule import import_schedule
 from exams.models import ExamPeriod, PeriodLockedError, PeriodStatus, RoomAllocation, TimeSlot
 from exams.tests.helpers import FACULTY_HEADER, SCHEDULE_HEADER, make_xlsx
-from exams.importers.faculty import import_faculty
 
 pytestmark = pytest.mark.django_db
 
@@ -158,7 +157,7 @@ def test_unreadable_file_raises_value_error(name, content):
 
 
 def test_unreadable_file_view_shows_message(admin_client):
-    r = admin_client.post(reverse("faculty_import"), {"file": SimpleUploadedFile("bad.xlsx", b"junk")})
+    r = admin_client.post(reverse("import_start", args=["faculty"]), {"file": SimpleUploadedFile("bad.xlsx", b"junk")})
     assert r.status_code == 200 and "Could not read the file" in r.content.decode()
 
 
@@ -172,7 +171,3 @@ def test_schedule_rejects_over_long_values(period, dept):
         "Row 2: room is longer than 50 characters",
     ]
 
-
-def test_faculty_rejects_over_long_values(dept):
-    res = import_faculty(make_xlsx([FACULTY_HEADER, ["E" * 51, "Ali", "a@uni.edu", "Computer Science", "Lecturer"]]))
-    assert res.errors == ["Row 2: employee_id is longer than 50 characters"]

@@ -5,7 +5,6 @@ from openpyxl import Workbook
 from openpyxl.styles import Font
 
 from allocation.engine import fairness_stats
-from faculty.models import Designation
 
 from .queries import faculty_load, roster_rows
 
@@ -145,11 +144,10 @@ def operations_xlsx(period):
 
 
 def load_xlsx(period):
-    wb, ws = _sheet("Faculty Load", ["Employee ID", "Name", "Department", "Designation", "Duties"])
+    wb, ws = _sheet("Faculty Load", ["Faculty ID", "Name", "Department", "Category", "Duties"])
     load = faculty_load(period)
-    labels = dict(Designation.choices)
     for f, n in load:
-        _append(ws, [f.employee_id, f.name, f.department.name, labels.get(f.designation, f.designation), n])
+        _append(ws, [f.employee_id, f.name, f.department.name, f.category.name, n])
     stats = fairness_stats(n for f, n in load if f.is_active and not f.is_exempt)
     ws.append([])
     for label, value in (("Min", stats.min), ("Max", stats.max), ("Average", stats.avg)):

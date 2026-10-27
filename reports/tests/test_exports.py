@@ -61,7 +61,7 @@ def test_roster_xlsx_has_header_and_one_row_per_room(allocated_period):
 
 def test_load_xlsx_includes_zero_duty_faculty_and_summary_rows(allocated_period):
     rows = sheet_rows(load_xlsx(allocated_period))
-    assert rows[0] == ["Employee ID", "Name", "Department", "Designation", "Duties"]
+    assert rows[0] == ["Faculty ID", "Name", "Department", "Category", "Duties"]
     body = rows[1:9]
     assert len(body) == 8 and sum(r[4] for r in body) == 6 and min(r[4] for r in body) == 0
     assert [r[0] for r in rows[-3:]] == ["Min", "Max", "Average"]

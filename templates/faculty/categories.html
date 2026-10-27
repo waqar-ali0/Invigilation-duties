@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Designations — Invigilation Duties{% endblock %}
+{% block content %}
+<h1>Designations</h1>
+<p class="subtitle"><a href="{% url 'faculty_list' %}">← Faculty</a> · Faculty categories. Duty numbers are never tied to a designation; they are set for each exam period.</p>
+
+<div class="card table-wrap">
+  <table class="stack">
+    <thead><tr><th>Designation</th><th>Faculty</th><th>Kind</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      {% for c in rows %}
+      <tr>
+        <td data-label="Designation"><strong>{{ c.name }}</strong></td>
+        <td data-label="Faculty">{{ c.members }}</td>
+        <td data-label="Kind">{% if c.is_visiting %}<span class="badge info">visiting</span>{% endif %}{% if c.is_backup %}<span class="badge info">backup pool</span>{% endif %}</td>
+        <td data-label="Status">{% if c.is_active %}<span class="badge ok">in use</span>{% else %}<span class="badge">not in use</span>{% endif %}</td>
+        <td><a class="button secondary sm" href="?edit={{ c.pk }}">Edit</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h2>{% if editing %}Edit “{{ editing.name }}”{% else %}Add a designation{% endif %}</h2>
+  <form method="post">
+    {% csrf_token %}
+    {% include "_form_fields.html" %}
+    <div class="actions">
+      <button type="submit">{% icon "check" %}Save</button>
+      {% if editing %}<a class="button secondary" href="{% url 'faculty_categories' %}">Cancel</a>{% endif %}
+    </div>
+  </form>
+  <p class="muted">A designation that is not in use stays on existing faculty records but can't be chosen for new ones.</p>
+</div>
+{% endblock %}

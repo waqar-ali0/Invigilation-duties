@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Faculty — Invigilation Duties{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Faculty</h1>
+    <p class="subtitle">{{ total }} faculty member(s){% if needs_fixing %} · <a href="?contact=invalid">{{ needs_fixing }} with a missing or invalid phone number</a>{% endif %}</p>
+  </div>
+  <div class="actions">
+    <a class="button secondary" href="{% url 'faculty_categories' %}">{% icon "settings" %}Designations</a>
+    <a class="button secondary" href="{% url 'import_start' 'faculty' %}">{% icon "upload" %}Import from Excel</a>
+    <a class="button" href="{% url 'faculty_create' %}">{% icon "plus" %}Add faculty</a>
+  </div>
+</div>
+
+<div class="card">
+  <form method="get" class="filters">
+    <input type="search" name="q" value="{{ q }}" placeholder="Name, faculty ID, email or phone" aria-label="Search faculty">
+    <select name="department" aria-label="Department"><option value="">All departments</option>{% for d in departments %}<option value="{{ d.pk }}"{% if filters.department == d.pk|stringformat:"s" %} selected{% endif %}>{{ d.name }}</option>{% endfor %}</select>
+    <select name="category" aria-label="Designation"><option value="">All designations</option>{% for c in categories %}<option value="{{ c.pk }}"{% if filters.category == c.pk|stringformat:"s" %} selected{% endif %}>{{ c.name }}</option>{% endfor %}</select>
+    <select name="status" aria-label="Status"><option value="">Any status</option>{% for k, label in status_filters %}<option value="{{ k }}"{% if filters.status == k %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+    <select name="contact" aria-label="Contact details"><option value="">Any contact details</option>{% for k, label in contact_filters %}<option value="{{ k }}"{% if filters.contact == k %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+    <button type="submit">{% icon "search" %}Filter</button>
+    {% if querystring %}<a class="button secondary" href="{% url 'faculty_list' %}">Clear</a>{% endif %}
+  </form>
+</div>
+
+<div class="card table-wrap">
+  {% if page.object_list %}
+  <table class="stack">
+    <thead><tr>
+      <th><a href="?{{ querystring }}&sort={% if sort == 'id' %}-id{% else %}id{% endif %}">Faculty ID</a></th>
+      <th><a href="?{{ querystring }}&sort={% if sort == 'name' %}-name{% else %}name{% endif %}">Name</a></th>
+      <th><a href="?{{ querystring }}&sort={% if sort == 'category' %}-category{% else %}category{% endif %}">Designation</a></th>
+      <th><a href="?{{ querystring }}&sort={% if sort == 'department' %}-department{% else %}department{% endif %}">Department</a></th>
+      <th>Phone</th><th>Status</th>
+    </tr></thead>
+    <tbody>
+      {% for f in page.object_list %}
+      <tr>
+        <td data-label="Faculty ID"><code>{{ f.employee_id }}</code></td>
+        <td data-label="Name"><a href="{% url 'faculty_detail' f.pk %}">{{ f.name }}</a>{% if f.email %}<div class="muted">{{ f.email }}</div>{% endif %}</td>
+        <td data-label="Designation">{{ f.category }}</td>
+        <td data-label="Department">{{ f.department }}</td>
+        <td data-label="Phone">{% if f.phone_e164 %}{{ f.phone_e164 }}{% elif f.phone %}<span class="badge danger">invalid</span> {{ f.phone }}{% else %}<span class="badge warn">missing</span>{% endif %}</td>
+        <td data-label="Status">{% if not f.is_active %}<span class="badge">inactive</span>{% elif f.is_exempt %}<span class="badge info">exempt</span>{% else %}<span class="badge ok">active</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% include "_pager.html" %}
+  {% else %}
+  <div class="empty">{% icon "users" %}<strong>No faculty found</strong>{% if querystring %}Try other filters.{% else %}Import your faculty spreadsheet to begin.{% endif %}</div>
+  {% endif %}
+</div>
+{% endblock %}

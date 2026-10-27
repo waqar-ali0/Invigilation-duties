@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Rooms — Invigilation Duties{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Rooms</h1>
+    <p class="subtitle">{{ total }} room(s) in use. The room list is kept from one exam period to the next; schedules link to it by room name.</p>
+  </div>
+  <div class="actions">
+    <a class="button secondary" href="{% url 'import_start' 'rooms' %}">{% icon "upload" %}Import rooms</a>
+    <a class="button" href="{% url 'room_create' %}">{% icon "plus" %}Add room</a>
+  </div>
+</div>
+
+<div class="card">
+  <form method="get" class="filters">
+    <input type="search" name="q" value="{{ q }}" placeholder="Room, building or campus" aria-label="Search rooms">
+    <select name="building" aria-label="Building"><option value="">All buildings</option>{% for b in buildings %}<option value="{{ b.pk }}"{% if building == b.pk|stringformat:"s" %} selected{% endif %}>{{ b }} ({{ b.n }})</option>{% endfor %}</select>
+    <select name="show" aria-label="Show"><option value="active"{% if show == "active" %} selected{% endif %}>In use</option><option value="inactive"{% if show == "inactive" %} selected{% endif %}>Not in use</option><option value="all"{% if show == "all" %} selected{% endif %}>All</option></select>
+    <button type="submit">{% icon "search" %}Filter</button>
+  </form>
+</div>
+
+<div class="card table-wrap">
+  {% if page.object_list %}
+  <table class="stack">
+    <thead><tr><th>Room</th><th>Building</th><th>Capacity</th><th>Invigilators</th><th>Special requirements</th><th>Exams held</th><th></th></tr></thead>
+    <tbody>
+      {% for r in page.object_list %}
+      <tr>
+        <td data-label="Room"><strong>{{ r.name }}</strong>{% if not r.is_active %} <span class="badge">not in use</span>{% endif %}</td>
+        <td data-label="Building">{{ r.building }}</td>
+        <td data-label="Capacity">{{ r.capacity|default:"—" }}</td>
+        <td data-label="Invigilators">{% if r.invigilators_needed %}{{ r.invigilators_needed }}{% else %}<span class="muted">from student numbers</span>{% endif %}</td>
+        <td data-label="Special requirements">{{ r.special_requirements|default:"—" }}</td>
+        <td data-label="Exams held">{{ r.exams }}</td>
+        <td><a class="button secondary sm" href="{% url 'room_edit' r.pk %}">Edit</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% include "_pager.html" %}
+  {% else %}
+  <div class="empty">{% icon "building" %}<strong>No rooms</strong>Import your room list or add rooms one by one.</div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>Add a building</h2>
+  <form method="post" class="filters">
+    {% csrf_token %}
+    {{ building_form.name.errors }}
+    <input type="text" name="b-name" placeholder="Building name" aria-label="Building name" maxlength="100" required>
+    <input type="text" name="b-campus" placeholder="Campus (optional)" aria-label="Campus" maxlength="100">
+    <button type="submit" class="secondary">{% icon "plus" %}Add building</button>
+  </form>
+</div>
+{% endblock %}

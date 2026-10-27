@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
 
-from faculty.models import Department, Designation, Faculty
+from faculty.models import Department, Faculty, FacultyCategory
 
 
 class PeriodStatus(models.TextChoices):
@@ -85,9 +85,12 @@ class ExamPeriod(models.Model):
             raise PeriodLockedError("Only a published roster can be changed this way.")
         return period
 
-    def cap_for(self, designation):
-        """The maximum number of duties for a faculty member with this designation in this period."""
-        override = self.designation_caps.filter(designation=designation).first()
+    def cap_for(self, category):
+        """The maximum number of duties for a faculty member in this category (object, id or code) in this period."""
+        if isinstance(category, str) and not category.isdigit():
+            override = self.designation_caps.filter(category__code=category).first()
+        else:
+            override = self.designation_caps.filter(category_id=getattr(category, "pk", category)).first()
         return override.max_duties if override else self.settings.max_duties_per_faculty
 
 
@@ -118,14 +121,15 @@ class PeriodSettings(models.Model):
 
 class DesignationCap(models.Model):
     period = models.ForeignKey(ExamPeriod, on_delete=models.CASCADE, related_name="designation_caps")
-    designation = models.CharField(max_length=30, choices=Designation.choices)
+    category = models.ForeignKey(FacultyCategory, on_delete=models.PROTECT, related_name="+")
     max_duties = models.PositiveIntegerField()
 
     class Meta:
-        constraints = [models.UniqueConstraint(fields=["period", "designation"], name="unique_designation_cap")]
+        verbose_name = "category cap"
+        constraints = [models.UniqueConstraint(fields=["period", "category"], name="unique_category_cap")]
 
     def __str__(self):
-        return f"{self.get_designation_display()}: {self.max_duties}"
+        return f"{self.category}: {self.max_duties}"
 
 
 class TimeSlot(models.Model):
@@ -181,9 +185,56 @@ class ExamSession(models.Model):
         return f"{self.course_code} — {self.slot}"
 
 
+def room_key(name):
+    """Room names compare ignoring case and extra spaces."""
+    return " ".join(str(name).split()).lower()
+
+
+class Building(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    campus = models.CharField(max_length=100, blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["campus", "name"]
+
+    def __str__(self):
+        return f"{self.name} ({self.campus})" if self.campus else self.name
+
+
+class Room(models.Model):
+    """A room in the permanent inventory, reused by every exam period."""
+
+    building = models.ForeignKey(Building, on_delete=models.PROTECT, related_name="rooms")
+    name = models.CharField("room", max_length=50)
+    capacity = models.PositiveIntegerField(null=True, blank=True, help_text="Seats for students.")
+    invigilators_needed = models.PositiveIntegerField(
+        null=True, blank=True, validators=[MinValueValidator(1)],
+        help_text="Leave empty to work it out from the number of students (period rules).",
+    )
+    special_requirements = models.CharField(max_length=200, blank=True)
+    is_active = models.BooleanField(default=True, help_text="Inactive rooms are kept for history but not offered for new exams.")
+
+    class Meta:
+        ordering = ["building__name", "name"]
+        constraints = [models.UniqueConstraint(fields=["building", "name"], name="unique_room_in_building")]
+
+    def __str__(self):
+        return f"{self.name} — {self.building.name}"
+
+    def clean(self):
+        if self.building_id and self.name:
+            clash = Room.objects.filter(building_id=self.building_id).exclude(pk=self.pk)
+            if any(room_key(r.name) == room_key(self.name) for r in clash):
+                raise ValidationError({"name": "This building already has a room with this name."})
+
+
 class RoomAllocation(models.Model):
     session = models.ForeignKey(ExamSession, on_delete=models.CASCADE, related_name="rooms")
     room = models.CharField(max_length=50)
+    room_ref = models.ForeignKey(
+        Room, null=True, blank=True, on_delete=models.SET_NULL, related_name="allocations", verbose_name="inventory room"
+    )
     student_count = models.PositiveIntegerField()
     invigilators_required = models.PositiveIntegerField()
 
@@ -195,6 +246,9 @@ class RoomAllocation(models.Model):
         return f"{self.room} — {self.session}"
 
 
-def required_invigilators(student_count, settings):
-    """Invigilators a room needs: one per `students_per_invigilator`, never fewer than the minimum."""
+def required_invigilators(student_count, settings, room=None):
+    """Invigilators a room needs: the inventory room's fixed number when it has one, otherwise one
+    per `students_per_invigilator`, never fewer than the minimum."""
+    if room is not None and room.invigilators_needed:
+        return room.invigilators_needed
     return max(settings.min_invigilators_per_room, math.ceil(student_count / settings.students_per_invigilator))

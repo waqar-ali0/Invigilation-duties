@@ -340,7 +340,10 @@ def search(request):
     faculty, rooms = [], []
     if len(q) >= MIN_QUERY:
         faculty = list(
-            Faculty.objects.filter(Q(name__icontains=q) | Q(employee_id__icontains=q) | Q(email__icontains=q))
+            Faculty.objects.filter(
+                Q(name__icontains=q) | Q(employee_id__icontains=q) | Q(email__icontains=q) | Q(phone__icontains=q)
+                | Q(phone_e164__icontains=q.replace(" ", "").replace("-", ""))
+            )
             .select_related("department", "user")
             .order_by("name")[:50]
         )

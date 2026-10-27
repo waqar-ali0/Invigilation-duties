@@ -13,7 +13,7 @@ def dept(db):
 @pytest.fixture
 def make_faculty(db, dept):
     """Factory: make_faculty(name="A", **overrides) -> Faculty."""
-    from faculty.models import Designation, Faculty
+    from faculty.models import Designation, Faculty, FacultyCategory
 
     counter = {"n": 0}
 
@@ -25,8 +25,9 @@ def make_faculty(db, dept):
             "name": name or f"Faculty {n:04d}",
             "email": f"f{n}@uni.edu",
             "department": dept,
-            "designation": Designation.LECTURER,
         }
+        # designation="professor" (a category code) is accepted as a shortcut for category=...
+        defaults["category"] = FacultyCategory.get(extra.pop("designation", Designation.LECTURER))
         defaults.update(extra)
         return Faculty.objects.create(**defaults)
 

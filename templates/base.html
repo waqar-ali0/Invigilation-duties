@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <title>{% block title %}Invigilation Duties{% endblock %}</title>
-  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=21">{# bump v= whenever app.css changes, so browsers fetch the new file #}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=22">{# bump v= whenever app.css changes, so browsers fetch the new file #}
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%232f5bea'/%3E%3Cpath d='M7 12.5l3 3 7-7' stroke='white' stroke-width='2.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 </head>
 <body class="{% block body_class %}{% if user.is_authenticated %}app{% endif %}{% endblock %}">
@@ -23,6 +23,10 @@
       <div class="nav-section">Overview</div>
       <a href="{% url 'period_list' %}" class="{% if n == 'period_list' or n == 'period_dashboard' or n == 'room_detail' or n == 'publish' or n == 'schedule_import' or n == 'replace_duty' or n == 'operations_report' or n == 'faculty_import' or n == 'department_import' %}active{% endif %}">{% icon "calendar" %}<span>Exam periods</span></a>
       <a href="{% url 'search' %}" class="{% if n == 'search' %}active{% endif %}">{% icon "search" %}<span>Search</span></a>
+      <div class="nav-section">Data</div>
+      <a href="{% url 'faculty_list' %}" class="{% if n == 'faculty_list' or n == 'faculty_detail' or n == 'faculty_edit' or n == 'faculty_create' or n == 'faculty_categories' %}active{% endif %}">{% icon "users" %}<span>Faculty</span></a>
+      <a href="{% url 'room_list' %}" class="{% if n == 'room_list' or n == 'room_create' or n == 'room_edit' %}active{% endif %}">{% icon "building" %}<span>Rooms</span></a>
+      <a href="{% url 'import_home' %}" class="{% if n == 'import_home' or n == 'import_start' or n == 'import_start_period' or n == 'import_columns' or n == 'import_batch' %}active{% endif %}">{% icon "upload" %}<span>Imports</span></a>
       <div class="nav-section">Operations</div>
       <a href="{% url 'admin_requests' %}" class="{% if n == 'admin_requests' %}active{% endif %}">{% icon "inbox" %}<span>Requests</span></a>
       <a href="{% url 'admin_swaps' %}" class="{% if n == 'admin_swaps' %}active{% endif %}">{% icon "repeat" %}<span>Swaps</span></a>
@@ -65,7 +69,7 @@
       {% if user.is_superuser or user.role == "admin" %}
       <form class="top-search" method="get" action="{% url 'search' %}" role="search">
         {% icon "search" %}
-        <input type="search" name="q" placeholder="Search people, employee ID, course or room…" aria-label="Search" value="{% if n == 'search' %}{{ request.GET.q }}{% endif %}">
+        <input type="search" name="q" placeholder="Search people, faculty ID, phone, course or room…" aria-label="Search" value="{% if n == 'search' %}{{ request.GET.q }}{% endif %}">
       </form>
       {% else %}
       <span class="top-title">{% if user.role == "exam_staff" %}Exam day attendance{% else %}Welcome back{% endif %}</span>

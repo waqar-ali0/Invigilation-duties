@@ -1,6 +1,7 @@
 import pytest
 from django.urls import reverse
 
+from imports.tests.helpers import run_import
 from exams.tests.helpers import FACULTY_HEADER, SCHEDULE_HEADER, make_xlsx
 from faculty.models import Department, Faculty
 
@@ -53,22 +54,33 @@ def test_dashboard_shows_rooms_and_fairness(admin_client, small_period, admin_us
 
 
 def test_schedule_import_shows_row_errors(admin_client, period, dept):
-    bad = make_xlsx([SCHEDULE_HEADER, ["2026-12-02", "09:00", "12:00", "CS1", "X", "Nope", "A1", 30, ""]])
-    r = admin_client.post(reverse("schedule_import", args=[period.pk]), {"file": bad})
-    assert r.status_code == 200 and "Row 2: unknown department &#x27;Nope&#x27;" in r.content.decode()
+    from imports.models import ImportBatch
+
+    rows = [SCHEDULE_HEADER, ["2026-12-02", "09:00", "12:00", "CS1", "X", "Nope", "A1", 30, ""]]
+    batch = run_import(admin_client, "schedule", rows, period=period)
+    assert batch.status != "done" and not period.slots.exists()
+    page = admin_client.get(reverse("import_batch", args=[batch.pk])).content.decode()
+    assert "unknown department &#x27;Nope&#x27;" in page and "Every row must be correct" in page
+    assert ImportBatch.objects.count() == 1
 
 
 def test_schedule_import_success(admin_client, period, dept):
-    good = make_xlsx([SCHEDULE_HEADER, ["2026-12-02", "09:00", "12:00", "CS1", "X", dept.name, "A1", 30, ""]])
-    r = admin_client.post(reverse("schedule_import", args=[period.pk]), {"file": good})
-    assert "Imported 1 new" in r.content.decode()
+    rows = [SCHEDULE_HEADER, ["2026-12-02", "09:00", "12:00", "CS1", "X", dept.name, "A1", 30, ""]]
+    assert run_import(admin_client, "schedule", rows, period=period).result["created"] == 1
+    assert period.slots.count() == 1
+
+
+def test_old_import_links_open_the_wizard(admin_client, period):
+    assert admin_client.get(reverse("faculty_import"))["Location"] == reverse("import_start", args=["faculty"])
+    assert admin_client.get(reverse("schedule_import", args=[period.pk]))["Location"] == reverse(
+        "import_start_period", args=["schedule", period.pk]
+    )
 
 
 def test_faculty_and_department_import(admin_client):
     admin_client.post(reverse("department_import"), {"file": make_xlsx([["Name"], ["Physics"]])})
     assert Department.objects.filter(name="Physics").exists()
-    f = make_xlsx([FACULTY_HEADER, ["E1", "Ali", "ali@uni.edu", "Physics", "Lecturer"]])
-    admin_client.post(reverse("faculty_import"), {"file": f})
+    run_import(admin_client, "faculty", [FACULTY_HEADER, ["E1", "Ali", "ali@uni.edu", "Physics", "Lecturer"]])
     assert Faculty.objects.filter(email="ali@uni.edu").exists()
 
 

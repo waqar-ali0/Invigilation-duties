@@ -10,7 +10,7 @@ from exams.models import (
     TimeSlot,
     required_invigilators,
 )
-from faculty.models import Designation
+from faculty.models import Designation, FacultyCategory
 
 pytestmark = pytest.mark.django_db
 
@@ -33,7 +33,7 @@ def test_new_period_gets_default_settings(period):
 
 
 def test_cap_for_uses_designation_override(period):
-    DesignationCap.objects.create(period=period, designation=Designation.PROFESSOR, max_duties=4)
+    DesignationCap.objects.create(period=period, category=FacultyCategory.get(Designation.PROFESSOR), max_duties=4)
     assert period.cap_for(Designation.PROFESSOR) == 4
     assert period.cap_for(Designation.LECTURER) == 8
 

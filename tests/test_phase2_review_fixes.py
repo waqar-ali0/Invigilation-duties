@@ -6,7 +6,6 @@ from django.urls import reverse
 
 from accounts.invitations import InvitationError, invite
 from accounts.models import Role, User
-from exams.importers.faculty import import_faculty
 from exams.tests.helpers import FACULTY_HEADER, make_xlsx
 from faculty.models import Faculty
 from notifications import outbox
@@ -98,11 +97,6 @@ def test_stale_sending_rows_are_retried(mailoutbox):
 # --- 4. Email clashes are errors, not crashes -------------------------------------------
 
 
-def test_import_reports_email_used_by_another_account(dept, make_member):
-    make_member(employee_id="E1", email="one@uni.edu")
-    User.objects.create_user("taken@uni.edu", "x", role=Role.ADMIN)
-    res = import_faculty(make_xlsx([FACULTY_HEADER, ["E1", "One", "taken@uni.edu", dept.name, "Lecturer"]]))
-    assert res.errors == ["Row 2: email 'taken@uni.edu' is already used by another account"]
 
 
 def test_admin_form_rejects_email_used_by_another_account(rf, admin_user, make_member):

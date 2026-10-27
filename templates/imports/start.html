@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Import {{ kind.title|lower }} — Invigilation Duties{% endblock %}
+{% block content %}
+<h1>Import {{ kind.title|lower }}{% if period %} — {{ period.name }}{% endif %}</h1>
+<p class="subtitle">
+  {% if period %}<a href="{% url 'period_dashboard' period.pk %}">← {{ period.name }}</a>{% else %}<a href="{% url 'import_home' %}">← Imports</a>{% endif %}
+  · Step 1 of 3: upload
+</p>
+{% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+
+<div class="card">
+  <p>{{ kind.description }}</p>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="field">
+      <label for="id_file">Spreadsheet (.xlsx, .xls or .csv; first sheet, headings in the first row)</label>
+      <input id="id_file" type="file" name="file" accept=".xlsx,.xlsm,.xls,.csv" required>
+    </div>
+    <div class="actions">
+      <button type="submit">{% icon "upload" %}Upload and check</button>
+      <a class="button secondary" href="{% url 'import_template' kind.key %}">{% icon "download" %}Download a template</a>
+    </div>
+  </form>
+  <p class="muted">Nothing is saved yet: next you choose which column holds what, then you see every row before confirming.</p>
+</div>
+
+<div class="card">
+  <h2>Fields</h2>
+  <table>
+    <thead><tr><th>Field</th><th>Needed</th><th>Column names recognised</th></tr></thead>
+    <tbody>
+      {% for f in kind.fields %}
+      <tr><td>{{ f.label }}</td><td>{% if f.required %}<span class="badge warn">required</span>{% else %}optional{% endif %}</td><td class="muted">{{ f.synonyms|join:", " }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if history %}
+<div class="card table-wrap">
+  <h2>Earlier imports</h2>
+  <table class="stack">
+    <thead><tr><th>When</th><th>File</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      {% for b in history %}
+      <tr><td data-label="When">{{ b.created_at|date:"d M Y H:i" }}</td><td data-label="File">{{ b.filename }}</td><td data-label="Status">{{ b.get_status_display }}</td><td><a class="button secondary sm" href="{% url 'import_batch' b.pk %}">Open{% icon "arrow-right" %}</a></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

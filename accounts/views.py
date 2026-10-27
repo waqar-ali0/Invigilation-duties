@@ -26,7 +26,8 @@ def accounts_page(request):
             groups["active"].append(f)
         else:
             groups["invited"].append(f)
-    return render(request, "accounts/accounts_page.html", {"groups": groups})
+    can_invite = sum(1 for f in groups["none"] if f.email and f.invited_at is None)
+    return render(request, "accounts/accounts_page.html", {"groups": groups, "can_invite": can_invite})
 
 
 @admin_only

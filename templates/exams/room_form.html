@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}{{ title }} — Invigilation Duties{% endblock %}
+{% block content %}
+<h1>{{ title }}</h1>
+<p class="subtitle"><a href="{% url 'room_list' %}">← Rooms</a></p>
+<div class="card">
+  <form method="post" class="form-grid">
+    {% csrf_token %}
+    {% include "_form_fields.html" %}
+    <div class="actions"><button type="submit">{% icon "check" %}Save</button></div>
+  </form>
+  <p class="muted">Rooms are never deleted, so past exams keep their room. Untick “In use” to stop offering a room.</p>
+</div>
+{% endblock %}

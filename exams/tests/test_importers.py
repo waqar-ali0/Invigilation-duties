@@ -4,7 +4,6 @@ import pytest
 
 from duties.models import Duty, DutySource
 from exams.importers.departments import import_departments
-from exams.importers.faculty import import_faculty
 from exams.importers.reader import read_rows
 from exams.importers.schedule import import_schedule
 from exams.models import ExamSession, PeriodLockedError, PeriodStatus, RoomAllocation, TimeSlot
@@ -64,51 +63,12 @@ def test_departments_import_skips_existing_and_flags_duplicates(dept):
 # --- faculty ----------------------------------------------------------------
 
 
-def test_faculty_import_matches_designation_label_and_updates_existing(dept, make_faculty):
-    make_faculty("Old Name", employee_id="E1", email="e1@uni.edu")
-    res = import_faculty(
-        make_xlsx(
-            [
-                FACULTY_HEADER,
-                ["E1", "New Name", "e1@uni.edu", "computer science", "Associate Professor"],
-                ["E2", "Sara", "sara@uni.edu", "Computer Science", "lecturer"],
-            ]
-        )
-    )
-    assert res.ok and (res.created, res.updated) == (1, 1)
-    e1 = Faculty.objects.get(employee_id="E1")
-    assert e1.name == "New Name" and e1.designation == Designation.ASSOCIATE_PROFESSOR
 
 
-def test_faculty_import_reports_all_errors_and_saves_nothing(dept):
-    res = import_faculty(
-        make_xlsx(
-            [
-                FACULTY_HEADER,
-                ["E1", "A", "a@uni.edu", "Computer Science", "Lecturer"],
-                ["E2", "B", "a@uni.edu", "Computer Science", "Lecturer"],
-                ["E3", "C", "not-an-email", "Physics", "Dean"],
-            ]
-        )
-    )
-    assert res.errors == [
-        "Row 3: duplicate email 'a@uni.edu'",
-        "Row 4: invalid email 'not-an-email'",
-        "Row 4: unknown department 'Physics'",
-        "Row 4: unknown designation 'Dean'",
-    ]
-    assert not Faculty.objects.exists()
 
 
-def test_faculty_import_rejects_email_of_another_employee(dept, make_faculty):
-    make_faculty(employee_id="E1", email="taken@uni.edu")
-    res = import_faculty(make_xlsx([FACULTY_HEADER, ["E9", "X", "taken@uni.edu", "Computer Science", "Lecturer"]]))
-    assert res.errors == ["Row 2: email 'taken@uni.edu' belongs to another employee"]
 
 
-def test_missing_columns_reported(dept):
-    res = import_faculty(make_xlsx([["Name", "Email"], ["A", "a@uni.edu"]]))
-    assert res.errors == ["Missing column(s): department, designation, employee_id"]
 
 
 # --- schedule ---------------------------------------------------------------
@@ -169,7 +129,7 @@ def test_schedule_row_level_errors(period, dept):
     assert res.errors == [
         "Row 2: end time must be after start time",
         "Row 3: student count must be a whole number of 0 or more",
-        "Row 4: unknown teacher email 'ghost@uni.edu'",
+        "Row 4: unknown teacher 'ghost@uni.edu'",
         "Row 6: duplicate of row 5",
         "Row 7: slot at 2026-12-02 09:00 already exists with a different end time",
         "Row 8: course_code is required",

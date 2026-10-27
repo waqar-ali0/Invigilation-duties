@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Check the import — Invigilation Duties{% endblock %}
+{% block content %}
+<h1>Check before importing</h1>
+<p class="subtitle">{{ kind.title }}{% if batch.period %} — {{ batch.period.name }}{% endif %} · {{ batch.filename }} · Step 3 of 3 · <a href="{% url 'import_columns' batch.pk %}">Change columns or options</a></p>
+
+<div class="grid">
+  <div class="card"><h2>{% icon "file" %}Rows in file</h2><div class="stat">{{ total }}</div><div class="muted">{% for label, header in mapped %}{{ label }} ← “{{ header }}”{% if not forloop.last %} · {% endif %}{% endfor %}</div></div>
+  <div class="card"><h2>{% icon "check" %}Ready</h2><div class="stat">{{ counts.new }} new · {{ counts.update }} update</div><div class="muted">{{ counts.same }} already up to date</div></div>
+  <div class="card"><h2>{% icon "alert" %}Need attention</h2><div class="stat">{{ counts.invalid }} to correct · {{ counts.review }} to decide</div><div class="muted"><a href="{% url 'import_report' batch.pk %}">Download the check as Excel</a></div></div>
+</div>
+
+{% for n in plan.notes %}<div class="alert info">{{ n }}</div>{% endfor %}
+{% if plan.blocking %}<div class="alert error">{{ plan.blocking }}</div>{% endif %}
+
+<form method="post">
+  {% csrf_token %}
+  {% for status, label, rows in groups %}
+  <div class="card table-wrap">
+    <h2>{{ label }} ({{ rows|length }})</h2>
+    {% if status == Status.REVIEW %}<p class="muted">These rows look like someone already in the system, but not reliably. Choose for each: skip it, add as a new person, or update the person it matches.</p>{% endif %}
+    {% if status == Status.INVALID %}<p class="muted">These rows are not imported. Correct them in your file and upload it again (the Excel check lists every problem).</p>{% endif %}
+    <table class="stack">
+      <thead><tr>{% if kind.selectable and status != Status.INVALID %}<th><input type="checkbox" checked data-toggle-all="{{ status }}" aria-label="Select all"></th>{% endif %}<th>Row</th><th>Record</th><th>Details</th>{% if status == Status.REVIEW %}<th>Decision</th>{% endif %}</tr></thead>
+      <tbody>
+        {% for p in rows %}
+        <tr>
+          {% if kind.selectable and status != Status.INVALID %}<td><input type="checkbox" name="row" value="{{ p.number }}" checked data-group="{{ status }}" aria-label="Import row {{ p.number }}"></td>{% endif %}
+          <td data-label="Row">{{ p.number }}</td>
+          <td data-label="Record"><strong>{{ p.label }}</strong>{% if p.match %}<div class="muted">{{ p.match }}</div>{% endif %}</td>
+          <td data-label="Details">
+            {% for e in p.errors %}<div class="text-danger">✕ {{ e }}</div>{% endfor %}
+            {% for w in p.warnings %}<div class="muted">• {{ w }}</div>{% endfor %}
+            {% for label, old, new in p.changes %}<div>{{ label }}: <span class="muted">{{ old }}</span> → <strong>{{ new }}</strong></div>{% endfor %}
+          </td>
+          {% if status == Status.REVIEW %}
+          <td data-label="Decision">
+            <select name="decision_{{ p.number }}" aria-label="Decision for row {{ p.number }}">
+              <option value="skip">Skip this row</option>
+              <option value="new">Add as a new person</option>
+              {% for c in p.candidates %}<option value="{{ c.pk }}">Update {{ c.name }} ({{ c.employee_id }}{% if c.phone %}, {{ c.phone }}{% endif %})</option>{% endfor %}
+            </select>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endfor %}
+
+  {% if not plan.blocking %}
+  <div class="card">
+    <h2>Confirm</h2>
+    {% if kind.modes|length > 1 %}
+    {% for value, label in kind.modes %}
+    <div class="field"><label><input type="radio" name="mode" value="{{ value }}"{% if forloop.first %} checked{% endif %}> {{ label }}</label></div>
+    {% endfor %}
+    {% else %}<input type="hidden" name="mode" value="{{ kind.modes.0.0 }}">{% endif %}
+    <p class="muted">Blank cells never erase what is already saved. Duty history is never touched.</p>
+    <div class="actions">
+      <button type="submit" data-confirm="Import the selected rows now?">{% icon "check" %}Import</button>
+    </div>
+  </div>
+  {% endif %}
+</form>
+<form method="post" action="{% url 'import_cancel' batch.pk %}">{% csrf_token %}<button class="link" type="submit">Cancel this import</button></form>
+<script>
+  document.querySelectorAll("[data-toggle-all]").forEach(function (all) {
+    all.addEventListener("change", function () {
+      document.querySelectorAll('[data-group="' + all.dataset.toggleAll + '"]').forEach(function (box) { box.checked = all.checked; });
+    });
+  });
+  document.querySelectorAll("[data-confirm]").forEach(function (btn) {
+    btn.addEventListener("click", function (e) { if (!window.confirm(btn.dataset.confirm)) e.preventDefault(); });
+  });
+</script>
+{% endblock %}

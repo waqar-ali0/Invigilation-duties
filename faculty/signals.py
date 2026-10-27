@@ -50,7 +50,7 @@ def sync_user(sender, instance, **kwargs):
     if user is None or not is_faculty_account(user):
         return
     changed = []
-    if user.email != instance.email.lower() and not email_taken(instance.email, user.pk):
+    if instance.email and user.email != instance.email.lower() and not email_taken(instance.email, user.pk):
         user.email = instance.email.lower()
         changed.append("email")
     if user.is_active != instance.is_active:

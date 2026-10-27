@@ -4,7 +4,6 @@ from datetime import datetime
 from django.contrib import messages
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -13,15 +12,10 @@ from accounts.permissions import role_required
 from allocation.engine import fairness_stats
 from allocation.services import capacity_report, pending_capacity, roster_conflicts, unfilled_rooms
 from duties.models import Duty, SwapRequest, SwapStatus
-from faculty.models import Designation
 from reports.queries import faculty_load
 
 from .availability import AvailabilityError, close_availability, open_availability
 from .importers.departments import import_departments
-from .importers.faculty import COLUMNS as FACULTY_COLUMNS
-from .importers.faculty import import_faculty
-from .importers.schedule import COLUMNS as SCHEDULE_COLUMNS
-from .importers.schedule import import_schedule
 from .halls import hall_key, halls_by_key
 from .models import ExamPeriod, ExamSession, PeriodLockedError, RoomAllocation
 
@@ -62,15 +56,17 @@ def _slots_with_rooms(period):
 
 
 def _fairness(period, load):
-    """Stats for eligible faculty at the default cap, and (label, cap, stats) per capped designation."""
-    caps = {c.designation: c.max_duties for c in period.designation_caps.all()}
+    """Stats for eligible faculty at the default cap, and (label, cap, stats) per capped category."""
+    caps = {c.category: c.max_duties for c in period.designation_caps.select_related("category")}
+    capped_ids = {c.pk for c in caps}
     groups = defaultdict(list)
     for f, n in load:
         if f.is_active and not f.is_exempt:
-            groups[f.designation if f.designation in caps else None].append(n)
-    labels = dict(Designation.choices)
+            groups[f.category_id if f.category_id in capped_ids else None].append(n)
     capped = [
-        (labels[d], caps[d], fairness_stats(groups[d])) for d in sorted(caps, key=list(labels).index) if groups[d]
+        (c.name, cap, fairness_stats(groups[c.pk]))
+        for c, cap in sorted(caps.items(), key=lambda item: (item[0].order, item[0].name))
+        if groups[c.pk]
     ]
     return fairness_stats(groups[None]), capped
 
@@ -151,32 +147,17 @@ def _import_view(request, title, columns, run, notes="", back_url=None):
 @admin_only
 def schedule_import(request, pk):
     period = get_object_or_404(ExamPeriod, pk=pk)
-    back = reverse("period_dashboard", args=[pk])
     try:
-        return _import_view(
-            request,
-            f"Import exam schedule — {period.name}",
-            SCHEDULE_COLUMNS + ["course_teacher_emails"],
-            lambda f: import_schedule(period, f),
-            notes="One row per room. course_teacher_emails is optional (separate several with ;). "
-            "Dates as YYYY-MM-DD or DD/MM/YYYY, times as HH:MM.",
-            back_url=back,
-        )
+        period.ensure_editable()
     except PeriodLockedError as e:
         messages.error(request, str(e))
-        return redirect(back)
+        return redirect("period_dashboard", pk=pk)
+    return redirect("import_start_period", kind="schedule", period_pk=pk)
 
 
 @admin_only
 def faculty_import(request):
-    return _import_view(
-        request,
-        "Import faculty",
-        FACULTY_COLUMNS,
-        import_faculty,
-        notes="Existing faculty are matched by employee_id and updated. Designation is one of: "
-        "Professor, Associate Professor, Assistant Professor, Lecturer, Visiting.",
-    )
+    return redirect("import_start", kind="faculty")
 
 
 @admin_only

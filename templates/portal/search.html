@@ -3,7 +3,7 @@
 {% block title %}Search — Invigilation Duties{% endblock %}
 {% block content %}
 <h1>Search</h1>
-<p class="subtitle">Find a faculty member by name, employee ID or email, or an exam by course code, course name or room.</p>
+<p class="subtitle">Find a faculty member by name, faculty ID, phone or email, or an exam by course code, course name or room.</p>
 
 <div class="card">
   <form method="get" class="actions">
@@ -19,17 +19,17 @@
   <h2>Faculty ({{ faculty|length }})</h2>
   {% if faculty %}
   <table class="stack">
-    <thead><tr><th>Name</th><th>Employee ID</th><th>Department</th><th>Duties</th></tr></thead>
+    <thead><tr><th>Name</th><th>Faculty ID</th><th>Department</th><th>Duties</th></tr></thead>
     <tbody>
       {% for f in faculty %}
       <tr>
         <td data-label="Name">
-          <a href="{% url 'admin:faculty_faculty_change' f.pk %}">{{ f.name }}</a>
+          <a href="{% url 'faculty_detail' f.pk %}">{{ f.name }}</a>
           <div class="muted">{{ f.email }}</div>
           {% if f.is_exempt %}<span class="badge">exempt</span>{% endif %}{% if not f.is_active %}<span class="badge">inactive</span>{% endif %}
         </td>
-        <td data-label="Employee ID"><code>{{ f.employee_id }}</code></td>
-        <td data-label="Department">{{ f.department }}<div class="muted">{{ f.get_designation_display }}</div></td>
+        <td data-label="Faculty ID"><code>{{ f.employee_id }}</code></td>
+        <td data-label="Department">{{ f.department }}<div class="muted">{{ f.category }}</div></td>
         <td data-label="Duties">
           {% for d in f.found_duties %}
             {% with s=d.room_allocation.session %}

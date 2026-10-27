@@ -13,7 +13,7 @@ from duties.models import Duty, DutySource, Unavailability
 from exams.importers.schedule import import_schedule
 from exams.models import DesignationCap, TimeSlot
 from exams.tests.helpers import make_csv
-from faculty.models import Designation
+from faculty.models import Designation, FacultyCategory
 from reports.excel import load_xlsx, roster_xlsx
 from reports.queries import faculty_load
 
@@ -78,7 +78,7 @@ def test_faculty_load_includes_exempt_faculty_with_duties(room, make_faculty):
 
 
 def test_dashboard_fairness_split_by_cap(admin_client, period, make_room, make_faculty):
-    DesignationCap.objects.create(period=period, designation=Designation.PROFESSOR, max_duties=1)
+    DesignationCap.objects.create(period=period, category=FacultyCategory.get(Designation.PROFESSOR), max_duties=1)
     rooms = [make_room(day=d, course=f"C{d}") for d in range(1, 4)]
     for name in ("L1", "L2"):
         f = make_faculty(name)

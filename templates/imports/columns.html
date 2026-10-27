@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Choose columns — Invigilation Duties{% endblock %}
+{% block content %}
+<h1>Which column holds what?</h1>
+<p class="subtitle">{{ kind.title }}{% if batch.period %} — {{ batch.period.name }}{% endif %} · {{ batch.filename }} · {{ batch.rows|length }} row(s) · Step 2 of 3</p>
+
+<form method="post">
+  {% csrf_token %}
+  <div class="card table-wrap">
+    <p class="muted">Guesses are filled in from your column headings. Fields you don't have can stay on “Not in this file”.</p>
+    <table class="stack">
+      <thead><tr><th>Field</th><th>Column in your file</th></tr></thead>
+      <tbody>
+        {% for f, chosen in fields %}
+        <tr>
+          <td data-label="Field"><strong>{{ f.label }}</strong>{% if f.required %} <span class="badge warn">required</span>{% endif %}</td>
+          <td data-label="Column">
+            <select name="map_{{ f.key }}" aria-label="Column for {{ f.label }}">
+              <option value="">— Not in this file —</option>
+              {% for i, header, samples in columns %}
+              <option value="{{ i }}"{% if chosen == i %} selected{% endif %}>{{ header }}{% if samples %} (e.g. {{ samples|join:", "|truncatechars:60 }}){% endif %}</option>
+              {% endfor %}
+            </select>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if options %}
+  <div class="card">
+    <h2>Options</h2>
+    {% for o, value in options %}
+    <div class="field">
+      {% if o.kind == "bool" %}
+        <label><input type="checkbox" name="opt_{{ o.name }}"{% if value %} checked{% endif %}> {{ o.label }}</label>
+      {% elif o.kind == "select" %}
+        <label for="opt_{{ o.name }}">{{ o.label }}</label>
+        <select id="opt_{{ o.name }}" name="opt_{{ o.name }}">
+          {% for v, label in o.choices %}<option value="{{ v }}"{% if v == value|stringformat:"s" %} selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      {% else %}
+        <label for="opt_{{ o.name }}">{{ o.label }}</label>
+        <input id="opt_{{ o.name }}" type="text" name="opt_{{ o.name }}" value="{{ value|default:'' }}" maxlength="150">
+      {% endif %}
+      {% if o.help %}<div class="muted">{{ o.help }}</div>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="actions">
+    <button type="submit">Check the rows{% icon "arrow-right" %}</button>
+  </div>
+</form>
+<form method="post" action="{% url 'import_cancel' batch.pk %}" style="margin-top:12px">{% csrf_token %}<button class="link" type="submit">Cancel this import</button></form>
+{% endblock %}
