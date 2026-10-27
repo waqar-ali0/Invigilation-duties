@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}WhatsApp reminders — Invigilation Duties{% endblock %}
+{% block content %}
+<h1>WhatsApp reminders</h1>
+<p class="subtitle">The exam office can remind you on WhatsApp the day before each invigilation duty (date, time, room). Your number is used only for examination duties.</p>
+<div class="card">
+  <p class="muted">Number on record: {{ faculty.phone_e164|default:"none" }} · Status: {{ contact.get_consent_display }}{% if contact.consent_at %} since {{ contact.consent_at|date:"d M Y" }}{% endif %}{% if contact.verified %} · <span class="badge ok">verified</span>{% endif %}</p>
+  <form method="post">
+    {% csrf_token %}
+    {% include "_form_fields.html" %}
+    <div class="actions"><button type="submit">{% icon "check" %}Save</button></div>
+  </form>
+  <p class="muted">You can withdraw at any time here. Email reminders continue unless you choose WhatsApp only.</p>
+</div>
+{% endblock %}

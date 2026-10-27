@@ -38,6 +38,7 @@
       <div class="nav-section">People &amp; system</div>
       <a href="{% url 'accounts_page' %}" class="{% if n == 'accounts_page' %}active{% endif %}">{% icon "users" %}<span>Accounts</span></a>
       <a href="{% url 'email_list' %}" class="{% if n == 'email_list' %}active{% endif %}">{% icon "mail" %}<span>Emails</span></a>
+      <a href="{% url 'whatsapp_settings' %}" class="{% if n == 'whatsapp_settings' or n == 'whatsapp_log' or n == 'whatsapp_tomorrow' or n == 'whatsapp_centre' or n == 'whatsapp_template' or n == 'whatsapp_contact' %}active{% endif %}">{% icon "send" %}<span>WhatsApp</span></a>
       <a href="{% url 'audit_log' %}" class="{% if n == 'audit_log' %}active{% endif %}">{% icon "shield" %}<span>Audit log</span></a>
       <a href="{% url 'admin:index' %}">{% icon "settings" %}<span>Admin panel</span></a>
       {% elif user.role == "exam_staff" %}
@@ -48,6 +49,7 @@
       <a href="{% url 'my_duties' %}" class="{% if n == 'my_duties' or n == 'ask_colleague' %}active{% endif %}">{% icon "clipboard" %}<span>My duties</span></a>
       <a href="{% url 'my_unavailability' %}" class="{% if n == 'my_unavailability' %}active{% endif %}">{% icon "calendar-x" %}<span>Unavailability</span></a>
       <a href="{% url 'my_preferences' %}" class="{% if n == 'my_preferences' %}active{% endif %}">{% icon "calendar" %}<span>Preferences</span></a>
+      <a href="{% url 'my_whatsapp' %}" class="{% if n == 'my_whatsapp' %}active{% endif %}">{% icon "send" %}<span>WhatsApp</span></a>
       <a href="{% url 'swap_requests' %}" class="{% if n == 'swap_requests' %}active{% endif %}">{% icon "repeat" %}<span>Swaps</span></a>
       {% if user.role == "hod" %}
       <div class="nav-section">My department</div>

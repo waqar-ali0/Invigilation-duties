@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}WhatsApp messages — Invigilation Duties{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>WhatsApp messages</h1>
+    <p class="subtitle"><a href="{% url 'whatsapp_settings' %}">← WhatsApp</a> · <em>Submitted</em> means WhatsApp accepted it; <em>sent</em>, <em>delivered</em> and <em>read</em> appear only when WhatsApp reports them.</p>
+  </div>
+  <a class="button secondary" href="?{{ querystring }}&format=csv">{% icon "download" %}Export CSV</a>
+</div>
+{% if not cfg.configured %}<div class="alert warning"><span>WhatsApp is not set up, so queued messages are waiting and nothing is being sent.</span></div>{% endif %}
+<div class="card">
+  <form method="get" class="filters">
+    <input type="search" name="q" value="{{ f.q }}" placeholder="Name or number" aria-label="Search">
+    <select name="status" aria-label="Status"><option value="">Any status</option>{% for v, l in statuses %}<option value="{{ v }}"{% if f.status == v %} selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+    <select name="kind" aria-label="Kind"><option value="">Any message</option>{% for v, l in kinds %}<option value="{{ v }}"{% if f.kind == v %} selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+    <button type="submit">{% icon "search" %}Filter</button>
+  </form>
+</div>
+<div class="card table-wrap">
+  {% if page.object_list %}
+  <table class="stack">
+    <thead><tr><th>Created</th><th>Message</th><th>To</th><th>Status</th><th>Details</th><th></th></tr></thead>
+    <tbody>
+      {% for m in page.object_list %}
+      <tr>
+        <td data-label="Created">{{ m.created_at|date:"d M H:i" }}</td>
+        <td data-label="Message">{{ m.get_kind_display }}<div class="muted">{{ m.template_name }}</div></td>
+        <td data-label="To">{% if m.faculty %}<a href="{% url 'faculty_detail' m.faculty_id %}">{{ m.faculty.name }}</a><div class="muted">{{ m.to }}</div>{% else %}{{ m.to }}{% endif %}</td>
+        <td data-label="Status"><span class="badge {% if m.status == 'failed' %}danger{% elif m.status == 'delivered' or m.status == 'read' %}ok{% elif m.status == 'cancelled' %}{% else %}info{% endif %}">{{ m.get_status_display }}</span>{% if m.attempts > 1 %} <span class="muted">({{ m.attempts }} tries)</span>{% endif %}</td>
+        <td data-label="Details" class="muted">{% if m.error %}<span class="text-danger">{{ m.error }}</span>{% elif m.read_at %}read {{ m.read_at|date:"d M H:i" }}{% elif m.delivered_at %}delivered {{ m.delivered_at|date:"d M H:i" }}{% elif m.sent_at %}sent {{ m.sent_at|date:"d M H:i" }}{% elif m.submitted_at %}submitted {{ m.submitted_at|date:"d M H:i" }}{% else %}due {{ m.scheduled_for|date:"d M H:i" }}{% endif %}</td>
+        <td>
+          {% if m.status == "failed" %}<form method="post">{% csrf_token %}<input type="hidden" name="id" value="{{ m.pk }}"><input type="hidden" name="action" value="retry"><button class="secondary sm" type="submit">Retry</button></form>
+          {% elif m.status == "queued" %}<form method="post">{% csrf_token %}<input type="hidden" name="id" value="{{ m.pk }}"><input type="hidden" name="action" value="cancel"><button class="secondary sm" type="submit">Cancel</button></form>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% include "_pager.html" %}
+  {% else %}
+  <div class="empty">{% icon "inbox" %}<strong>No messages</strong>Reminders and notices appear here once queued.</div>
+  {% endif %}
+</div>
+{% endblock %}

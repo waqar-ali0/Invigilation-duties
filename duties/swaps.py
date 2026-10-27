@@ -181,6 +181,10 @@ def approve_swap(swap, actor):
         swap.save(update_fields=["status", "decided_by", "decided_at", "new_duty"])
         log(actor, "swap.approve", swap, before={"faculty": duty.faculty_id}, after={"faculty": new_duty.faculty_id, "duty": new_duty.pk})
         record_roster_version(duty.period, actor, f"Swap: {duty.faculty.name} → {new_duty.faculty.name}")
+        from messaging.models import MessageKind
+        from messaging.services import on_handover
+
+        on_handover(duty, new_duty, MessageKind.NEW_DUTY, actor=actor)
         _emails(swap, "swap_approved", [_addr(swap.requested_by)])
         _emails(swap, "swap_approved", [_addr(swap.requested_with)], attachment=duty_ics_attachment(new_duty))
     return new_duty

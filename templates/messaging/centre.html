@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Send a WhatsApp message — Invigilation Duties{% endblock %}
+{% block content %}
+<h1>Send a message</h1>
+<p class="subtitle"><a href="{% url 'whatsapp_settings' %}">← WhatsApp</a> · Choose who, write the message, check the preview, then confirm. Only people who opted in receive it.</p>
+{% if not cfg.configured %}<div class="alert warning"><span>WhatsApp is not set up: messages will wait in the queue until it is. Nothing is reported as sent before WhatsApp confirms it.</span></div>{% endif %}
+
+<form method="get" class="card">
+  <h2>1. Recipients</h2>
+  <div class="field">
+    <label><input type="radio" name="audience" value="people"{% if mode == "people" %} checked{% endif %}> Chosen people</label>
+    <select name="faculty" multiple size="6" aria-label="People">{% for p in people %}<option value="{{ p.pk }}"{% if p.pk in chosen_ids %} selected{% endif %}>{{ p.name }} ({{ p.employee_id }})</option>{% endfor %}</select>
+  </div>
+  <div class="field"><label><input type="radio" name="audience" value="department"{% if mode == "department" %} checked{% endif %}> Everyone active in a department</label>
+    <select name="department" aria-label="Department">{% for d in departments %}<option value="{{ d.pk }}"{% if data.department == d.pk|stringformat:"s" %} selected{% endif %}>{{ d.name }}</option>{% endfor %}</select></div>
+  <div class="field"><label><input type="radio" name="audience" value="period"{% if mode == "period" %} checked{% endif %}> Everyone with duties in a period</label>
+    <select name="period" aria-label="Period">{% for p in periods %}<option value="{{ p.pk }}"{% if data.period == p.pk|stringformat:"s" %} selected{% endif %}>{{ p.name }}</option>{% endfor %}</select></div>
+  <div class="field"><label><input type="radio" name="audience" value="date"{% if mode == "date" %} checked{% endif %}> Everyone with duties on a date</label>
+    <input type="date" name="date" value="{{ data.date }}" aria-label="Date"></div>
+  <h2>2. Message</h2>
+  <div class="field"><textarea name="text" rows="4" maxlength="900" aria-label="Announcement" placeholder="Announcement text (no personal or sensitive details)">{{ text }}</textarea></div>
+  <div class="actions"><button type="submit" class="secondary">{% icon "eye" %}Preview</button></div>
+</form>
+
+{% if preview %}
+<div class="card">
+  <h2>3. Check and confirm</h2>
+  <p><strong>{{ eligible }}</strong> of {{ preview|length }} chosen people can receive it.</p>
+  <div class="muted" style="white-space:pre-line;border-left:3px solid var(--border);padding-left:10px">{{ sample }}</div>
+  <details style="margin-top:10px"><summary class="muted">Recipients</summary>
+    <ul class="muted">{% for f, c, p in preview %}<li>{{ f.name }} — {% if p %}<span class="text-danger">not sent: {{ p }}</span>{% else %}{{ c.address }}{% endif %}</li>{% endfor %}</ul>
+  </details>
+  <form method="post" style="margin-top:12px">
+    {% csrf_token %}
+    <input type="hidden" name="audience" value="people">
+    {% for f, c, p in preview %}<input type="hidden" name="faculty" value="{{ f.pk }}">{% endfor %}
+    <input type="hidden" name="text" value="{{ text }}">
+    <input type="hidden" name="confirm" value="yes">
+    <button type="submit" data-confirm="Send this message to {{ eligible }} people?"{% if not eligible or not text %} disabled{% endif %}>{% icon "send" %}Send to {{ eligible }} people</button>
+  </form>
+</div>
+{% endif %}
+<script>
+  document.querySelectorAll("[data-confirm]").forEach(function (b) { b.addEventListener("click", function (e) { if (!window.confirm(b.dataset.confirm)) e.preventDefault(); }); });
+</script>
+{% endblock %}

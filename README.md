@@ -135,6 +135,34 @@ per person** shows target, assigned, completed, pending, missed, handed over, co
 remaining for everyone, with filters and highlights (below / at target, near / over limit,
 no target set).
 
+## WhatsApp reminders
+
+Through the **official WhatsApp Business Platform (Cloud API)** only — no WhatsApp Web
+automation. Sidebar → **WhatsApp**.
+
+- **Set up** (once, see the page's checklist): Meta business account and number, then put
+  `WHATSAPP_TOKEN`, `WHATSAPP_APP_SECRET` and `WHATSAPP_VERIFY_TOKEN` in the server's `.env`
+  (never in the database or pages), enter the phone number ID, create the message templates
+  in WhatsApp Manager and enter their approved names, point Meta's webhook at
+  `https://<site>/whatsapp/webhook/`. *Test the connection* and *Send test* check it. Until all
+  of this is done the page says **not set up** and nothing is sent or shown as sent.
+- **Consent:** faculty opt in or out on their own WhatsApp page (or the exam office records a
+  consent given on paper, with its source); numbers come from the faculty phone numbers and
+  can be overridden; a number WhatsApp rejects is marked invalid.
+- **Reminders:** every day at the dispatch time (default 18:00, Asia/Karachi) reminders are
+  queued for duties *days ahead* (default tomorrow) and sent by the `whatsapp_tick` job
+  (every 5 minutes; the installer schedules it). Each duty gets one reminder per day —
+  running the job again, or twice at once, never sends a second one. Cancelled or handed-over
+  duties are not reminded. Optional notices when a duty is given, moved, replaced or cancelled.
+- **Tomorrow's duties** shows who will be reminded and why not when someone can't be (no
+  number, not opted in, opted out, email only, invalid number) — the reminder preview.
+- **Send a message:** pick people, a department, everyone with duties in a period or on a
+  date; write the announcement; preview recipients and text; confirm.
+- **Message log:** scheduled → queued → submitted → sent → delivered → read, or failed /
+  cancelled. *Submitted* only means WhatsApp accepted it; the rest comes from WhatsApp's signed
+  status reports. Temporary errors are retried (3 tries); permanent ones are not. Retry by
+  hand, cancel, or export CSV.
+
 ## Dashboard, reports and timetable
 
 - **Dashboard** (the exam office's home page): pick the period in the top bar. Cards for

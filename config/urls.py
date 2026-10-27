@@ -20,4 +20,5 @@ urlpatterns = [
     path("", include("imports.urls")),
     path("", include("faculty.urls")),
     path("", include("workload.urls")),
+    path("", include("messaging.urls")),
 ]

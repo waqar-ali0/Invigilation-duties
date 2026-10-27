@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}WhatsApp — {{ faculty.name }}{% endblock %}
+{% block content %}
+<h1>WhatsApp details for {{ faculty.name }}</h1>
+<p class="subtitle"><a href="{% url 'faculty_detail' faculty.pk %}">← {{ faculty.name }}</a> · Phone on record: {{ faculty.phone_e164|default:faculty.phone|default:"none" }}{% if contact.consent_at %} · consent {{ contact.get_consent_display|lower }} {{ contact.consent_at|date:"d M Y" }} ({{ contact.consent_source }}){% endif %}</p>
+<div class="card">
+  <form method="post" class="form-grid">
+    {% csrf_token %}
+    {% include "_form_fields.html" %}
+    <div class="actions"><button type="submit">{% icon "check" %}Save</button></div>
+  </form>
+  <p class="muted">Only record consent the faculty member actually gave (e.g. a signed form). They can change it themselves on their WhatsApp page.</p>
+  {% if contact.last_error %}<p class="text-danger">Last problem: {{ contact.last_error }}</p>{% endif %}
+</div>
+{% endblock %}

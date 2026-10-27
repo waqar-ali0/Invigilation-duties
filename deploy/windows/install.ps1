@@ -297,6 +297,8 @@ $every5 = New-ScheduledTaskTrigger -Once -At (Get-Date).Date -RepetitionInterval
 Register-Job "Send emails" "send_emails" $every5
 Register-Job "Duty reminders" "send_reminders" (New-ScheduledTaskTrigger -Daily -At "18:00")
 Register-Job "Nightly backup" "backup_db" (New-ScheduledTaskTrigger -Daily -At "02:00")
+$every5b = New-ScheduledTaskTrigger -Once -At (Get-Date).Date -RepetitionInterval (New-TimeSpan -Minutes 5)
+Register-Job "WhatsApp" "whatsapp_tick" $every5b
 
 # ---------------------------------------------------------------- 9. Firewall
 if (-not $Local) {

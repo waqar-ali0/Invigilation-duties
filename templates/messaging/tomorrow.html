@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Duties on {{ day|date:"d M" }} — WhatsApp{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Duties on {{ day|date:"D d M Y" }}</h1>
+    <p class="subtitle"><a href="{% url 'whatsapp_settings' %}">← WhatsApp</a> · Reminder preview: who would get a reminder, and why not when they can't. {{ eligible }} of {{ rows|length }} can be reminded.</p>
+  </div>
+  <form method="get" class="filters"><input type="date" name="date" value="{{ day|date:'Y-m-d' }}" aria-label="Date"><button class="secondary" type="submit">Show</button></form>
+</div>
+{% if sample %}
+<div class="card"><h2>{% icon "eye" %}The reminder reads like this</h2><div class="muted" style="white-space:pre-line">{{ sample }}</div></div>
+{% endif %}
+<div class="card table-wrap">
+  {% if rows %}
+  <table class="stack sortable">
+    <thead><tr><th>Time</th><th>Room</th><th>Faculty</th><th>Contact</th><th>Reminder</th></tr></thead>
+    <tbody>
+      {% for r in rows %}{% with s=r.duty.room_allocation.session %}
+      <tr>
+        <td data-label="Time">{{ s.slot.start_time|time:"H:i" }}–{{ s.slot.end_time|time:"H:i" }}</td>
+        <td data-label="Room">{{ r.duty.room_allocation.room }}{% if r.duty.room_allocation.room_ref %} <span class="muted">{{ r.duty.room_allocation.room_ref.building.name }}</span>{% endif %}</td>
+        <td data-label="Faculty"><a href="{% url 'faculty_detail' r.duty.faculty_id %}">{{ r.duty.faculty.name }}</a></td>
+        <td data-label="Contact">{{ r.contact.address|default:"—" }}{% if r.contact.verified %} <span class="badge ok">verified</span>{% endif %}<div class="muted">{{ r.contact.get_consent_display }}</div></td>
+        <td data-label="Reminder">{% if r.message %}<span class="badge info">{{ r.message.get_status_display }}</span>{% elif r.problem %}<span class="badge warn">not possible</span> <span class="muted">{{ r.problem }}</span> <a href="{% url 'whatsapp_contact' r.duty.faculty_id %}">fix</a>{% else %}<span class="muted">will be queued at {{ cfg.dispatch_time|time:"H:i" }}</span>{% endif %}</td>
+      </tr>
+      {% endwith %}{% endfor %}
+    </tbody>
+  </table>
+  <form method="post" style="margin-top:12px">{% csrf_token %}<input type="hidden" name="action" value="queue"><button type="submit">{% icon "send" %}Queue these reminders now</button></form>
+  <p class="muted">Queuing twice never sends twice: each duty gets one reminder per day.</p>
+  {% else %}
+  <div class="empty">{% icon "calendar" %}<strong>No duties on this day</strong>Only published rosters are reminded{% if not cfg.only_published %} (setting off){% endif %}.</div>
+  {% endif %}
+</div>
+{% endblock %}

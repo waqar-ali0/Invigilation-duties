@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     "ops",
     "imports",
     "workload",
+    "messaging",
 ]
 
 MIDDLEWARE = [
@@ -111,6 +112,11 @@ LANGUAGE_CODE = "en-us"
 TIME_ZONE = os.environ.get("TIME_ZONE", "Asia/Karachi")
 # Country calling code added to national phone numbers (0300-1234567 -> +923001234567).
 PHONE_COUNTRY_CODE = os.environ.get("PHONE_COUNTRY_CODE", "92")
+
+# WhatsApp Cloud API secrets: only ever in .env, never in the database or pages.
+WHATSAPP_TOKEN = os.environ.get("WHATSAPP_TOKEN", "")
+WHATSAPP_APP_SECRET = os.environ.get("WHATSAPP_APP_SECRET", "")
+WHATSAPP_VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN", "")
 USE_I18N = True
 USE_TZ = True
 

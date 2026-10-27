@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Template — {{ kind.label }}{% endblock %}
+{% block content %}
+<h1>{{ kind.label }}</h1>
+<p class="subtitle"><a href="{% url 'whatsapp_settings' %}">← WhatsApp</a></p>
+<div class="grid">
+  <div class="card">
+    <form method="post">
+      {% csrf_token %}
+      {% include "_form_fields.html" %}
+      <div class="actions"><button type="submit">{% icon "check" %}Save</button></div>
+    </form>
+  </div>
+  <div class="card">
+    <h2>Preview</h2>
+    <div class="muted" style="white-space:pre-line">{{ preview }}</div>
+    <h2 style="margin-top:14px">Parameters</h2>
+    <ul class="muted">{% for key, label in parameters.items %}<li><code>{{ key }}</code> — {{ label }}</li>{% endfor %}</ul>
+    <p class="muted">The approved template's first, second, … placeholders must match this order. Every value comes from the real duty.</p>
+  </div>
+</div>
+{% endblock %}

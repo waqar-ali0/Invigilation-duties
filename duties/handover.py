@@ -101,6 +101,9 @@ def replace_duty(duty, faculty, actor, reason):
         record_call(duty, new_duty)
         log(actor, "duty.replace", duty, before={"faculty": duty.faculty_id}, after={"faculty": faculty.pk, "reason": reason, "duty": new_duty.pk})
         record_roster_version(duty.period, actor, f"Replacement: {duty.faculty.name} → {faculty.name}")
+        from messaging.services import on_handover
+
+        on_handover(duty, new_duty, actor=actor)
         link = absolute_url(reverse("my_duties"))
         for kind, person, attachment in (
             (EmailKind.REPLACED_OUT, duty.faculty, None),

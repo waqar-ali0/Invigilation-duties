@@ -25,6 +25,13 @@
     <div class="muted">{% for c in faculty.courses.all %}{{ c.code }}{% if not forloop.last %}, {% endif %}{% empty %}None recorded{% endfor %}</div>
   </div>
   <div class="card">
+    <h2>{% icon "send" %}WhatsApp</h2>
+    <div class="muted">
+      {% with c=faculty.whatsapp %}{% if c %}{{ c.address|default:"no number" }}{% if c.verified %} <span class="badge ok">verified</span>{% endif %} · {{ c.get_consent_display }}{% if c.consent_at %} ({{ c.consent_at|date:"d M Y" }}, {{ c.consent_source }}){% endif %} · {{ c.get_preference_display }}{% if c.problem %}<br><span class="text-danger">No reminders: {{ c.problem }}</span>{% endif %}{% else %}Not asked yet{% endif %}{% endwith %}
+    </div>
+    <p><a href="{% url 'whatsapp_contact' faculty.pk %}">Edit WhatsApp details</a></p>
+  </div>
+  <div class="card">
     <h2>{% icon "clipboard" %}Remarks</h2>
     <div class="muted">{{ faculty.remarks|default:"—"|linebreaksbr }}</div>
   </div>

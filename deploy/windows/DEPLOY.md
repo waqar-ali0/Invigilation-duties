@@ -9,7 +9,7 @@ Everything runs natively on Windows — no Linux, no Docker.
                         ▼  127.0.0.1:8000 (not reachable from outside)
                      Waitress  ──►  Django app  ──►  PostgreSQL (local only)
 
- Task Scheduler:  send emails every 5 min · reminders 18:00 · backup 02:00
+ Task Scheduler:  emails + WhatsApp every 5 min · reminders 18:00 · backup 02:00
 ```
 
 | Part | Runs as | Name |
@@ -92,6 +92,19 @@ certificate. Either:
   `Restart-Service InvigilationCaddy` (note: re-running the installer rewrites this file), or
 - stop and disable `InvigilationCaddy` and have IIS (URL Rewrite + Application Request Routing)
   forward to `http://127.0.0.1:8000`, setting the header `X-Forwarded-Proto: https`.
+
+### WhatsApp (optional)
+
+Add to `.env` (as administrator) and restart `InvigilationWeb`:
+
+```
+WHATSAPP_TOKEN=...
+WHATSAPP_APP_SECRET=...
+WHATSAPP_VERIFY_TOKEN=...
+```
+
+The webhook URL for Meta is `https://duties.university.edu/whatsapp/webhook/` (needs the
+public HTTPS address). The rest is done on the site's WhatsApp page.
 
 ## 5. Day-to-day operation
 

@@ -277,5 +277,8 @@ def publish_period(period, actor, acknowledge_unfilled=False, confirm_rules=Fals
         period.save(update_fields=["status", "published_at"])
         emails = queue_roster_published(period)
         record_roster_version(period, actor, "Published")
+        from messaging.services import on_publish
+
+        on_publish(period, actor)
         log(actor, "period.publish", period, after={"unfilled_seats": missing, "emails": emails})
     _copy_fields(period, caller_period, ["status", "published_at"])

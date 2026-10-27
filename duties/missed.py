@@ -129,6 +129,10 @@ def assign_makeup(obligation, room, actor, faculty=None):
         log(actor, "obligation.assign", obligation, after={"duty": duty.pk, "faculty": faculty.pk, "room": room.pk})
         if period.status == PeriodStatus.PUBLISHED:
             record_roster_version(period, actor, f"Make-up duty for {faculty.name}")
+            from messaging.models import MessageKind
+            from messaging.services import notify_duty
+
+            notify_duty(duty, MessageKind.NEW_DUTY, actor)
             subject, body = render_email("makeup_assigned", {
                 "person": faculty, "duty": duty, "original": obligation.original, "link": absolute_url(reverse("my_duties")),
             })

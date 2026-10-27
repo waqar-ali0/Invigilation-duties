@@ -26,6 +26,9 @@
   <a class="card" href="{{ links.backups }}"><h2>{% icon "users" %}Backups</h2><div class="stat">{{ backups_free }}</div><div class="muted">reserved and free now · {{ backups_pool }} in the pool</div></a>
   <a class="card" href="{{ links.people }}?flag=below"><h2>{% icon "chart" %}Below target</h2><div class="stat">{{ below }}</div><div class="muted">{{ at }} at target</div></a>
   <a class="card" href="{{ links.people }}?flag=over"><h2>{% icon "alert" %}Over limit</h2><div class="stat">{{ over }}</div><div class="muted">faculty above their approved maximum</div></a>
+  <a class="card" href="{% url 'whatsapp_settings' %}"><h2>{% icon "send" %}WhatsApp</h2><div class="stat">{{ wa.opted_in }} · {{ wa.verified }}</div><div class="muted">opted in · verified numbers{% if not wa.configured %} · <span class="text-danger">set-up pending</span>{% endif %}</div></a>
+  <a class="card" href="{% url 'whatsapp_tomorrow' %}"><h2>{% icon "calendar" %}Tomorrow</h2><div class="stat">{{ wa.tomorrow }}</div><div class="muted">duties tomorrow · {{ wa.today_queued }} reminder(s) queued today</div></a>
+  <a class="card" href="{% url 'whatsapp_log' %}"><h2>{% icon "inbox" %}Messages</h2><div class="stat">{{ wa.submitted }} · {{ wa.delivered }}</div><div class="muted">submitted · delivered{% if wa.failed %} · <span class="text-danger">{{ wa.failed }} failed</span>{% endif %}</div></a>
   <a class="card" href="{{ links.people }}?flag=no_target"><h2>{% icon "settings" %}No target</h2><div class="stat">{{ no_target }}</div><div class="muted">eligible faculty without a target (shared equally)</div></a>
   {% endif %}
 </div>

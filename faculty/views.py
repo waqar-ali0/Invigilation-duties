@@ -74,7 +74,7 @@ def faculty_list(request):
 def faculty_detail(request, pk):
     from duties.models import Duty
 
-    faculty = get_object_or_404(Faculty.objects.select_related("department", "category", "user").prefetch_related("courses"), pk=pk)
+    faculty = get_object_or_404(Faculty.objects.select_related("department", "category", "user", "whatsapp").prefetch_related("courses"), pk=pk)
     duties = (
         Duty.objects.filter(faculty=faculty)
         .select_related("period", "room_allocation__session__slot", "room_allocation__room_ref__building", "replaces__faculty")

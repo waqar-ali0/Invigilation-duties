@@ -80,6 +80,10 @@ def move_duty(duty, room, actor, reason=""):
         new = Duty.objects.create(faculty=duty.faculty, room_allocation=room, source=DutySource.MOVED, replaces=duty)
         log(actor, "duty.move", duty, before={"room": old_room.pk}, after={"room": room.pk, "duty": new.pk, "reason": reason})
         record_roster_version(period, actor, f"Moved {duty.faculty.name}: {old_room.room} → {room.room}")
+        from messaging.models import MessageKind
+        from messaging.services import on_handover
+
+        on_handover(duty, new, MessageKind.ROOM_CHANGED, actor=actor)
         subject, body = render_email("duty_moved", {"person": duty.faculty, "duty": new, "old": duty, "link": absolute_url(reverse("my_duties"))})
         queue_email(address_of(duty.faculty), subject, body, EmailKind.DUTY_MOVED, attachment=duty_ics_attachment(new))
     return new

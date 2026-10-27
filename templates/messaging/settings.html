@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}WhatsApp — Invigilation Duties{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>WhatsApp</h1>
+    <p class="subtitle">Duty reminders and notices through the official WhatsApp Business Platform. Nothing is shown as sent unless WhatsApp confirms it.</p>
+  </div>
+  <div class="actions">
+    <a class="button secondary" href="{% url 'whatsapp_tomorrow' %}">{% icon "calendar" %}Tomorrow's duties</a>
+    <a class="button secondary" href="{% url 'whatsapp_log' %}">{% icon "inbox" %}Message log</a>
+    <a class="button" href="{% url 'whatsapp_centre' %}">{% icon "send" %}Send a message</a>
+  </div>
+</div>
+
+{% if not cfg.configured %}
+<div class="alert warning">{% icon "alert" %}<span><strong>WhatsApp is not set up yet — no messages are being sent.</strong> Missing: {{ cfg.missing|join:", " }}. See “Setting up” below.</span></div>
+{% elif not cfg.enabled %}
+<div class="alert info"><span>Set up, but automatic reminders are switched off. Turn them on below.</span></div>
+{% endif %}
+
+<div class="grid">
+  <div class="card"><h2>{% icon "shield" %}Server secrets</h2>
+    <div class="muted">Access token: {% if token_set %}<span class="badge ok">set</span>{% else %}<span class="badge warn">missing</span>{% endif %}<br>
+    App secret (webhook signatures): {% if secret_set %}<span class="badge ok">set</span>{% else %}<span class="badge warn">missing</span>{% endif %}<br>
+    Webhook verify token: {% if verify_set %}<span class="badge ok">set</span>{% else %}<span class="badge warn">missing</span>{% endif %}</div>
+    <p class="muted">These live only in the server's <code>.env</code> and are never shown or stored in the database.</p>
+  </div>
+  <div class="card"><h2>{% icon "inbox" %}Messages</h2>
+    <div class="muted">{% for s, n in stats.items %}{% if n %}{{ s }}: <strong>{{ n }}</strong> · {% endif %}{% endfor %}</div>
+    <p class="muted"><a href="{% url 'whatsapp_log' %}?status=failed">Failed messages</a></p>
+  </div>
+  <div class="card"><h2>{% icon "check" %}Check</h2>
+    <form method="post">{% csrf_token %}<input type="hidden" name="action" value="test_connection"><button class="secondary" type="submit">Test the connection</button></form>
+    <form method="post" class="filters" style="margin-top:10px">{% csrf_token %}<input type="hidden" name="action" value="test_message">
+      <input type="tel" name="number" placeholder="Test number, e.g. 0300-1234567" aria-label="Test number" required>
+      <select name="kind" aria-label="Message">{% for k, label in kinds %}<option value="{{ k }}">{{ label }}</option>{% endfor %}</select>
+      <button class="secondary" type="submit" data-confirm="Send one test message to this number?">Send test</button>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Settings</h2>
+  <form method="post" class="form-grid">
+    {% csrf_token %}<input type="hidden" name="action" value="settings">
+    {% include "_form_fields.html" %}
+    <div class="actions"><button type="submit">{% icon "check" %}Save</button></div>
+  </form>
+</div>
+
+<div class="card table-wrap">
+  <h2>Message templates</h2>
+  <p class="muted">WhatsApp only allows business-started messages from templates approved in Meta's WhatsApp Manager. Enter each approved template's exact name and language, the order of its parameters, and mark it active.</p>
+  <table class="stack">
+    <thead><tr><th>Message</th><th>Approved template</th><th>Status</th><th>Preview</th><th></th></tr></thead>
+    <tbody>
+      {% for kind, label, t, preview in templates %}
+      <tr>
+        <td data-label="Message"><strong>{{ label }}</strong></td>
+        <td data-label="Approved template">{% if t %}<code>{{ t.name }}</code> ({{ t.language }})<div class="muted">{{ t.parameters|join:", " }}</div>{% else %}—{% endif %}</td>
+        <td data-label="Status">{% if t.active %}<span class="badge ok">active</span>{% else %}<span class="badge">not active</span>{% endif %}</td>
+        <td data-label="Preview"><div class="muted" style="white-space:pre-line;max-width:420px">{{ preview|truncatechars:160 }}</div></td>
+        <td><a class="button secondary sm" href="{% url 'whatsapp_template' kind %}">Edit</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h2>Setting up</h2>
+  <ol class="muted">
+    <li>In Meta Business Manager, create a WhatsApp Business account and register the university's number (WhatsApp Cloud API).</li>
+    <li>Create a <em>System User</em> access token with <code>whatsapp_business_messaging</code> permission. Put it in the server's <code>.env</code> as <code>WHATSAPP_TOKEN=…</code>, the app secret as <code>WHATSAPP_APP_SECRET=…</code> and a webhook password of your choice as <code>WHATSAPP_VERIFY_TOKEN=…</code>, then restart the web service.</li>
+    <li>Enter the phone number ID and account ID above.</li>
+    <li>Create the message templates in WhatsApp Manager (category <em>Utility</em>), wait for approval, then enter their names here and mark them active.</li>
+    <li>In the Meta app's WhatsApp webhook settings use the callback URL <code>{{ webhook_url }}</code> with your verify token, and subscribe to <code>messages</code> (delivery statuses).</li>
+    <li>Test the connection and send a test message, then switch on automatic reminders.</li>
+  </ol>
+  <p class="muted">Reminders are queued at the dispatch time and sent by the <code>whatsapp_tick</code> job (every 5 minutes; the installer schedules it). Faculty must opt in first (their WhatsApp page, or the exam office records a signed consent).</p>
+</div>
+<script>
+  document.querySelectorAll("[data-confirm]").forEach(function (b) { b.addEventListener("click", function (e) { if (!window.confirm(b.dataset.confirm)) e.preventDefault(); }); });
+</script>
+{% endblock %}

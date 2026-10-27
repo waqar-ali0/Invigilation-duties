@@ -57,6 +57,7 @@ def dashboard(request):
     context["faculty_total"] = faculty.count()
     context["faculty_to_fix"] = faculty.filter(Q(phone="") | (~Q(phone="") & Q(phone_e164=""))).count()
     context["imported"] = sum((b.result or {}).get("created", 0) for b in ImportBatch.objects.filter(kind="faculty", status=BatchStatus.DONE))
+    context["wa"] = _whatsapp_summary()
     if period is None:
         return render(request, "reports/dashboard.html", context)
 
@@ -128,6 +129,25 @@ def dashboard(request):
              for f, n in [slot_fill[s.id]] if n][:30], unit="%", max_value=100),
     })
     return render(request, "reports/dashboard.html", context)
+
+
+def _whatsapp_summary():
+    from datetime import timedelta
+
+    from messaging.models import Consent, MessageStatus, WhatsAppContact, WhatsAppMessage, WhatsAppSettings
+
+    messages = Counter(WhatsAppMessage.objects.values_list("status", flat=True))
+    today = timezone.localdate()
+    return {
+        "configured": WhatsAppSettings.get().configured,
+        "opted_in": WhatsAppContact.objects.filter(consent=Consent.OPTED_IN).count(),
+        "verified": WhatsAppContact.objects.filter(verified=True).count(),
+        "tomorrow": Duty.objects.filter(status=DutyStatus.ASSIGNED, room_allocation__session__slot__date=today + timedelta(days=1)).count(),
+        "today_queued": WhatsAppMessage.objects.filter(kind="reminder", created_at__date=today).count(),
+        "submitted": sum(messages[s] for s in (MessageStatus.SUBMITTED, MessageStatus.SENT, MessageStatus.DELIVERED, MessageStatus.READ)),
+        "delivered": messages[MessageStatus.DELIVERED] + messages[MessageStatus.READ],
+        "failed": messages[MessageStatus.FAILED],
+    }
 
 
 def _cat(name):
