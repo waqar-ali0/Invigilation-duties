@@ -88,7 +88,7 @@ if (-not (Test-Path $Python)) {
 }
 Invoke-Native $Python @("-m", "pip", "install", "--quiet", "--upgrade", "pip")
 Invoke-Native $Python @("-m", "pip", "install", "--quiet", "-r", (Join-Path $Root "requirements.txt"))
-Write-Ok (& $Python --version)
+Write-Ok (Get-NativeOutput $Python @("--version"))
 
 # ---------------------------------------------------------------- 2. Database
 Write-Step "Setting up the database"
@@ -113,11 +113,11 @@ if ($UseSqlite) {
     $env:PGPASSWORD = ConvertFrom-Secure $pgAdmin
     try {
         $dbPassword = New-Secret 32
-        $roleExists = (& $psql -U postgres -h localhost -tAc "SELECT 1 FROM pg_roles WHERE rolname='invigilation'") -eq "1"
+        $roleExists = (Get-NativeOutput $psql @("-U", "postgres", "-h", "localhost", "-tAc", "SELECT 1 FROM pg_roles WHERE rolname='invigilation'")) -eq "1"
         if ($LASTEXITCODE -ne 0) { throw "Could not connect to PostgreSQL as 'postgres'. Check the password." }
         $verb = if ($roleExists) { "ALTER" } else { "CREATE" }
         Invoke-Native $psql @("-U", "postgres", "-h", "localhost", "-v", "ON_ERROR_STOP=1", "-qc", "$verb ROLE invigilation LOGIN PASSWORD '$dbPassword'")
-        $dbExists = (& $psql -U postgres -h localhost -tAc "SELECT 1 FROM pg_database WHERE datname='invigilation'") -eq "1"
+        $dbExists = (Get-NativeOutput $psql @("-U", "postgres", "-h", "localhost", "-tAc", "SELECT 1 FROM pg_database WHERE datname='invigilation'")) -eq "1"
         if (-not $dbExists) {
             Invoke-Native $psql @("-U", "postgres", "-h", "localhost", "-v", "ON_ERROR_STOP=1", "-qc", "CREATE DATABASE invigilation OWNER invigilation ENCODING 'UTF8'")
         }
@@ -166,7 +166,7 @@ Invoke-Manage migrate --noinput
 Invoke-Manage collectstatic --noinput --clear --verbosity=0
 Invoke-Manage check --deploy
 Push-Location $Root
-& $Python manage.py shell -c "import sys; from accounts.models import User; sys.exit(0 if User.objects.filter(is_superuser=True).exists() else 3)"
+Get-NativeOutput $Python @("manage.py", "shell", "-c", "import sys; from accounts.models import User; sys.exit(0 if User.objects.filter(is_superuser=True).exists() else 3)") | Out-Null
 $hasSuperuser = $LASTEXITCODE -eq 0
 Pop-Location
 if (-not $hasSuperuser) {
@@ -190,7 +190,7 @@ elseif (-not (Test-Path $caddy)) {
 }
 if ($WinSWExe) { Copy-Item $WinSWExe $winsw -Force }
 elseif (-not (Test-Path $winsw)) { Invoke-WebRequest $WinSWUrl -OutFile $winsw -UseBasicParsing }
-Write-Ok (& $caddy version)
+Write-Ok (Get-NativeOutput $caddy @("version"))
 
 # ---------------------------------------------------------------- 6. Caddyfile
 Write-Step "Writing the Caddy configuration"

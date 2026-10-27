@@ -23,11 +23,23 @@ function Assert-Admin {
     }
 }
 
-# Runs a native program and stops the script if it fails.
+# Runs a native program and stops the script if it fails. Judged by exit code only: Windows
+# PowerShell turns anything a program writes to stderr (e.g. warnings) into errors when the
+# output is redirected to a log, which must not abort the install.
 function Invoke-Native {
     param([string]$Exe, [string[]]$Arguments)
-    & $Exe @Arguments
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try { & $Exe @Arguments } finally { $ErrorActionPreference = $previous }
     if ($LASTEXITCODE -ne 0) { throw "'$Exe $($Arguments -join ' ')' failed with exit code $LASTEXITCODE." }
+}
+
+# Runs a native program and returns its output; the caller checks $LASTEXITCODE.
+function Get-NativeOutput {
+    param([string]$Exe, [string[]]$Arguments)
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try { return (& $Exe @Arguments 2>$null) } finally { $ErrorActionPreference = $previous }
 }
 
 function Invoke-Manage {
