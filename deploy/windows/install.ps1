@@ -163,7 +163,7 @@ if (-not $smtpConfigured) { Write-Note "Email is not set up yet: messages are sa
 Write-Step "Updating the database tables and static files"
 Stop-AppService $WebService
 Invoke-Manage migrate --noinput
-Invoke-Manage collectstatic --noinput --clear -v 0
+Invoke-Manage collectstatic --noinput --clear --verbosity=0
 Invoke-Manage check --deploy
 Push-Location $Root
 & $Python manage.py shell -c "import sys; from accounts.models import User; sys.exit(0 if User.objects.filter(is_superuser=True).exists() else 3)"

@@ -38,7 +38,7 @@ Stop-AppService $WebService
 
 Write-Step "Updating the database tables and static files"
 Invoke-Manage migrate --noinput
-Invoke-Manage collectstatic --noinput --clear -v 0
+Invoke-Manage collectstatic --noinput --clear --verbosity=0
 Invoke-Manage check --deploy
 
 Write-Step "Starting the web app"
