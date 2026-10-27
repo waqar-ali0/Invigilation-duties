@@ -31,10 +31,17 @@ def _period_of(room):
     return ExamPeriod.objects.get(pk=room.session.slot.period_id)
 
 
+MSG_PREFERENCE = "Goes against their preferences"
+
+
 def _warnings(state, faculty_id, room_id):
     warnings = state.soft_warnings(faculty_id, room_id)
     if state.remaining(room_id) == 0:
         warnings.append(MSG_ROOM_FULL)
+    wish = (state.data.preferences or {}).get(faculty_id)
+    room = state.rooms[room_id]
+    if wish is not None and wish.misses(state.slots[room.slot_id], room):
+        warnings.append(MSG_PREFERENCE)
     return warnings
 
 
@@ -47,7 +54,7 @@ def check_assignment(faculty, room):
     return state.hard_errors(faculty.id, room.id), _warnings(state, faculty.id, room.id)
 
 
-def add_duty(faculty, room, actor, allow_warnings=False):
+def add_duty(faculty, room, actor, allow_warnings=False, reason=""):
     with transaction.atomic():
         # Locking the period serialises every change to this draft, so two people
         # editing at once cannot double-book anyone.
@@ -60,8 +67,20 @@ def add_duty(faculty, room, actor, allow_warnings=False):
         if warnings and not allow_warnings:
             raise AssignmentNeedsConfirmation(warnings)
         duty = Duty.objects.create(faculty=faculty, room_allocation=room, source=DutySource.MANUAL)
-        log(actor, "duty.assign", duty, after={"faculty": faculty.id, "room": room.id, "warnings": warnings})
+        after = {"faculty": faculty.id, "room": room.id, "warnings": warnings}
+        if warnings and reason.strip():
+            after["override_reason"] = reason.strip()[:300]
+        log(actor, "duty.assign", duty, after=after)
     return duty
+
+
+def set_locked(duty, locked, actor):
+    """Lock a draft duty so allocation re-runs keep it, or unlock it again."""
+    with transaction.atomic():
+        ExamPeriod.lock_for_edit(duty.period_id)
+        duty.locked = locked
+        duty.save(update_fields=["locked", "updated_at"])
+        log(actor, "duty.lock" if locked else "duty.unlock", duty, after={"locked": locked})
 
 
 def remove_duty(duty, actor):

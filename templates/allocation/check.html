@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Check — {{ period.name }}{% endblock %}
+{% block content %}
+<h1>Check {{ period.name }}</h1>
+<p class="subtitle"><a href="{% url 'period_dashboard' period.pk %}">← {{ period.name }}</a> · Run this before allocating and before publishing.
+  {% if errors %}<span class="badge danger">{{ errors }} to fix</span>{% endif %}{% if warnings %} <span class="badge warn">{{ warnings }} to review</span>{% endif %}{% if not errors and not warnings %} <span class="badge ok">all clear</span>{% endif %}</p>
+
+{% for c in checks %}
+<div class="card check {{ c.level }}">
+  <h2>{% if c.level == "ok" %}{% icon "check" %}{% elif c.level == "info" %}{% icon "eye" %}{% else %}{% icon "alert" %}{% endif %}{{ c.title }}</h2>
+  {% if c.details %}<ul class="muted">{% for d in c.details %}<li>{{ d }}</li>{% endfor %}</ul>{% endif %}
+  {% if c.fix %}<p><strong>What to do:</strong> {{ c.fix }}{% if c.link %} <a href="{{ c.link }}">Open{% icon "arrow-right" %}</a>{% endif %}</p>{% endif %}
+</div>
+{% endfor %}
+{% endblock %}

@@ -2,7 +2,15 @@ from django.urls import path
 
 from . import views
 
+from . import backups as backup_views
+from . import preferences as preference_views
+
 urlpatterns = [
+    path("my/preferences/", preference_views.my_preferences, name="my_preferences"),
+    path("my/preferences/<int:pk>/remove/", preference_views.remove_preference, name="remove_preference"),
+    path("periods/<int:pk>/preferences/", preference_views.period_preferences, name="period_preferences"),
+    path("backups/", backup_views.pool, name="backup_pool"),
+    path("periods/<int:pk>/backups/", backup_views.period_backups, name="period_backups"),
     path("", views.home, name="home"),
     path("my/duties/", views.my_duties, name="my_duties"),
     path("my/duties/<int:period_id>/pdf/", views.my_duties_pdf, name="my_duties_pdf"),

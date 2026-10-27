@@ -14,6 +14,7 @@ from duties.services import (
     add_duty,
     eligible_candidates,
     remove_duty,
+    set_locked,
 )
 from exams.halls import hall_rooms
 from exams.models import ExamPeriod, PeriodLockedError, PeriodStatus, RoomAllocation
@@ -93,7 +94,11 @@ def add_duty_view(request, pk, room_id):
         raise Http404("Unknown faculty member.")
     faculty = get_object_or_404(Faculty, pk=faculty_id)
     try:
-        add_duty(faculty, room, request.user, allow_warnings=request.POST.get("confirm") == "1")
+        add_duty(
+            faculty, room, request.user,
+            allow_warnings=request.POST.get("confirm") == "1",
+            reason=request.POST.get("reason", ""),
+        )
     except PeriodLockedError as e:
         messages.error(request, str(e))
     except AssignmentBlocked as e:
@@ -151,18 +156,52 @@ def publish_view(request, pk):
 @require_POST
 def run_allocation_view(request, pk):
     period = get_object_or_404(ExamPeriod, pk=pk)
+    slot_ids = [int(s) for s in request.POST.getlist("slot") if s.isdigit()] or None
     try:
-        result = run_allocation(period, request.user)
+        result = run_allocation(period, request.user, slot_ids=slot_ids)
     except PeriodLockedError as e:
         messages.error(request, str(e))
     else:
         missing = sum(u.count for u in result.unfilled)
-        text = f"Allocation finished: {len(result.assignments)} duties assigned."
+        scope = f" in {len(slot_ids)} time slot(s)" if slot_ids else ""
+        text = f"Allocation finished{scope}: {len(result.assignments)} duties assigned (locked and manual duties kept)."
+        if result.preferences_total:
+            text += f" Preferences met for {result.preferences_met} of {result.preferences_total}."
         if missing:
             messages.warning(request, f"{text} {missing} seats could not be filled — see below.")
         else:
             messages.success(request, text)
     return redirect("period_dashboard", pk=pk)
+
+
+@admin_only
+def check_view(request, pk):
+    from .checks import ERROR, WARN, period_checks
+
+    period = get_object_or_404(ExamPeriod, pk=pk)
+    checks = period_checks(period)
+    order = {ERROR: 0, WARN: 1, "info": 2, "ok": 3}
+    checks.sort(key=lambda c: order[c.level])
+    context = {
+        "period": period,
+        "checks": checks,
+        "errors": sum(1 for c in checks if c.level == ERROR),
+        "warnings": sum(1 for c in checks if c.level == WARN),
+    }
+    return render(request, "allocation/check.html", context)
+
+
+@admin_only
+@require_POST
+def lock_duty_view(request, pk, duty_id):
+    duty = get_object_or_404(Duty.objects.select_related("faculty"), pk=duty_id, period_id=pk)
+    try:
+        set_locked(duty, request.POST.get("locked") == "1", request.user)
+    except PeriodLockedError as e:
+        messages.error(request, str(e))
+    else:
+        messages.success(request, f"{duty.faculty.name}'s duty is {'locked: re-runs keep it' if duty.locked else 'unlocked'}.")
+    return redirect("room_detail", pk=pk, room_id=duty.room_allocation_id)
 
 
 @admin_only

@@ -14,6 +14,7 @@ from notifications.outbox import queue_email
 from notifications.render import absolute_url, render_email
 from notifications.triggers import address_of, duty_ics_attachment, queue_swap_email
 
+from .backups import record_call
 from .models import OPEN_SWAP_STATUSES, Duty, DutySource, DutyStatus, SwapRequest, SwapStatus
 
 MSG_INELIGIBLE = "Faculty is inactive or exempt"
@@ -47,17 +48,27 @@ def _has_account(faculty):
 
 
 def handover_candidates(duty, require_account):
-    """[(faculty, active duty count, warnings)] who could take `duty`, best first."""
+    """[(faculty, active duty count, warnings)] who could take `duty`, best first: no rule
+    warnings, then reserved backups for this slot, then the backup pool by priority, then the
+    fewest duties. Nobody busy in an overlapping slot is ever suggested (hard rule).
+    Each faculty gets `backup_label` ("Reserved backup", "Backup pool" or "")."""
+    from .backups import backup_order
+
     state = _state_without(duty)
     room_id = duty.room_allocation_id
+    room = duty.room_allocation
+    ranks = backup_order(room.session.slot_id, room.room_ref.building_id if room.room_ref_id else None)
     result = []
     for faculty in Faculty.objects.filter(pk__in=list(state.people)).exclude(pk=duty.faculty_id).select_related("department", "user"):
         if require_account and not _has_account(faculty):
             continue
         if state.hard_errors(faculty.id, room_id):
             continue
+        rank = ranks.get(faculty.id, (3, 0))
+        faculty.backup_label = {0: "Reserved backup", 1: "Backup pool", 2: "Backup pool (other building)"}.get(rank[0], "")
+        faculty.backup_rank = rank
         result.append((faculty, state.count(faculty.id), state.soft_warnings(faculty.id, room_id)))
-    result.sort(key=lambda item: (len(item[2]), item[1], item[0].name))
+    result.sort(key=lambda item: (len(item[2]), item[0].backup_rank, item[1], item[0].name))
     return result
 
 
@@ -86,6 +97,7 @@ def replace_duty(duty, faculty, actor, reason):
             queue_swap_email(swap, "swap_cancelled", [address_of(swap.requested_by), address_of(swap.requested_with)])
 
         new_duty = transfer_duty(duty, faculty, DutySource.REPLACEMENT)
+        record_call(duty, new_duty)
         log(actor, "duty.replace", duty, before={"faculty": duty.faculty_id}, after={"faculty": faculty.pk, "reason": reason, "duty": new_duty.pk})
         link = absolute_url(reverse("my_duties"))
         for kind, person, attachment in (

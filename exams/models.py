@@ -119,6 +119,12 @@ class PeriodSettings(models.Model):
     swap_cutoff_hours = models.PositiveIntegerField(
         default=24, help_text="Faculty can ask for and accept swaps until this many hours before the exam."
     )
+    backups_per_slot = models.PositiveIntegerField(
+        default=0, help_text="Backup members kept free in every time slot (reserved after each allocation run)."
+    )
+    reserves_fill_shortages = models.BooleanField(
+        default=False, help_text="Backup-only members may fill seats nobody else can take."
+    )
 
     class Meta:
         verbose_name_plural = "period settings"

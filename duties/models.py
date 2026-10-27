@@ -3,7 +3,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 
-from exams.models import ExamPeriod, RoomAllocation, TimeSlot
+from exams.models import Building, ExamPeriod, RoomAllocation, TimeSlot
 from faculty.models import Faculty
 
 
@@ -79,6 +79,8 @@ class Duty(models.Model):
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
     )
     attendance_marked_at = models.DateTimeField(null=True, blank=True)
+    # Locked duties are kept as they are when the allocation is run again.
+    locked = models.BooleanField(default=False)
 
     objects = DutyQuerySet.as_manager()
 
@@ -142,3 +144,88 @@ class SwapRequest(models.Model):
 
     def __str__(self):
         return f"{self.requested_by.name} → {self.requested_with.name}: {self.duty.room_allocation}"
+
+
+class PreferenceKind(models.TextChoices):
+    DATE = "date", "Prefer this date"
+    SLOT = "slot", "Prefer this time slot"
+    AVOID_SLOT = "avoid_slot", "Rather not this time slot"
+    BUILDING = "building", "Prefer this building"
+
+
+class Preference(models.Model):
+    """A soft wish for one period. Unlike unavailability it never blocks a duty; the engine
+    follows it when it can and reports how many were met."""
+
+    faculty = models.ForeignKey(Faculty, on_delete=models.CASCADE, related_name="preferences")
+    period = models.ForeignKey(ExamPeriod, on_delete=models.CASCADE, related_name="preferences")
+    kind = models.CharField(max_length=12, choices=PreferenceKind.choices)
+    date = models.DateField(null=True, blank=True)
+    slot = models.ForeignKey(TimeSlot, null=True, blank=True, on_delete=models.CASCADE)
+    building = models.ForeignKey(Building, null=True, blank=True, on_delete=models.CASCADE)
+    remarks = models.CharField(max_length=200, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["kind", "date"]
+
+    def clean(self):
+        needed = {"date": "date", "slot": "slot", "avoid_slot": "slot", "building": "building"}.get(self.kind)
+        if needed and getattr(self, f"{needed}_id" if needed != "date" else "date") is None:
+            raise ValidationError({needed: "Choose one."})
+        if self.slot_id and self.period_id and self.slot.period_id != self.period_id:
+            raise ValidationError({"slot": "This time slot belongs to a different exam period."})
+
+    def __str__(self):
+        target = self.date or self.slot or self.building
+        return f"{self.faculty.name}: {self.get_kind_display()} {target}"
+
+
+class BackupRole(models.TextChoices):
+    ALSO_BACKUP = "also_backup", "Regular duties and backup"
+    RESERVE_ONLY = "reserve_only", "Backup only (kept in reserve)"
+
+
+class BackupMember(models.Model):
+    """Someone in the backup pool, called on when an invigilator is absent."""
+
+    faculty = models.OneToOneField(Faculty, on_delete=models.CASCADE, related_name="backup")
+    role = models.CharField(max_length=12, choices=BackupRole.choices, default=BackupRole.ALSO_BACKUP)
+    priority = models.PositiveIntegerField(default=10, help_text="Lower numbers are called first.")
+    max_backup = models.PositiveIntegerField(
+        "maximum backup reservations per period", null=True, blank=True, help_text="Leave empty for no limit."
+    )
+    buildings = models.ManyToManyField(Building, blank=True, help_text="Leave empty for any building.")
+    notes = models.CharField(max_length=200, blank=True)
+
+    class Meta:
+        ordering = ["priority", "faculty__name"]
+
+    def __str__(self):
+        return f"{self.faculty.name} ({self.get_role_display()})"
+
+
+class ReservationStatus(models.TextChoices):
+    RESERVED = "reserved", "Reserved as backup"
+    CALLED = "called", "Called upon"
+    RELEASED = "released", "Released"
+
+
+class BackupReservation(models.Model):
+    """A backup member kept free for one time slot. When called, the replacement duty they take
+    is linked here, so the chain reserved -> called -> assigned -> performed stays visible."""
+
+    period = models.ForeignKey(ExamPeriod, on_delete=models.CASCADE, related_name="backup_reservations")
+    slot = models.ForeignKey(TimeSlot, on_delete=models.CASCADE, related_name="backup_reservations")
+    faculty = models.ForeignKey(Faculty, on_delete=models.CASCADE, related_name="backup_reservations")
+    status = models.CharField(max_length=10, choices=ReservationStatus.choices, default=ReservationStatus.RESERVED)
+    duty = models.ForeignKey(Duty, null=True, blank=True, on_delete=models.SET_NULL, related_name="+", help_text="The duty they took when called.")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["slot__date", "slot__start_time", "faculty__name"]
+        constraints = [models.UniqueConstraint(fields=["slot", "faculty"], name="one_reservation_per_slot")]
+
+    def __str__(self):
+        return f"{self.faculty.name} — backup for {self.slot}"

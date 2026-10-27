@@ -135,6 +135,28 @@ per person** shows target, assigned, completed, pending, missed, handed over, co
 remaining for everyone, with filters and highlights (below / at target, near / over limit,
 no target set).
 
+## Preferences, locking, backups and checks
+
+- **Preferences** (faculty: sidebar → *Preferences*, while availability is open; exam office:
+  dashboard → *Preferences*): preferred dates, time slots or buildings, or a slot someone would
+  rather avoid. They are wishes: the engine follows them among people with the same workload,
+  never at the cost of fairness, and never leaves a seat empty for them. Each run reports how
+  many were met. Assigning someone by hand against a preference asks for a reason (audit log).
+- **Locking:** on a room page, *Lock* keeps a duty when the allocation is run again.
+  **Re-run this slot** on the dashboard re-generates one time slot only; everything else stays.
+- **Backups** (sidebar → *Backups*): the backup pool, with priority, *regular + backup* or
+  *backup only* (kept in reserve, not given regular duties), optional building limits and a
+  maximum; *Add a whole designation* puts e.g. all Lab Engineers in. Per period (dashboard →
+  *Backups*) choose how many backups to keep free per time slot — reserved after every run,
+  released automatically if they become busy — and whether backup-only members may fill seats
+  nobody else can take. Replacement suggestions list reserved backups first, then the pool,
+  never anyone busy at that time; the reservation then shows *called*, the duty they took and
+  whether it was performed. The absent person's original duty always stays on record.
+- **Check** (dashboard): before allocating and publishing, a list of everything missing or
+  wrong — schedule, rooms not in the room list or over capacity, unset targets, unconfirmed
+  rules, capacity and per-slot shortages, pending requests, conflicts, people over their limit
+  or below their minimum, unfilled seats with their reasons — each with what to do about it.
+
 ## Faculty, rooms and imports
 
 **Faculty** (sidebar → *Faculty*) lists everyone with filters (department, designation, status,

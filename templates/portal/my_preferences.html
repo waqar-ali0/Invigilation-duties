@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}My preferences — Invigilation Duties{% endblock %}
+{% block content %}
+<h1>My preferences</h1>
+<p class="subtitle">Tell the exam office which dates, time slots or buildings suit you best. These are wishes: they are followed when it is fair to do so, but they never block a duty. If you <em>cannot</em> invigilate at a time, use <a href="{% url 'my_unavailability' %}">Unavailability</a> instead.</p>
+
+{% if faculty.is_exempt %}
+  <div class="card"><p>You are exempt from invigilation, so preferences are not needed.</p></div>
+{% else %}
+{% for period, form, prefs in forms %}
+<div class="card">
+  <h2>{{ period.name }}</h2>
+  <p class="muted">Exams {{ period.start_date|date:"d M" }} – {{ period.end_date|date:"d M Y" }} · can be changed until {{ period.availability_deadline|date:"D d M Y, H:i" }}</p>
+  {% if prefs %}
+  <table class="stack">
+    <thead><tr><th>Preference</th><th>Remarks</th><th></th></tr></thead>
+    <tbody>
+      {% for p in prefs %}
+      <tr>
+        <td data-label="Preference">{{ p.get_kind_display }}: <strong>{% if p.date %}{{ p.date|date:"D d M" }}{% elif p.slot %}{{ p.slot }}{% else %}{{ p.building }}{% endif %}</strong></td>
+        <td data-label="Remarks">{{ p.remarks|default:"—" }}</td>
+        <td><form method="post" action="{% url 'remove_preference' p.pk %}">{% csrf_token %}<button class="secondary sm" type="submit">Remove</button></form></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+  <form method="post" class="form-grid" style="margin-top:12px">
+    {% csrf_token %}<input type="hidden" name="period" value="{{ period.pk }}">
+    {% include "_form_fields.html" %}
+    <div class="actions"><button type="submit">{% icon "plus" %}Add preference</button></div>
+  </form>
+</div>
+{% empty %}
+<div class="card empty">{% icon "calendar" %}<strong>Nothing open right now</strong>You'll get an email when the exam office opens availability for the next exams.</div>
+{% endfor %}
+{% endif %}
+{% endblock %}

@@ -79,6 +79,12 @@
 <div class="card">
   <h2>Actions</h2>
   <div class="actions">
+    <a class="button secondary" href="{% url 'period_check' period.pk %}">{% icon "check-square" %}Check</a>
+    <a class="button secondary" href="{% url 'workload_rules' period.pk %}">{% icon "settings" %}Workload rules</a>
+    <a class="button secondary" href="{% url 'period_preferences' period.pk %}">{% icon "calendar" %}Preferences</a>
+    <a class="button secondary" href="{% url 'period_backups' period.pk %}">{% icon "users" %}Backups</a>
+  </div>
+  <div class="actions" style="margin-top:10px">
     {% if editable %}
       <a class="button secondary" href="{% url 'schedule_import' period.pk %}">{% icon "upload" %}Import schedule</a>
       <form method="post" action="{% url 'run_allocation' period.pk %}">{% csrf_token %}<button type="submit">{% icon "play" %}Run allocation</button></form>
@@ -119,9 +125,15 @@
 </div>
 {% endif %}
 
+{% if period.last_run and period.last_run.preferences.total %}
+<p class="muted">Last run: preferences met for {{ period.last_run.preferences.met }} of {{ period.last_run.preferences.total }} new duties given to people with preferences.</p>
+{% endif %}
 {% for s in slots %}
 <div class="card table-wrap">
-  <h2>{{ s.slot }}</h2>
+  <div class="page-head" style="margin-bottom:8px">
+    <h2 style="margin:0">{{ s.slot }}</h2>
+    {% if editable and duty_count %}<form method="post" action="{% url 'run_allocation' period.pk %}">{% csrf_token %}<input type="hidden" name="slot" value="{{ s.slot.pk }}"><button class="secondary sm" type="submit" title="Re-generate this time slot only; locked and manual duties stay">{% icon "repeat" %}Re-run this slot</button></form>{% endif %}
+  </div>
   {% if s.rows %}
   <table>
     <thead><tr><th>Course</th><th>Room</th><th>Students</th><th>Invigilators</th></tr></thead>

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Backup pool — Invigilation Duties{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Backup pool</h1>
+    <p class="subtitle">People called on when an invigilator is absent. Backup-only members are kept in reserve and not given regular duties (unless a period allows them to fill shortages).</p>
+  </div>
+</div>
+
+{% if periods %}
+<div class="card"><div class="actions">{% icon "calendar" %}<span>Reservations per time slot:</span>{% for p in periods %}<a class="button secondary sm" href="{% url 'period_backups' p.pk %}">{{ p.name }}</a>{% endfor %}</div></div>
+{% endif %}
+
+<div class="card table-wrap">
+  {% if members %}
+  <table class="stack">
+    <thead><tr><th>Priority</th><th>Faculty</th><th>Role</th><th>Buildings</th><th>Reserved / called</th><th></th></tr></thead>
+    <tbody>
+      {% for m in members %}
+      <tr>
+        <td data-label="Priority">{{ m.priority }}</td>
+        <td data-label="Faculty"><a href="{% url 'faculty_detail' m.faculty_id %}">{{ m.faculty.name }}</a><div class="muted">{{ m.faculty.category }} · {{ m.faculty.department }}</div></td>
+        <td data-label="Role">{% if m.role == "reserve_only" %}<span class="badge info">backup only</span>{% else %}regular + backup{% endif %}{% if m.max_backup %}<div class="muted">at most {{ m.max_backup }} per period</div>{% endif %}</td>
+        <td data-label="Buildings">{% for b in m.buildings.all %}{{ b.name }}{% if not forloop.last %}, {% endif %}{% empty %}<span class="muted">any</span>{% endfor %}</td>
+        <td data-label="Reserved / called">{{ m.reserved }} / {{ m.called }}</td>
+        <td>
+          <div class="actions">
+            <a class="button secondary sm" href="?edit={{ m.pk }}">Edit</a>
+            <form method="post">{% csrf_token %}<input type="hidden" name="action" value="remove"><input type="hidden" name="id" value="{{ m.pk }}"><button class="secondary sm" type="submit">Remove</button></form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">{% icon "users" %}<strong>The pool is empty</strong>Add people below, or add a whole designation such as Lab Engineers.</div>
+  {% endif %}
+</div>
+
+<div class="grid">
+  <div class="card">
+    <h2>{% if editing %}Edit {{ editing.faculty.name }}{% else %}Add someone{% endif %}</h2>
+    <form method="post">
+      {% csrf_token %}<input type="hidden" name="action" value="save">
+      {% include "_form_fields.html" %}
+      <div class="actions"><button type="submit">{% icon "check" %}Save</button>{% if editing %}<a class="button secondary" href="{% url 'backup_pool' %}">Cancel</a>{% endif %}</div>
+    </form>
+  </div>
+  <div class="card">
+    <h2>Add a whole designation</h2>
+    <form method="post">
+      {% csrf_token %}<input type="hidden" name="action" value="add_category">
+      <div class="field"><label for="id_cat">Designation</label><select id="id_cat" name="category">{% for c in categories %}<option value="{{ c.pk }}"{% if c.code == "lab_engineer" %} selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></div>
+      <div class="field"><label for="id_role">Role</label><select id="id_role" name="role">{% for v, label in roles %}<option value="{{ v }}">{{ label }}</option>{% endfor %}</select></div>
+      <div class="actions"><button class="secondary" type="submit">{% icon "plus" %}Add everyone</button></div>
+    </form>
+  </div>
+</div>
+{% endblock %}

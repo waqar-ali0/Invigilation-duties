@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Backups — {{ period.name }}{% endblock %}
+{% block content %}
+<h1>Backups</h1>
+<p class="subtitle"><a href="{% url 'period_dashboard' period.pk %}">← {{ period.name }}</a> · <a href="{% url 'backup_pool' %}">Backup pool</a> ({{ pool_size }} active members)</p>
+
+<div class="card">
+  <form method="post" class="form-grid">
+    {% csrf_token %}<input type="hidden" name="action" value="settings">
+    {% with form=settings_form %}{% include "_form_fields.html" %}{% endwith %}
+    <div class="actions"><button class="secondary" type="submit">Save and reserve</button></div>
+  </form>
+  <form method="post">{% csrf_token %}<input type="hidden" name="action" value="reserve"><button class="link" type="submit">Fill free backup places now</button></form>
+  <p class="muted">Reservations are refreshed after every allocation run. Someone who gets a duty or is approved unavailable in a slot is released from it automatically.</p>
+</div>
+
+<div class="card table-wrap">
+  <table class="stack">
+    <thead><tr><th>Time slot</th><th>Backups</th></tr></thead>
+    <tbody>
+      {% for slot, reservations in rows %}
+      <tr>
+        <td data-label="Time slot">{{ slot }}</td>
+        <td data-label="Backups">
+          {% for r in reservations %}
+            <div>
+              <a href="{% url 'faculty_detail' r.faculty_id %}">{{ r.faculty.name }}</a>
+              <span class="badge {% if r.status == 'called' %}warn{% elif r.status == 'reserved' %}info{% endif %}">{{ r.get_status_display }}</span>
+              {% if r.duty %}→ took {{ r.duty.room_allocation.room }} · <span class="badge {{ r.duty.status|tone }}">{% if r.duty.status == "completed" %}performed{% else %}{{ r.duty.get_status_display }}{% endif %}</span>{% endif %}
+            </div>
+          {% empty %}<span class="muted">none</span>{% endfor %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="2" class="muted">No time slots yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

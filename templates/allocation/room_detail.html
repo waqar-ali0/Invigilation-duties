@@ -26,6 +26,7 @@
       {% csrf_token %}
       <input type="hidden" name="faculty_id" value="{{ pending.0.pk }}">
       <input type="hidden" name="confirm" value="1">
+      <input type="text" name="reason" placeholder="Reason for the exception (kept in the audit log)" aria-label="Reason" maxlength="300" required style="max-width:360px">
       <button type="submit">Assign anyway</button>
     </form>
     <a class="button secondary" href="{% url 'room_detail' period.pk room.pk %}">Cancel</a>
@@ -42,13 +43,16 @@
     <tbody>
       {% for d in duties %}
       <tr>
-        <td>{{ d.faculty.name }}</td>
+        <td>{{ d.faculty.name }}{% if d.locked %} <span class="badge info">locked</span>{% endif %}</td>
         <td>{{ d.faculty.department }}</td>
         <td><span class="badge">{{ d.get_source_display }}</span></td>
         {% if published %}<td>{{ d.get_status_display }}</td>{% endif %}
         <td>
           {% if editable %}
+          <div class="actions">
+          <form method="post" action="{% url 'lock_duty' period.pk d.pk %}">{% csrf_token %}<input type="hidden" name="locked" value="{% if d.locked %}0{% else %}1{% endif %}"><button class="secondary sm" type="submit" title="Locked duties are kept when the allocation is run again">{% if d.locked %}Unlock{% else %}Lock{% endif %}</button></form>
           <form method="post" action="{% url 'remove_duty' period.pk d.pk %}">{% csrf_token %}<button class="danger sm" type="submit">{% icon "trash" %}Remove</button></form>
+          </div>
           {% elif can_replace and d.status == "assigned" %}
           <a class="button secondary" href="{% url 'replace_duty' period.pk d.pk %}">{% icon "repeat" %}Replace</a>
           {% endif %}

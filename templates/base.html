@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <title>{% block title %}Invigilation Duties{% endblock %}</title>
-  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=23">{# bump v= whenever app.css changes, so browsers fetch the new file #}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=24">{# bump v= whenever app.css changes, so browsers fetch the new file #}
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%232f5bea'/%3E%3Cpath d='M7 12.5l3 3 7-7' stroke='white' stroke-width='2.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 </head>
 <body class="{% block body_class %}{% if user.is_authenticated %}app{% endif %}{% endblock %}">
@@ -31,6 +31,7 @@
       <a href="{% url 'admin_requests' %}" class="{% if n == 'admin_requests' %}active{% endif %}">{% icon "inbox" %}<span>Requests</span></a>
       <a href="{% url 'admin_swaps' %}" class="{% if n == 'admin_swaps' %}active{% endif %}">{% icon "repeat" %}<span>Swaps</span></a>
       <a href="{% url 'attendance' %}" class="{% if n == 'attendance' or n == 'attendance_slot' or n == 'record_stand_in' %}active{% endif %}">{% icon "check-square" %}<span>Attendance</span></a>
+      <a href="{% url 'backup_pool' %}" class="{% if n == 'backup_pool' or n == 'period_backups' %}active{% endif %}">{% icon "users" %}<span>Backups</span></a>
       <div class="nav-section">People &amp; system</div>
       <a href="{% url 'accounts_page' %}" class="{% if n == 'accounts_page' %}active{% endif %}">{% icon "users" %}<span>Accounts</span></a>
       <a href="{% url 'email_list' %}" class="{% if n == 'email_list' %}active{% endif %}">{% icon "mail" %}<span>Emails</span></a>
@@ -43,6 +44,7 @@
       <div class="nav-section">My work</div>
       <a href="{% url 'my_duties' %}" class="{% if n == 'my_duties' or n == 'ask_colleague' %}active{% endif %}">{% icon "clipboard" %}<span>My duties</span></a>
       <a href="{% url 'my_unavailability' %}" class="{% if n == 'my_unavailability' %}active{% endif %}">{% icon "calendar-x" %}<span>Unavailability</span></a>
+      <a href="{% url 'my_preferences' %}" class="{% if n == 'my_preferences' %}active{% endif %}">{% icon "calendar" %}<span>Preferences</span></a>
       <a href="{% url 'swap_requests' %}" class="{% if n == 'swap_requests' %}active{% endif %}">{% icon "repeat" %}<span>Swaps</span></a>
       {% if user.role == "hod" %}
       <div class="nav-section">My department</div>

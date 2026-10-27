@@ -8,6 +8,8 @@ urlpatterns = [
     path("periods/<int:pk>/rooms/<int:room_id>/", views.room_detail, name="room_detail"),
     path("periods/<int:pk>/rooms/<int:room_id>/add/", views.add_duty_view, name="add_duty"),
     path("periods/<int:pk>/duties/<int:duty_id>/remove/", views.remove_duty_view, name="remove_duty"),
+    path("periods/<int:pk>/duties/<int:duty_id>/lock/", views.lock_duty_view, name="lock_duty"),
+    path("periods/<int:pk>/check/", views.check_view, name="period_check"),
     path("periods/<int:pk>/duties/<int:duty_id>/replace/", views.replace_duty_view, name="replace_duty"),
     path("periods/<int:pk>/publish/", views.publish_view, name="publish"),
 ]

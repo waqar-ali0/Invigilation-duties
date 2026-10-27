@@ -446,3 +446,14 @@ th a:hover { text-decoration: underline; }
 td input.num, td input[type=number] { width: 96px; min-width: 0; }
 td select { min-width: 150px; width: auto; }
 input[type=radio] { width: 17px; height: 17px; accent-color: var(--primary); vertical-align: -3px; margin-right: 8px; }
+
+/* Check page */
+.card.check { border-left: 4px solid var(--border); }
+.card.check.ok { border-left-color: var(--ok); }
+.card.check.info { border-left-color: var(--info); }
+.card.check.warn { border-left-color: var(--warn); }
+.card.check.error { border-left-color: var(--danger); }
+.card.check h2 .icon { margin-right: 6px; }
+.card.check.error h2 .icon { color: var(--danger); }
+.card.check.warn h2 .icon { color: var(--warn); }
+.card.check.ok h2 .icon { color: var(--ok); }

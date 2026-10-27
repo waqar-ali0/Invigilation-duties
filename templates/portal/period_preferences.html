@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Preferences — {{ period.name }}{% endblock %}
+{% block content %}
+<h1>Preferences</h1>
+<p class="subtitle"><a href="{% url 'period_dashboard' period.pk %}">← {{ period.name }}</a> · Soft wishes: followed when fair, never blocking.{% if last_run.preferences.total %} Last allocation run met {{ last_run.preferences.met }} of {{ last_run.preferences.total }} new duties given to people with preferences.{% endif %}</p>
+
+<div class="card table-wrap">
+  {% if prefs %}
+  <table class="stack">
+    <thead><tr><th>Faculty</th><th>Preference</th><th>Remarks</th><th>Added</th><th></th></tr></thead>
+    <tbody>
+      {% for p in prefs %}
+      <tr>
+        <td data-label="Faculty"><a href="{% url 'faculty_detail' p.faculty_id %}">{{ p.faculty.name }}</a></td>
+        <td data-label="Preference">{{ p.get_kind_display }}: <strong>{% if p.date %}{{ p.date|date:"D d M" }}{% elif p.slot %}{{ p.slot }}{% else %}{{ p.building }}{% endif %}</strong></td>
+        <td data-label="Remarks">{{ p.remarks|default:"—" }}</td>
+        <td data-label="Added">{{ p.created_at|date:"d M Y" }}</td>
+        <td><form method="post">{% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="{{ p.pk }}"><button class="secondary sm" type="submit">Remove</button></form></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">{% icon "calendar" %}<strong>No preferences yet</strong>Faculty add them under My preferences while availability is open.</div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>Add a preference for someone</h2>
+  <form method="post" class="form-grid">
+    {% csrf_token %}
+    {% include "_form_fields.html" %}
+    <div class="actions"><button class="secondary" type="submit">{% icon "plus" %}Add</button></div>
+  </form>
+</div>
+{% endblock %}

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Duty, SwapRequest, Unavailability
+from .models import BackupMember, BackupReservation, Duty, Preference, SwapRequest, Unavailability
 
 
 @admin.register(SwapRequest)
@@ -45,3 +45,23 @@ class DutyAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(Preference)
+class PreferenceAdmin(admin.ModelAdmin):
+    list_display = ("faculty", "period", "kind", "date", "slot", "building")
+    list_filter = ("period", "kind")
+    search_fields = ("faculty__name",)
+
+
+@admin.register(BackupMember)
+class BackupMemberAdmin(admin.ModelAdmin):
+    list_display = ("faculty", "role", "priority", "max_backup")
+    list_filter = ("role",)
+    search_fields = ("faculty__name",)
+
+
+@admin.register(BackupReservation)
+class BackupReservationAdmin(admin.ModelAdmin):
+    list_display = ("faculty", "slot", "status", "duty")
+    list_filter = ("period", "status")

@@ -7,6 +7,7 @@ from accounts.models import Role
 from audit.log import log
 from exams.models import ExamPeriod
 
+from .backups import record_call
 from .models import Duty, DutySource, DutyStatus
 
 
@@ -84,6 +85,7 @@ def record_stand_in(duty, faculty, actor, reason):
             attendance_marked_by=actor,
             attendance_marked_at=timezone.now(),
         )
+        record_call(duty, new_duty)
         log(actor, "duty.stand_in", duty, after={"faculty": faculty.pk, "reason": reason, "duty": new_duty.pk})
     return new_duty
 

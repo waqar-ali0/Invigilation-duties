@@ -1,20 +1,32 @@
 """Database glue around the pure allocation engine."""
 
 import random
-from collections import defaultdict
+from collections import Counter, defaultdict
 
 from django.db import transaction
 from django.db.models import Count, Q
 from django.utils import timezone
 
 from audit.log import log
-from duties.models import Duty, DutySource, DutyStatus, Unavailability, UnavailabilityStatus
+from duties.backups import reserve_backups
+from duties.models import (
+    BackupMember,
+    BackupRole,
+    Duty,
+    DutySource,
+    DutyStatus,
+    Preference,
+    PreferenceKind,
+    Unavailability,
+    UnavailabilityStatus,
+)
 from exams.halls import staff_shared_halls
 from exams.models import ExamPeriod, ExamSession, PeriodStatus, RoomAllocation
 from faculty.models import Faculty
 from notifications.triggers import queue_roster_published
 
 from .engine import AllocationResult, CapacityReport, EngineInput, Person, Room, Rules, Slot, allocate, capacity_check
+from .engine import Preference as EnginePreference
 
 
 class PublishBlocked(Exception):
@@ -32,21 +44,44 @@ def engine_people(period):
     candidates = Faculty.objects.filter(Q(is_active=True, is_exempt=False) | Q(workload_rules__period=period, workload_rules__allow_inactive=True)).select_related("category").distinct()
     rules = resolve_rules(period, candidates)
     prior = prior_counts(period)
+    reserve_only = set(BackupMember.objects.filter(role=BackupRole.RESERVE_ONLY).values_list("faculty_id", flat=True))
     people = []
     for f in candidates:
         rule = rules[f.id]
         if rule.exempt or (not (f.is_active and not f.is_exempt) and not rule.allow_inactive):
             continue
         low, high = rule.bounds()
-        people.append(Person(f.id, f.department_id, high, minimum=low or 0, target=rule.target, prior=prior.get(f.id, 0)))
+        people.append(Person(
+            f.id, f.department_id, high, minimum=low or 0, target=rule.target, prior=prior.get(f.id, 0),
+            reserve=f.id in reserve_only,
+        ))
     return people
 
 
-def build_engine_input(period, exclude_auto=False, include_pending=False, exclude_duty_ids=()):
+def engine_preferences(period):
+    """{faculty id: engine Preference} from the soft wishes recorded for `period`."""
+    wishes = defaultdict(lambda: {"dates": set(), "slots": set(), "avoid_slots": set(), "buildings": set()})
+    for faculty_id, kind, day, slot_id, building_id in Preference.objects.filter(period=period).values_list(
+        "faculty_id", "kind", "date", "slot_id", "building_id"
+    ):
+        w = wishes[faculty_id]
+        if kind == PreferenceKind.DATE and day:
+            w["dates"].add(day)
+        elif kind == PreferenceKind.SLOT and slot_id:
+            w["slots"].add(slot_id)
+        elif kind == PreferenceKind.AVOID_SLOT and slot_id:
+            w["avoid_slots"].add(slot_id)
+        elif kind == PreferenceKind.BUILDING and building_id:
+            w["buildings"].add(building_id)
+    return {fid: EnginePreference(**{k: frozenset(v) for k, v in w.items()}) for fid, w in wishes.items()}
+
+
+def build_engine_input(period, exclude_auto=False, include_pending=False, exclude_duty_ids=(), only_slots=None):
     """Describe `period` for the engine. Existing active duties become `fixed`
     (AUTO ones are left out when `exclude_auto`; duties in `exclude_duty_ids` are left out,
     e.g. one being handed over). Approved unavailability blocks people; with
-    `include_pending`, pending requests do too (for "what if all are approved")."""
+    `include_pending`, pending requests do too (for "what if all are approved").
+    With `only_slots`, rooms in other slots keep exactly the duties they have."""
     s = period.settings
     people = engine_people(period)
 
@@ -61,9 +96,19 @@ def build_engine_input(period, exclude_auto=False, include_pending=False, exclud
         "examsession_id", "faculty_id"
     ):
         teachers[session_id].add(faculty_id)
+    room_rows = list(RoomAllocation.objects.filter(session__slot__period=period).select_related("session", "room_ref"))
+    held = Counter()
+    if only_slots is not None:
+        held.update(Duty.objects.active().filter(period=period).values_list("room_allocation_id", flat=True))
     rooms = [
-        Room(r.id, r.session.slot_id, r.invigilators_required, frozenset(teachers[r.session_id]))
-        for r in RoomAllocation.objects.filter(session__slot__period=period).select_related("session")
+        Room(
+            r.id,
+            r.session.slot_id,
+            r.invigilators_required if only_slots is None or r.session.slot_id in only_slots else min(held[r.id], r.invigilators_required),
+            frozenset(teachers[r.session_id]),
+            r.room_ref.building_id if r.room_ref_id else None,
+        )
+        for r in room_rows
     ]
 
     statuses = [UnavailabilityStatus.APPROVED] + ([UnavailabilityStatus.PENDING] if include_pending else [])
@@ -87,24 +132,30 @@ def build_engine_input(period, exclude_auto=False, include_pending=False, exclud
         slots=slots,
         rooms=rooms,
         people=people,
-        rules=Rules(s.max_duties_per_day, s.avoid_back_to_back, s.exclude_course_teacher),
+        rules=Rules(s.max_duties_per_day, s.avoid_back_to_back, s.exclude_course_teacher, s.reserves_fill_shortages),
         unavailable_days=frozenset(unavailable_days),
         unavailable_slots=frozenset(unavailable_slots),
         fixed=fixed,
+        preferences=engine_preferences(period),
     )
 
 
-def run_allocation(period, actor, seed=None) -> AllocationResult:
-    """(Re)allocate the draft: AUTO duties are replaced, manual ones kept."""
+def run_allocation(period, actor, seed=None, slot_ids=None) -> AllocationResult:
+    """(Re)allocate the draft: unlocked AUTO duties are replaced, manual and locked ones kept.
+    With `slot_ids`, only those time slots are re-generated; the rest stays exactly as it is."""
     caller_period = period
     period.ensure_editable()
     with transaction.atomic():
         period = ExamPeriod.lock_for_edit(period.pk)
         staff_shared_halls(period)  # also catches rooms edited in the admin panel since the import
-        Duty.objects.active().filter(period=period, source=DutySource.AUTO).delete()
+        replaced = Duty.objects.active().filter(period=period, source=DutySource.AUTO, locked=False)
+        if slot_ids is not None:
+            slot_ids = set(period.slots.filter(pk__in=slot_ids).values_list("pk", flat=True))
+            replaced = replaced.filter(room_allocation__session__slot_id__in=slot_ids)
+        replaced.delete()
         if seed is None:
             seed = random.randrange(1, 2**31)
-        result = allocate(build_engine_input(period), seed)
+        result = allocate(build_engine_input(period, only_slots=slot_ids), seed)
         Duty.objects.bulk_create(
             Duty(period=period, faculty_id=person_id, room_allocation_id=room_id, source=DutySource.AUTO)
             for person_id, room_id in result.assignments
@@ -115,6 +166,8 @@ def run_allocation(period, actor, seed=None) -> AllocationResult:
             "assigned": len(result.assignments),
             "stats": {"min": result.stats.min, "max": result.stats.max, "avg": result.stats.avg},
             "soft_violations": result.soft_violations,
+            "preferences": {"met": result.preferences_met, "total": result.preferences_total},
+            "slots": sorted(slot_ids) if slot_ids is not None else "all",
         }
         period.allocation_seed = seed
         period.status = PeriodStatus.ALLOCATING
@@ -123,6 +176,7 @@ def run_allocation(period, actor, seed=None) -> AllocationResult:
             "unfilled": [{"room_id": u.room_id, "count": u.count, "reason": u.reason} for u in result.unfilled],
         }
         period.save(update_fields=["allocation_seed", "status", "last_run"])
+        reserve_backups(period)
         log(actor, "allocation.run", period, after={**summary, "unfilled_seats": sum(u.count for u in result.unfilled)})
     _copy_fields(period, caller_period, ["allocation_seed", "status", "last_run"])
     return result

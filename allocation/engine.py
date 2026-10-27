@@ -18,6 +18,7 @@ MSG_PERIOD_CAP = "Reached period cap ({cap})"
 MSG_DAILY_LIMIT = "Reached daily limit ({max_per_day})"
 MSG_BACK_TO_BACK = "Back-to-back with another duty"
 MSG_COURSE_TEACHER = "Teaches this course"
+MSG_RESERVE = "Backup only (kept in reserve)"
 
 
 @dataclass(frozen=True)
@@ -42,6 +43,7 @@ class Room:
     slot_id: int
     needed: int
     course_teacher_ids: frozenset[int] = frozenset()
+    building_id: int | None = None
 
 
 @dataclass(frozen=True)
@@ -52,6 +54,28 @@ class Person:
     minimum: int = 0  # filled first, before anyone above their minimum
     target: int | None = None  # their share: seats go to whoever is furthest below theirs
     prior: int = 0  # duties already counted elsewhere (periods whose duties count together)
+    reserve: bool = False  # backup-only: used for seats nobody else can take, and only when allowed
+
+
+@dataclass(frozen=True)
+class Preference:
+    """Soft wishes: seats on preferred dates/slots/buildings are favoured, avoided slots disfavoured."""
+
+    dates: frozenset = frozenset()
+    slots: frozenset = frozenset()
+    avoid_slots: frozenset = frozenset()
+    buildings: frozenset = frozenset()
+
+    def misses(self, slot: "Slot", room: "Room") -> int:
+        """0 when a seat in `room` suits every wish; one point per wish it goes against."""
+        miss = 0
+        if slot.id in self.avoid_slots:
+            miss += 2
+        if (self.dates or self.slots) and slot.date not in self.dates and slot.id not in self.slots:
+            miss += 1
+        if self.buildings and room.building_id not in self.buildings:
+            miss += 1
+        return miss
 
 
 @dataclass(frozen=True)
@@ -59,6 +83,7 @@ class Rules:
     max_per_day: int
     avoid_back_to_back: bool
     exclude_course_teacher: bool
+    reserves_fill_shortages: bool = False
 
 
 @dataclass(frozen=True)
@@ -70,6 +95,7 @@ class EngineInput:
     unavailable_days: frozenset[tuple[int, date]] = frozenset()  # (person_id, date)
     unavailable_slots: frozenset[tuple[int, int]] = frozenset()  # (person_id, slot_id)
     fixed: tuple[tuple[int, int], ...] = ()  # existing (person_id, room_id) duties, kept as they are
+    preferences: dict = None  # person_id -> Preference
 
 
 @dataclass(frozen=True)
@@ -93,6 +119,8 @@ class AllocationResult:
     stats: FairnessStats
     soft_violations: int
     seed: int
+    preferences_met: int = 0  # new seats that suited the holder's wishes
+    preferences_total: int = 0  # new seats given to people who expressed wishes
 
 
 def fairness_stats(counts: Iterable[int]) -> FairnessStats:
@@ -207,7 +235,7 @@ class AllocationState:
 @dataclass(frozen=True)
 class CapacityReport:
     seats_needed: int
-    capacity: int
+    capacity: int  # duties the eligible faculty can still take (backup-only members not counted)
     ok: bool
     slot_shortages: list[tuple[int, int, int]]  # (slot_id, seats needed in slot, people available in slot)
 
@@ -261,8 +289,9 @@ def capacity_check(data: EngineInput) -> CapacityReport:
     for s in data.slots:
         if s.id in slots_with_rooms:
             slots_by_date[s.date].append(s)
+    usable = [p for p in data.people if not p.reserve or data.rules.reserves_fill_shortages]
     capacity = int(sum(
-        max(0, min(_attendable(state, p, slots_by_date), _room_left(state, p)) - state.count(p.id)) for p in data.people
+        max(0, min(_attendable(state, p, slots_by_date), _room_left(state, p)) - state.count(p.id)) for p in usable
     ))
     needed, available = _slot_demand(state)
     shortages = [(s.id, needed[s.id], available[s.id]) for s in data.slots if needed[s.id] > available[s.id]]
@@ -273,14 +302,18 @@ def _unfilled_reason(state: AllocationState, room: Room) -> str:
     slot = state.slots[room.slot_id]
     unavailable = at_cap = at_daily = 0
     busy = state.people_in_slot(slot.id)
+    reserves_allowed = state.rules.reserves_fill_shortages
     others = [p for p in state.data.people if p.id not in busy]
     if not others:
         return "All faculty are already assigned in this time slot"
+    reserve = 0
     for p in others:
         if state.is_unavailable(p.id, slot):
             unavailable += 1
         elif p.cap is not None and state.total(p.id) >= p.cap:
             at_cap += 1
+        elif p.reserve and not reserves_allowed:
+            reserve += 1
         else:
             at_daily += 1
     total = len(others)
@@ -290,7 +323,10 @@ def _unfilled_reason(state: AllocationState, room: Room) -> str:
         return "All remaining faculty have reached their period cap"
     if at_daily == total:
         return "All remaining faculty have reached their daily limit"
-    return f"No eligible faculty: {unavailable} unavailable, {at_cap} at period cap, {at_daily} at daily limit"
+    parts = [f"{unavailable} unavailable", f"{at_cap} at period cap", f"{at_daily} at daily limit"]
+    if reserve:
+        parts.append(f"{reserve} kept in reserve")
+    return "No eligible faculty: " + ", ".join(parts)
 
 
 def fair_share(data: EngineInput) -> float:
@@ -306,7 +342,11 @@ def allocate(data: EngineInput, seed: int) -> AllocationResult:
     below their own target (or the fair share when they have none), fewest duties next;
     soft rules and department spread break ties before a seeded random tie-break."""
     state = AllocationState(data)
-    default_share = fair_share(data) or 1.0
+    regular = [p for p in data.people if not p.reserve]
+    reserves = [p for p in data.people if p.reserve] if data.rules.reserves_fill_shortages else []
+    default_share = fair_share(EngineInput(data.slots, data.rooms, regular or data.people, data.rules)) or 1.0
+    preferences = data.preferences or {}
+    no_wishes = Preference()
 
     def progress(p: Person) -> float:
         share = p.target if p.target is not None else default_share
@@ -331,33 +371,43 @@ def allocate(data: EngineInput, seed: int) -> AllocationResult:
     assignments = []
     unfilled = []
     soft_violations = 0
+    met = wished = 0
     for slot in sorted(data.slots, key=difficulty):
         for room in rooms_by_slot[slot.id]:
             missing = 0
             for _ in range(state.remaining(room.id)):
                 depts = state.departments_in_room(room.id)
                 best_key, best = None, None
-                for p in data.people:
-                    if state.hard_errors(p.id, room.id):
-                        continue
-                    key = (
-                        len(state.soft_warnings(p.id, room.id)),
-                        0 if state.total(p.id) < p.minimum else 1,
-                        round(progress(p), 6),
-                        state.total(p.id),
-                        1 if p.department_id in depts else 0,
-                        tie_break[p.id],
-                    )
-                    if best_key is None or key < best_key:
-                        best_key, best = key, p
+                for pool in (regular, reserves):  # backup-only members only when nobody else can sit
+                    for p in pool:
+                        if state.hard_errors(p.id, room.id):
+                            continue
+                        share_progress = progress(p)
+                        key = (
+                            len(state.soft_warnings(p.id, room.id)),
+                            0 if state.total(p.id) < p.minimum else 1,
+                            int(share_progress * default_share + 1e-9),  # whole duties: fairness first
+                            preferences.get(p.id, no_wishes).misses(slot, room),  # then wishes
+                            round(share_progress, 6),
+                            state.total(p.id),
+                            1 if p.department_id in depts else 0,
+                            tie_break[p.id],
+                        )
+                        if best_key is None or key < best_key:
+                            best_key, best = key, p
+                    if best is not None:
+                        break
                 if best is None:
                     missing += 1
                     continue
                 soft_violations += best_key[0]
+                if best.id in preferences:
+                    wished += 1
+                    met += 1 if best_key[3] == 0 else 0
                 state.assign(best.id, room.id)
                 assignments.append((best.id, room.id))
             if missing:
                 unfilled.append(Unfilled(room.id, missing, _unfilled_reason(state, room)))
 
-    stats = fairness_stats(state.count(p.id) for p in data.people)
-    return AllocationResult(assignments, unfilled, stats, soft_violations, seed)
+    stats = fairness_stats(state.count(p.id) for p in regular or data.people)
+    return AllocationResult(assignments, unfilled, stats, soft_violations, seed, met, wished)

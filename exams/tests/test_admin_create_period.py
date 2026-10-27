@@ -17,7 +17,7 @@ def period_form(**settings):
         "settings-INITIAL_FORMS": "0",
         "settings-MIN_NUM_FORMS": "0",
         "settings-MAX_NUM_FORMS": "1",
-        "settings-0-max_duties_per_faculty": "8",
+        "settings-0-max_duties_per_faculty": "8", "settings-0-backups_per_slot": "0",
         "settings-0-max_duties_per_day": "2",
         "settings-0-students_per_invigilator": "30",
         "settings-0-min_invigilators_per_room": "2",
