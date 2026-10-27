@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Reports — Invigilation Duties{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Reports</h1>
+    <p class="subtitle">Built from the same records and workload rules as the dashboards. Download any report as CSV, Excel or PDF.</p>
+  </div>
+</div>
+
+<div class="card">
+  <form method="get" class="filters">
+    <select name="type" aria-label="Report">{% for k, t in reports %}<option value="{{ k }}"{% if k == key %} selected{% endif %}>{{ t }}</option>{% endfor %}</select>
+    <select name="period" aria-label="Exam period"><option value="">All periods</option>{% for p in periods %}<option value="{{ p.pk }}"{% if f.period and f.period.pk == p.pk %} selected{% endif %}>{{ p.name }}</option>{% endfor %}</select>
+    {% if key == "comparison" %}<select name="compare_with" aria-label="Compare with"><option value="">Compare with…</option>{% for p in periods %}<option value="{{ p.pk }}"{% if f.compare_with and f.compare_with.pk == p.pk %} selected{% endif %}>{{ p.name }}</option>{% endfor %}</select>{% endif %}
+    <input type="date" name="date_from" value="{{ q.date_from }}" aria-label="From date" title="From date">
+    <input type="date" name="date_to" value="{{ q.date_to }}" aria-label="To date" title="To date">
+    <select name="department" aria-label="Department"><option value="">All departments</option>{% for d in departments %}<option value="{{ d.pk }}"{% if f.department == d.pk %} selected{% endif %}>{{ d.name }}</option>{% endfor %}</select>
+    <select name="category" aria-label="Designation"><option value="">All designations</option>{% for c in categories %}<option value="{{ c.pk }}"{% if f.category == c.pk %} selected{% endif %}>{{ c.name }}</option>{% endfor %}</select>
+    <select name="faculty" aria-label="Faculty member"><option value="">Everyone</option>{% for p in people %}<option value="{{ p.pk }}"{% if f.faculty == p.pk %} selected{% endif %}>{{ p.name }} ({{ p.employee_id }})</option>{% endfor %}</select>
+    <input type="text" name="room" value="{{ f.room }}" placeholder="Room" aria-label="Room">
+    <select name="building" aria-label="Building"><option value="">All buildings</option>{% for b in buildings %}<option value="{{ b.pk }}"{% if f.building == b.pk %} selected{% endif %}>{{ b }}</option>{% endfor %}</select>
+    <select name="status" aria-label="Duty status"><option value="">Any status</option>{% for v, label in statuses %}<option value="{{ v }}"{% if f.status == v %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+    <button type="submit">{% icon "search" %}Show</button>
+  </form>
+</div>
+
+<div class="card table-wrap">
+  <div class="page-head" style="margin-bottom:8px">
+    <h2 style="margin:0">{{ report.title }} <span class="muted">· {{ report.rows|length }} row(s)</span></h2>
+    <div class="actions">
+      <a class="button secondary sm" href="?{{ querystring }}&format=csv">{% icon "download" %}CSV</a>
+      <a class="button secondary sm" href="?{{ querystring }}&format=xlsx">{% icon "download" %}Excel</a>
+      <a class="button secondary sm" href="?{{ querystring }}&format=pdf">{% icon "download" %}PDF</a>
+    </div>
+  </div>
+  {% for n in report.notes %}<p class="muted">{{ n }}</p>{% endfor %}
+  {% if not report.columns %}
+    <p class="muted">Choose an exam period for this report.</p>
+  {% elif rows %}
+  <table class="sortable">
+    <thead><tr>{% for c in report.columns %}<th>{{ c }}</th>{% endfor %}</tr></thead>
+    <tbody>
+      {% for row in rows %}<tr>{% for v in row %}<td>{% if v.year %}{{ v|date:"d M Y" }}{% else %}{{ v }}{% endif %}</td>{% endfor %}</tr>{% endfor %}
+    </tbody>
+  </table>
+  {% if truncated %}<p class="muted">Showing the first 500 rows. Download for all {{ report.rows|length }}.</p>{% endif %}
+  {% else %}
+  <div class="empty">{% icon "chart" %}<strong>Nothing to report</strong>No records match these filters.</div>
+  {% endif %}
+</div>
+{% endblock %}

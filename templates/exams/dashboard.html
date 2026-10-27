@@ -130,7 +130,7 @@
 <p class="muted">Last run: preferences met for {{ period.last_run.preferences.met }} of {{ period.last_run.preferences.total }} new duties given to people with preferences.</p>
 {% endif %}
 {% for s in slots %}
-<div class="card table-wrap">
+<div class="card table-wrap" id="slot-{{ s.slot.pk }}">
   <div class="page-head" style="margin-bottom:8px">
     <h2 style="margin:0">{{ s.slot }}</h2>
     {% if editable and duty_count %}<form method="post" action="{% url 'run_allocation' period.pk %}">{% csrf_token %}<input type="hidden" name="slot" value="{{ s.slot.pk }}"><button class="secondary sm" type="submit" title="Re-generate this time slot only; locked and manual duties stay">{% icon "repeat" %}Re-run this slot</button></form>{% endif %}

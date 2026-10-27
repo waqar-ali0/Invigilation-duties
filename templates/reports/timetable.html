@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Timetable — {{ period.name }}{% endblock %}
+{% block content %}
+<h1>Timetable</h1>
+<p class="subtitle"><a href="{% url 'period_dashboard' period.pk %}">← {{ period.name }}</a> · Each cell: courses, rooms and invigilator seats filled. Click a cell for its rooms.</p>
+<div class="card table-wrap">
+  {% if grid %}
+  <table class="timetable">
+    <thead><tr><th>Date</th>{% for start, end in times %}<th>{{ start|time:"H:i" }}–{{ end|time:"H:i" }}</th>{% endfor %}</tr></thead>
+    <tbody>
+      {% for day, cells in grid %}
+      <tr>
+        <th scope="row">{{ day|date:"D d M" }}</th>
+        {% for c in cells %}
+        <td>{% if c %}<a class="tt-cell{% if c.filled < c.needed %} short{% endif %}" href="{% url 'period_dashboard' period.pk %}#slot-{{ c.slot.pk }}">
+          <strong>{{ c.courses }}</strong> course(s) · {{ c.rooms }} room(s)<br>
+          <span class="{% if c.filled < c.needed %}text-danger{% else %}muted{% endif %}">{{ c.filled }}/{{ c.needed }} seats</span></a>{% else %}<span class="muted">—</span>{% endif %}</td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">{% icon "calendar" %}<strong>No schedule yet</strong>Import the exam schedule first.</div>
+  {% endif %}
+</div>
+{% endblock %}

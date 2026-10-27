@@ -462,3 +462,20 @@ input[type=radio] { width: 17px; height: 17px; accent-color: var(--primary); ver
 .icon-button.bell { position: relative; margin-left: 8px; }
 .bell-count { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--danger); color: #fff; font-size: 0.7rem; font-weight: 700; line-height: 18px; text-align: center; }
 .card.unread { border-left: 4px solid var(--info); }
+
+/* Charts */
+.chart { display: block; max-width: 100%; font-size: 12px; }
+.chart .bar, .chart .tone-info { fill: var(--primary); }
+.chart .tone-ok, .swatch.tone-ok { fill: var(--ok); background: var(--ok); }
+.chart .tone-danger, .swatch.tone-danger { fill: var(--danger); background: var(--danger); }
+.swatch.tone-info { background: var(--primary); }
+.chart .label { fill: var(--muted); }
+.chart .value { fill: var(--text); font-weight: 600; }
+.chart .hit { fill: transparent; }
+.chart a:hover .bar { opacity: .8; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; font-size: .85rem; color: var(--muted); }
+.swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; }
+.grid.cards > a.card { text-decoration: none; color: inherit; }
+.timetable td { min-width: 140px; vertical-align: top; }
+.tt-cell { display: block; padding: 8px; border-radius: 8px; background: var(--surface-3); text-decoration: none; color: inherit; }
+.tt-cell.short { box-shadow: inset 3px 0 0 var(--danger); }

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Dashboard — Invigilation Duties{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Dashboard</h1>
+    <p class="subtitle">{% if period %}<a href="{% url 'period_dashboard' period.pk %}">{{ period.name }}</a> · {{ period.start_date|date:"d M" }} – {{ period.end_date|date:"d M Y" }} · <span class="badge {{ period.status|tone }}">{{ period.get_status_display }}</span>{% else %}No exam periods yet.{% endif %} · Every number is counted live from the records; click a card for the details.</p>
+  </div>
+  {% if period %}
+  <div class="actions">
+    <a class="button secondary" href="{{ links.timetable }}">{% icon "calendar" %}Timetable</a>
+    <a class="button secondary" href="{{ links.check }}">{% icon "check-square" %}Check</a>
+    <a class="button" href="{{ links.reports }}">{% icon "chart" %}Reports</a>
+  </div>
+  {% endif %}
+</div>
+
+<div class="grid cards">
+  <a class="card" href="{% url 'faculty_list' %}"><h2>{% icon "users" %}Faculty</h2><div class="stat">{{ faculty_total }}</div><div class="muted">{{ imported }} added by import{% if faculty_to_fix %} · {{ faculty_to_fix }} need contact details fixed{% endif %}</div></a>
+  {% if period %}
+  <a class="card" href="{{ links.timetable }}"><h2>{% icon "building" %}Rooms</h2><div class="stat">{{ rooms_total }}</div><div class="muted">room bookings · {{ seats_needed }} invigilator seats required</div></a>
+  <a class="card" href="{{ links.dash }}"><h2>{% icon "clipboard" %}Coverage</h2><div class="stat">{% if coverage is not None %}{{ coverage }}%{% else %}—{% endif %}</div><div class="muted">{{ seats_filled }} of {{ seats_needed }} seats filled{% if seats_empty %} · <span class="text-danger">{{ seats_empty }} empty</span>{% endif %}</div></a>
+  <a class="card" href="{{ links.reports }}?type=assigned&period={{ period.pk }}"><h2>{% icon "check" %}Duties</h2><div class="stat">{{ assigned }}</div><div class="muted">{{ completed }} completed · {{ pending }} pending · {{ missed }} missed{% if unconfirmed is not None %} · {{ unconfirmed }} not yet confirmed by faculty{% endif %}</div></a>
+  <a class="card" href="{{ links.missed }}"><h2>{% icon "calendar-x" %}Missed &amp; make-ups</h2><div class="stat">{{ missed }} · {{ obligations }}</div><div class="muted">missed duties · make-ups still owed</div></a>
+  <a class="card" href="{{ links.backups }}"><h2>{% icon "users" %}Backups</h2><div class="stat">{{ backups_free }}</div><div class="muted">reserved and free now · {{ backups_pool }} in the pool</div></a>
+  <a class="card" href="{{ links.people }}?flag=below"><h2>{% icon "chart" %}Below target</h2><div class="stat">{{ below }}</div><div class="muted">{{ at }} at target</div></a>
+  <a class="card" href="{{ links.people }}?flag=over"><h2>{% icon "alert" %}Over limit</h2><div class="stat">{{ over }}</div><div class="muted">faculty above their approved maximum</div></a>
+  <a class="card" href="{{ links.people }}?flag=no_target"><h2>{% icon "settings" %}No target</h2><div class="stat">{{ no_target }}</div><div class="muted">eligible faculty without a target (shared equally)</div></a>
+  {% endif %}
+</div>
+
+{% if period %}
+<div class="grid">
+  <div class="card">
+    <h2>{% icon "check" %}Duty completion</h2>
+    {{ chart_status|default:'<p class="muted">No duties yet.</p>' }}
+  </div>
+  <div class="card">
+    <h2>{% icon "clock" %}Next time slots</h2>
+    {% for s, fill in next_slots %}
+      <div><a href="{{ links.dash }}#slot-{{ s.pk }}">{{ s }}</a> <span class="muted">· {{ fill.0 }}/{{ fill.1 }} seats</span></div>
+    {% empty %}<p class="muted">No upcoming slots.</p>{% endfor %}
+  </div>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <h2>{% icon "chart" %}Average duties by designation</h2>
+    {{ chart_categories|default:'<p class="muted">No data yet.</p>' }}
+    <p class="muted"><a href="{{ links.reports }}?type=designations&period={{ period.pk }}">As a table</a></p>
+  </div>
+  <div class="card">
+    <h2>{% icon "users" %}How many people have how many duties</h2>
+    {{ chart_distribution|default:'<p class="muted">No data yet.</p>' }}
+    <p class="muted">Number of duties counted (bottom) and how many eligible faculty have that many. <a href="{{ links.reports }}?type=fairness&period={{ period.pk }}">Fairness table</a></p>
+  </div>
+</div>
+
+<div class="card">
+  <h2>{% icon "clipboard" %}Seats filled per time slot</h2>
+  {{ chart_coverage|default:'<p class="muted">No schedule yet.</p>' }}
+</div>
+
+<div class="card table-wrap">
+  <h2>{% icon "shield" %}Recent changes</h2>
+  <table class="stack">
+    <thead><tr><th>When</th><th>Who</th><th>What</th></tr></thead>
+    <tbody>{% for e in recent %}<tr><td data-label="When">{{ e.timestamp|date:"d M H:i" }}</td><td data-label="Who">{{ e.actor.email|default:"system" }}</td><td data-label="What">{{ e.action }}</td></tr>{% empty %}<tr><td colspan="3" class="muted">Nothing yet.</td></tr>{% endfor %}</tbody>
+  </table>
+  <p class="muted"><a href="{% url 'audit_log' %}">Full audit log</a></p>
+</div>
+{% else %}
+<div class="card empty">{% icon "calendar" %}<strong>No exam periods yet</strong><a href="{% url 'period_list' %}">Create the first one</a>.</div>
+{% endif %}
+{% endblock %}
