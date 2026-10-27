@@ -8,9 +8,9 @@ from faculty.models import Department, Faculty
 pytestmark = pytest.mark.django_db
 
 
-def test_home_redirects_to_period_list(admin_client):
+def test_home_redirects_to_dashboard(admin_client):
     r = admin_client.get("/")
-    assert r.status_code == 302 and r.url == reverse("period_list")
+    assert r.status_code == 302 and r.url == reverse("dashboard")
 
 
 def test_anonymous_redirected_to_login(client, period):

@@ -145,7 +145,7 @@ def run():
     User.objects.create_user("staff@uni.edu", PASSWORD, role=Role.EXAM_STAFF)
     office = Browser()
     check("admin logs in through the login form", office.login("office@uni.edu"))
-    check("admin home redirects to exam periods", office.get("/").url == reverse("period_list"))
+    check("admin home redirects to the dashboard", office.get("/").url == reverse("dashboard"))
 
     # ---------------------------------------------------------------- imports
     r = office.post(reverse("department_import"), files={"file": xlsx([["Name"], ["Computer Science"], ["Physics"], ["Mathematics"]], "d.xlsx")})
@@ -364,7 +364,7 @@ def run():
     duty = Duty.objects.filter(period=period, faculty=swapper, status="assigned").first()
     sb = browsers[swapper.employee_id]
     page = sb.text(reverse("ask_colleague", args=[duty.pk]))
-    colleague_ids = re.findall(r'<option value="(\d+)">', page)
+    colleague_ids = re.findall(r'<option value="(\d+)">', page[page.index("<main"):])
     check("Ask a colleague lists candidates", len(colleague_ids) > 0, page[page.find("<main>"):][:300])
     if colleague_ids:
         colleague = Faculty.objects.get(pk=int(colleague_ids[0]))
@@ -385,7 +385,7 @@ def run():
     # ---------------------------------------------------------------- replacement
     target = Duty.objects.filter(period=period, status="assigned").exclude(room_allocation__session__slot__date=start).first()
     page = office.text(reverse("replace_duty", args=[period.pk, target.pk]))
-    options = re.findall(r'<option value="(\d+)">', page)
+    options = re.findall(r'<option value="(\d+)">', page[page.index("<main"):])
     check("replace page lists candidates", len(options) > 0)
     if options:
         office.post(reverse("replace_duty", args=[period.pk, target.pk]), {"faculty_id": options[0], "reason": "Sick"})
@@ -414,7 +414,7 @@ def run():
     check("marked absent", absent.status == DutyStatus.ABSENT)
     check("mark all present", Duty.objects.filter(room_allocation_id=slot_duties[-1].room_allocation_id, status="completed").exists())
     page = staff.text(reverse("record_stand_in", args=[absent.pk]))
-    cands = re.findall(r'<option value="(\d+)">', page)
+    cands = re.findall(r'<option value="(\d+)">', page[page.index("<main"):])
     if cands:
         staff.post(reverse("record_stand_in", args=[absent.pk]), {"faculty_id": cands[0], "reason": "Covered"})
         check("stand-in recorded", Duty.objects.filter(replaces=absent, source="stand_in", status="completed").exists())

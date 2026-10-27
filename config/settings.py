@@ -77,6 +77,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "portal.operations.unread_notifications",
+                "reports.dashboard.period_choices",
             ],
         },
     },

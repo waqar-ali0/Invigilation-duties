@@ -12,7 +12,6 @@ from accounts.permissions import role_required
 from allocation.engine import fairness_stats
 from allocation.services import capacity_report, pending_capacity, roster_conflicts, unfilled_rooms
 from duties.models import Duty, SwapRequest, SwapStatus
-from reports.queries import faculty_load
 
 from .availability import AvailabilityError, close_availability, open_availability
 from .importers.departments import import_departments
@@ -86,12 +85,11 @@ def _rule_text(rule):
     return ", ".join(parts) or "no numbers set"
 
 
-def _workload_summary(period):
-    from workload.calc import Flag, period_loads, summary
+def _workload_summary(period, loads):
+    from workload.calc import Flag, summary
     from workload.models import WorkloadPolicy
 
     policy = WorkloadPolicy.for_period(period)
-    loads = period_loads(period)
     counts = summary(loads)
     return {
         "policy": policy,
@@ -107,17 +105,22 @@ def _workload_summary(period):
 
 @admin_only
 def period_dashboard(request, pk):
-    period = get_object_or_404(ExamPeriod, pk=pk)
-    capacity = capacity_report(period)
+    from allocation.services import engine_people
+    from workload.calc import period_loads
+
+    period = get_object_or_404(ExamPeriod.objects.select_related("settings"), pk=pk)
+    people = engine_people(period)  # worked out once and shared by the checks below
+    loads = period_loads(period)
+    capacity = capacity_report(period, people=people)
     slot_names = {s.id: str(s) for s in period.slots.all()}
-    stats, capped_stats = _fairness(period, faculty_load(period))
+    stats, capped_stats = _fairness(period, [(x.faculty, x.assigned) for x in loads])
     context = {
         "period": period,
         "settings": period.settings,
-        "workload": _workload_summary(period),
+        "workload": _workload_summary(period, loads),
         "capacity": capacity,
-        "pending": pending_capacity(period),
-        "conflicts": roster_conflicts(period),
+        "pending": pending_capacity(period, people=people),
+        "conflicts": roster_conflicts(period, people=people),
         "swaps_waiting": SwapRequest.objects.filter(duty__period=period, status=SwapStatus.PENDING_ADMIN).count(),
         "slot_shortages": [(slot_names[sid], needed, avail) for sid, needed, avail in capacity.slot_shortages],
         "stats": stats,

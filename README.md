@@ -135,6 +135,23 @@ per person** shows target, assigned, completed, pending, missed, handed over, co
 remaining for everyone, with filters and highlights (below / at target, near / over limit,
 no target set).
 
+## Dashboard, reports and timetable
+
+- **Dashboard** (the exam office's home page): pick the period in the top bar. Cards for
+  faculty, rooms, coverage, duties (completed / pending / missed / not yet confirmed), missed
+  duties and make-ups owed, backups, below target, over limit and no target — each opens the
+  records behind it. Charts: duty completion, average duties by designation, how many people
+  have how many duties, and seats filled per time slot (hover any bar for its numbers). Every
+  number is counted live from the records with the same calculator as the workload pages.
+- **Reports** (sidebar): faculty-, room- and slot-wise duty lists, department and designation
+  workload, visiting faculty per course, assigned vs completed, missed duties, make-up
+  obligations (all / outstanding), backup use, unfilled seats, fairness, preference
+  satisfaction, period comparison, overrides and exceptions, over-limit, and workload per
+  person. Filter by period, dates, department, designation, person, room, building and status;
+  click a column heading to sort; download as **CSV, Excel or PDF**.
+- **Timetable** (dashboard): dates × time slots with courses, rooms and seats filled.
+- The sidebar can be collapsed to icons on a desktop (button next to the menu).
+
 ## Missed duties, make-ups, moves and roster versions
 
 - **Missed duties** (sidebar): every duty marked absent. Record the reason, *excused* or

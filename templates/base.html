@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <title>{% block title %}Invigilation Duties{% endblock %}</title>
-  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=26">{# bump v= whenever app.css changes, so browsers fetch the new file #}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=28">{# bump v= whenever app.css changes, so browsers fetch the new file #}
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%232f5bea'/%3E%3Cpath d='M7 12.5l3 3 7-7' stroke='white' stroke-width='2.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 </head>
 <body class="{% block body_class %}{% if user.is_authenticated %}app{% endif %}{% endblock %}">
@@ -71,6 +71,7 @@
   <div class="shell">
     <header class="topbar">
       <button class="icon-button menu-toggle" type="button" aria-label="Open menu" aria-controls="sidebar" data-nav-open>{% icon "menu" %}</button>
+      <button class="icon-button collapse-toggle" type="button" aria-label="Collapse or expand the menu" aria-controls="sidebar" aria-pressed="false" data-nav-collapse>{% icon "menu" %}</button>
       {% if user.is_superuser or user.role == "admin" %}
       <form class="top-search" method="get" action="{% url 'search' %}" role="search">
         {% icon "search" %}
@@ -78,6 +79,15 @@
       </form>
       {% else %}
       <span class="top-title">{% if user.role == "exam_staff" %}Exam day attendance{% else %}Welcome back{% endif %}</span>
+      {% endif %}
+      {% if top_periods %}
+      <form class="top-period" method="get" action="{% url 'pick_period' %}">
+        <input type="hidden" name="next" value="{% url 'dashboard' %}">
+        <select name="period" aria-label="Exam period shown on the dashboard" onchange="this.form.submit()">
+          {% for p in top_periods %}<option value="{{ p.pk }}"{% if p.pk == top_period_id %} selected{% endif %}>{{ p.name }}</option>{% endfor %}
+        </select>
+        <noscript><button type="submit" class="secondary sm">Go</button></noscript>
+      </form>
       {% endif %}
       <span class="top-date">{% now "D d M Y" %}</span>
       <a class="icon-button bell" href="{% url 'notifications' %}" aria-label="Notifications{% if unread_notifications %}: {{ unread_notifications }} new{% endif %}" title="Notifications">{% icon "bell" %}{% if unread_notifications %}<span class="bell-count">{{ unread_notifications }}</span>{% endif %}</a>
@@ -94,6 +104,6 @@
   {% endif %}
   {% endwith %}
   <script src="{% static 'js/filter.js' %}?v=1" defer></script>
-  <script src="{% static 'js/app.js' %}?v=1" defer></script>
+  <script src="{% static 'js/app.js' %}?v=2" defer></script>
 </body>
 </html>

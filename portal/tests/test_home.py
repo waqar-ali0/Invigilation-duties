@@ -24,7 +24,7 @@ def test_deactivated_faculty_cannot_log_in(client, make_member):
 
 
 @pytest.mark.parametrize(
-    "role,target", [(Role.ADMIN, "period_list"), (Role.FACULTY, "my_duties"), (Role.HOD, "my_duties"), (Role.EXAM_STAFF, "staff_home")]
+    "role,target", [(Role.ADMIN, "dashboard"), (Role.FACULTY, "my_duties"), (Role.HOD, "my_duties"), (Role.EXAM_STAFF, "staff_home")]
 )
 def test_home_redirects_by_role(client, make_member, role, target):
     user = make_member(role=role).user if role in (Role.FACULTY, Role.HOD) else User.objects.create_user(f"{role}@uni.edu", "x", role=role)

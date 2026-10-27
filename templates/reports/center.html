@@ -45,7 +45,7 @@
       {% for row in rows %}<tr>{% for v in row %}<td>{% if v.year %}{{ v|date:"d M Y" }}{% else %}{{ v }}{% endif %}</td>{% endfor %}</tr>{% endfor %}
     </tbody>
   </table>
-  {% if truncated %}<p class="muted">Showing the first 500 rows. Download for all {{ report.rows|length }}.</p>{% endif %}
+  {% if truncated %}<p class="muted">Showing the first 200 rows. Download for all {{ report.rows|length }}.</p>{% endif %}
   {% else %}
   <div class="empty">{% icon "chart" %}<strong>Nothing to report</strong>No records match these filters.</div>
   {% endif %}

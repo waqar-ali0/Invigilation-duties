@@ -23,7 +23,7 @@ from .center import REPORTS, Filters, to_csv, to_pdf, to_xlsx
 
 admin_only = role_required(Role.ADMIN)
 SESSION_KEY = "dashboard_period"
-ROW_LIMIT = 500
+ROW_LIMIT = 200
 
 
 def chosen_period(request):

@@ -5,9 +5,9 @@ from django.utils.html import escape
 from django.utils.safestring import mark_safe
 
 ROW = 26  # height of one horizontal bar row
-LABEL_W = 170
-BAR_W = 300
-VALUE_W = 90
+LABEL_W = 130
+BAR_W = 190
+VALUE_W = 70
 
 
 def hbars(items, unit="", width=BAR_W, max_value=None, tone="bar"):
@@ -17,7 +17,7 @@ def hbars(items, unit="", width=BAR_W, max_value=None, tone="bar"):
     top = max_value or max((v for _, v, *_ in items), default=0) or 1
     h = ROW * len(items)
     total_w = LABEL_W + width + VALUE_W
-    out = [f'<svg class="chart" viewBox="0 0 {total_w} {h}" width="100%" role="img" aria-label="Bar chart">']
+    out = [f'<svg class="chart" viewBox="0 0 {total_w} {h}" width="{total_w}" height="{h}" role="img" aria-label="Bar chart">']
     for i, (label, value, tip, *rest) in enumerate(items):
         link = rest[0] if rest else None
         y = i * ROW
@@ -63,7 +63,7 @@ def columns(items, height=120, unit=""):
     top = max(v for _, v in items) or 1
     col_w, gap = 34, 6
     w = len(items) * (col_w + gap)
-    out = [f'<svg class="chart" viewBox="0 0 {w} {height + 34}" width="100%" role="img" aria-label="Column chart">']
+    out = [f'<svg class="chart" viewBox="0 0 {w} {height + 34}" width="{w}" height="{height + 34}" role="img" aria-label="Column chart">']
     for i, (label, value) in enumerate(items):
         x = i * (col_w + gap)
         h = round(height * value / top) if value else 0
@@ -77,7 +77,7 @@ def columns(items, height=120, unit=""):
     return mark_safe("".join(out))
 
 
-def _short(text, n=24):
+def _short(text, n=20):
     text = str(text)
     return text if len(text) <= n else text[: n - 1] + "…"
 

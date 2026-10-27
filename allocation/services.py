@@ -77,14 +77,14 @@ def engine_preferences(period):
     return {fid: EnginePreference(**{k: frozenset(v) for k, v in w.items()}) for fid, w in wishes.items()}
 
 
-def build_engine_input(period, exclude_auto=False, include_pending=False, exclude_duty_ids=(), only_slots=None):
+def build_engine_input(period, exclude_auto=False, include_pending=False, exclude_duty_ids=(), only_slots=None, people=None):
     """Describe `period` for the engine. Existing active duties become `fixed`
     (AUTO ones are left out when `exclude_auto`; duties in `exclude_duty_ids` are left out,
     e.g. one being handed over). Approved unavailability blocks people; with
     `include_pending`, pending requests do too (for "what if all are approved").
     With `only_slots`, rooms in other slots keep exactly the duties they have."""
     s = period.settings
-    people = engine_people(period)
+    people = engine_people(period) if people is None else people
 
     slots = []
     order_on_date = defaultdict(int)
@@ -203,19 +203,19 @@ def clear_draft(period, actor) -> int:
     return deleted
 
 
-def capacity_report(period) -> CapacityReport:
-    return capacity_check(build_engine_input(period))
+def capacity_report(period, people=None) -> CapacityReport:
+    return capacity_check(build_engine_input(period, people=people))
 
 
-def pending_capacity(period):
+def pending_capacity(period, people=None):
     """(pending request count, capacity if they were all approved), or None when nothing is pending."""
     pending = Unavailability.objects.filter(period=period, status=UnavailabilityStatus.PENDING).count()
     if not pending:
         return None
-    return pending, capacity_check(build_engine_input(period, include_pending=True))
+    return pending, capacity_check(build_engine_input(period, include_pending=True, people=people))
 
 
-def roster_conflicts(period):
+def roster_conflicts(period, people=None):
     """[(duty, reason)] for duties that break a rule made after they were assigned: an approved
     unavailability for that time, or a faculty member who is now inactive or exempt."""
     duties = list(
@@ -228,7 +228,7 @@ def roster_conflicts(period):
         period=period, status=UnavailabilityStatus.APPROVED
     ).values_list("faculty_id", "date", "slot_id"):
         blocked.add((faculty_id, day, slot_id))
-    eligible = {p.id for p in engine_people(period)}
+    eligible = {p.id for p in (engine_people(period) if people is None else people)}
     conflicts = []
     for d in duties:
         slot = d.room_allocation.session.slot

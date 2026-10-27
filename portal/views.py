@@ -42,7 +42,7 @@ def home(request):
     if not user.is_authenticated:
         return redirect_to_login(request.get_full_path())
     if user.is_superuser or user.role == Role.ADMIN:
-        return redirect("period_list")
+        return redirect("dashboard")
     if user.role in (Role.FACULTY, Role.HOD):
         return redirect("my_duties")
     if user.role == Role.EXAM_STAFF:
